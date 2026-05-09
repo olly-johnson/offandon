@@ -54,6 +54,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
+          batch_id: string | null;
           title: string | null;
           hook: string | null;
           body: string;
@@ -66,6 +67,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id: string;
+          batch_id?: string | null;
           title?: string | null;
           hook?: string | null;
           body: string;
@@ -78,6 +80,7 @@ export type Database = {
         Update: {
           id?: string;
           user_id?: string;
+          batch_id?: string | null;
           title?: string | null;
           hook?: string | null;
           body?: string;
@@ -86,6 +89,42 @@ export type Database = {
           status?: "draft" | "published" | "archived";
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      script_batches: {
+        Row: {
+          id: string;
+          user_id: string;
+          status: "pending" | "running" | "complete" | "failed";
+          voice_dna_snapshot: Json;
+          count_requested: number;
+          count_generated: number;
+          failure_reason: string | null;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          status?: "pending" | "running" | "complete" | "failed";
+          voice_dna_snapshot: Json;
+          count_requested?: number;
+          count_generated?: number;
+          failure_reason?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          status?: "pending" | "running" | "complete" | "failed";
+          voice_dna_snapshot?: Json;
+          count_requested?: number;
+          count_generated?: number;
+          failure_reason?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
         };
         Relationships: [];
       };

@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { listBatchesForUser } from "@/engines/content/persistence";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { Button } from "@/components/ui/button";
@@ -31,7 +33,11 @@ export default async function DashboardPage() {
     redirect("/onboarding");
   }
 
-  const dna = await getCurrentVoiceDNA(supabase, user.id);
+  const [dna, batches] = await Promise.all([
+    getCurrentVoiceDNA(supabase, user.id),
+    listBatchesForUser(supabase, user.id, 3),
+  ]);
+  const latestBatch = batches[0] ?? null;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
@@ -72,9 +78,50 @@ export default async function DashboardPage() {
         </section>
       )}
 
+      {/* Recent script batches */}
+      <section className="mt-6 rounded-lg border border-border bg-card p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm uppercase tracking-wide text-muted-foreground">
+              Recent script batches
+            </h2>
+            {latestBatch ? (
+              <p className="mt-3 text-sm">
+                Latest batch is {batchStatusLabel(latestBatch.status)}
+                {latestBatch.status === "complete"
+                  ? ` with ${latestBatch.count_generated} script${latestBatch.count_generated === 1 ? "" : "s"}.`
+                  : "."}
+              </p>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                You haven&apos;t generated any scripts yet.
+              </p>
+            )}
+          </div>
+          <Link href="/scripts">
+            <Button variant="ghost" size="sm">
+              {latestBatch ? "Open scripts" : "Generate first batch"}
+            </Button>
+          </Link>
+        </div>
+      </section>
+
       <p className="mt-8 text-xs text-muted-foreground">
-        Dashboard is a stub. Chat, scripts, and IG analytics land in upcoming PRs.
+        Dashboard is a stub. Chat and IG analytics land in upcoming PRs.
       </p>
     </main>
   );
+}
+
+function batchStatusLabel(status: "pending" | "running" | "complete" | "failed"): string {
+  switch (status) {
+    case "pending":
+      return "queued";
+    case "running":
+      return "generating";
+    case "complete":
+      return "ready";
+    case "failed":
+      return "failed";
+  }
 }
