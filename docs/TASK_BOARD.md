@@ -23,6 +23,18 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-012 | Admin invite route stub (programmatic invite TODO) | claude | Done | PR #4 |
 | BO-004 | API: Claude 4.6 + anti-slop filter | claude | Done | PR #2 (anti-slop), PR #4 (SDK) |
 
+## Phase 2. Content engine
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-017 | Migration: script_batches table + scripts.batch_id + delete_user_data update | claude | In Progress | feature/script-generator |
+| BO-018 | Service-role Supabase admin client | claude | In Progress | feature/script-generator |
+| BO-019 | Content engine: ScriptGenerator + system prompt + anti-slop | claude | In Progress | feature/script-generator |
+| BO-020 | Content engine: persistence (createScriptBatch, saveGeneratedScripts, listBatches, getBatch, updateBatchStatus) | claude | In Progress | feature/script-generator |
+| BO-021 | Inngest: client + generate-scripts function + /api/inngest serve route | claude | In Progress | feature/script-generator |
+| BO-022 | /scripts UI: list page + detail page + GenerateButton + auto-refresh | claude | In Progress | feature/script-generator |
+| BO-023 | Dashboard: link to /scripts + recent batch summary | claude | In Progress | feature/script-generator |
+
 ## Phase 1. Pending
 
 | Task ID | Description | Owner | Status | Branch / PR |
