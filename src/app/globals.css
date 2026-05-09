@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Onyx & Gold — Bot OS aesthetic
+/* Onyx & Gold. Bot OS aesthetic.
    BG: #000000  Borders: #1A1A1A  Accent: #D4AF37 */
 :root {
   --background: #000000;

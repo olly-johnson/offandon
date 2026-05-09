@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto";
 
 import { SlopError, validateAntiSlop, type SlopViolation } from "@/lib/shared/anti-slop";
+import { createLogger } from "@/lib/shared/logger";
 
 import { buildVoiceDNASystemPrompt } from "./system-prompt";
 import type { IVoiceEngine, OnboardingAnswers, VoiceDNA } from "./types";
+
+const log = createLogger("voice.engine");
 
 /**
  * Minimal LLM client surface the Voice Engine depends on. Production binds
@@ -15,7 +18,7 @@ export interface ILLMClient {
 
 export interface VoiceEngineOptions {
   llm: ILLMClient;
-  /** Override the wall clock — useful for deterministic tests. */
+  /** Override the wall clock; useful for deterministic tests. */
   now?: () => Date;
 }
 
@@ -38,8 +41,15 @@ export class VoiceEngine implements IVoiceEngine {
     try {
       parsed = JSON.parse(raw);
     } catch (e) {
+      log.error("LLM returned invalid JSON", { raw_preview: raw.slice(0, 400) });
       throw new Error(`VoiceEngine: LLM did not return valid JSON (${(e as Error).message})`);
     }
+
+    log.debug("parsed dna shape", {
+      top_level_keys:
+        parsed && typeof parsed === "object" ? Object.keys(parsed as object) : typeof parsed,
+      tone_profile: (parsed as { tone_profile?: unknown })?.tone_profile,
+    });
 
     assertVoiceDNAShape(parsed);
 
@@ -87,7 +97,7 @@ function assertVoiceDNAShape(value: unknown): asserts value is VoiceDNA {
 }
 
 /**
- * Collect every string the engine considers "user-facing" — anything that
+ * Collect every string the engine considers "user-facing": anything that
  * could reach a Bot OS surface (chat, scripts, dashboard). Deliberately
  * skips `prohibited_phrases`, which is metadata: it is allowed to name
  * banned words by definition.

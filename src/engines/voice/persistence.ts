@@ -5,7 +5,7 @@ import type { Database, Json } from "@/lib/shared/supabase";
 import type { OnboardingAnswers, VoiceDNA } from "./types";
 
 /**
- * Convenience alias for downstream callers — they should not need to know
+ * Convenience alias for downstream callers. They should not need to know
  * which Database schema this engine is bound to.
  */
 export type VoiceSupabaseClient = SupabaseClient<Database>;
@@ -14,13 +14,13 @@ export type VoiceSupabaseClient = SupabaseClient<Database>;
  * Persist a freshly-generated Voice DNA for the authenticated caller.
  *
  * Routed through the `replace_voice_dna` RPC so the supersede + insert
- * happens in a single transaction — the partial unique index on
+ * happens in a single transaction; the partial unique index on
  * `(user_id) WHERE superseded_at IS NULL` makes any non-atomic two-step
  * implementation race-prone.
  *
  * The caller's identity is taken from the Supabase JWT inside the function.
  * The userId you might be holding in the application layer is intentionally
- * NOT a parameter — passing it would be a footgun if it ever drifted from
+ * NOT a parameter; passing it would be a footgun if it ever drifted from
  * the JWT.
  */
 export async function saveVoiceDNA(
