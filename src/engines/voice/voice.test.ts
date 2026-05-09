@@ -129,7 +129,7 @@ describe("VoiceDNA system prompt", () => {
   });
 });
 
-describe("VoiceEngine — Scenario 1: bro-marketing input distilled to professional", () => {
+describe("VoiceEngine, Scenario 1: bro-marketing input distilled to professional", () => {
   it("calls the LLM with the manifesto-embedded system prompt", async () => {
     const llm = new MockLLM(JSON.stringify(PROFESSIONAL_DNA));
     const engine = new VoiceEngine({ llm, now: FROZEN_NOW });
@@ -181,7 +181,7 @@ describe("VoiceEngine — Scenario 1: bro-marketing input distilled to professio
   });
 });
 
-describe("VoiceEngine — Scenario 2: anti-slop validation of LLM output", () => {
+describe("VoiceEngine, Scenario 2: anti-slop validation of LLM output", () => {
   it("throws SlopError when the LLM output contains an em-dash", async () => {
     const sloppy: VoiceDNA = {
       ...PROFESSIONAL_DNA,
@@ -248,7 +248,7 @@ describe("VoiceEngine — Scenario 2: anti-slop validation of LLM output", () =>
 
   it("does NOT slop-flag the prohibited_phrases array (it is metadata)", async () => {
     // PROFESSIONAL_DNA.prohibited_phrases literally lists "delve", "embark",
-    // "in today's digital landscape" — that must not trip the validator.
+    // "in today's digital landscape": that must not trip the validator.
     const engine = new VoiceEngine({
       llm: new MockLLM(JSON.stringify(PROFESSIONAL_DNA)),
       now: FROZEN_NOW,

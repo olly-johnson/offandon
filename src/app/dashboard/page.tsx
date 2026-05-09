@@ -10,7 +10,7 @@ import { signout } from "./actions";
 const log = createLogger("page.dashboard");
 
 export const metadata = {
-  title: "Dashboard — Bot OS",
+  title: "Dashboard · Bot OS",
 };
 
 export default async function DashboardPage() {

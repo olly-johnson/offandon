@@ -70,7 +70,7 @@ describe("saveVoiceDNA", () => {
     });
   });
 
-  it("does NOT pass userId — identity comes from the JWT inside the RPC", async () => {
+  it("does NOT pass userId; identity comes from the JWT inside the RPC", async () => {
     const { client, rpc } = mockClientWithRpc({ data: null, error: null });
 
     await saveVoiceDNA(client, FIXTURE_DNA, FIXTURE_ANSWERS);

@@ -2,7 +2,7 @@
 
 Single source of truth for in-flight and completed work. Update when starting a task (status → In Progress) and when finishing (status → Done with PR ref). Stale board = workflow bug.
 
-## Phase 0 — Foundations
+## Phase 0. Foundations
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
@@ -11,27 +11,36 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-003 | Engine: Voice DNA questionnaire logic (TDD) | claude | Done | PR #2 |
 | BO-006 | Persistence: voice_dna table + replace_voice_dna RPC + typed clients | claude | Done | PR #3 |
 
-## Phase 1 — Auth + Onboarding (in flight)
+## Phase 1. Auth + Onboarding
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-007 | Shared logger (`src/lib/shared/logger.ts`) | claude | In Progress | feature/auth-and-onboarding |
-| BO-008 | Auth foundation: middleware, /signin, /auth/callback, /onboarding/set-password | claude | In Progress | feature/auth-and-onboarding |
-| BO-009 | Onboarding wizard (3-step, multi-field) + profile creation | claude | In Progress | feature/auth-and-onboarding |
-| BO-010 | Anthropic SDK wired behind ILLMClient (Claude 4.6 Sonnet, prompt caching) | claude | In Progress | feature/auth-and-onboarding |
-| BO-011 | Dashboard stub (post-onboarding landing) | claude | In Progress | feature/auth-and-onboarding |
-| BO-012 | Admin invite route stub (programmatic invite TODO) | claude | In Progress | feature/auth-and-onboarding |
+| BO-007 | Shared logger (`src/lib/shared/logger.ts`) | claude | Done | PR #4 |
+| BO-008 | Auth foundation: middleware, /signin, /auth/callback, /auth/confirm, /onboarding/set-password | claude | Done | PR #4 |
+| BO-009 | Onboarding wizard (3-step, multi-field) + profile creation | claude | Done | PR #4 |
+| BO-010 | Anthropic SDK wired behind ILLMClient (Claude 4.6 Sonnet, prompt caching) | claude | Done | PR #4 |
+| BO-011 | Dashboard stub (post-onboarding landing) | claude | Done | PR #4 |
+| BO-012 | Admin invite route stub (programmatic invite TODO) | claude | Done | PR #4 |
+| BO-004 | API: Claude 4.6 + anti-slop filter | claude | Done | PR #2 (anti-slop), PR #4 (SDK) |
 
-## Phase 1 — Pending Claude 4.6 + content
+## Phase 1. Pending
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-004 | API: Claude 4.6 + anti-slop filter (anti-slop done; SDK wiring covered by BO-010) | claude | Partial | PR #2 (anti-slop) |
 | BO-005 | Social: Instagram auth + last 30 videos | - | Todo | - |
+
+## Phase 1. Follow-ups discovered during smoke-testing
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-013 | Programmatic admin invite endpoint (replaces dashboard invite) | - | Todo | - |
+| BO-014 | Custom email templates (invite, reset, magic link) with branded copy | - | Todo | - |
+| BO-015 | Surface `error` query param on /signin (callback failures, expired links) | - | Todo | - |
+| BO-016 | unwrapSupabaseError helper for the empty-error-on-401 wart | - | Todo | - |
 
 ## Conventions
 
 - `Owner` is the agent name (e.g. `claude`) or a human name. Empty = unclaimed.
-- `Status` ∈ {Todo, In Progress, Blocked, Done, Partial}.
+- `Status` is one of: Todo, In Progress, Blocked, Done, Partial.
 - `Branch / PR` references the active branch while In Progress and the merged PR number once Done.
 - Add a row before writing code; mark Done in the same PR that completes the task.

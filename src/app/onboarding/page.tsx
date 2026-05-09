@@ -8,7 +8,7 @@ import { OnboardingWizard } from "./wizard";
 const log = createLogger("page.onboarding");
 
 export const metadata = {
-  title: "Onboarding — Bot OS",
+  title: "Onboarding · Bot OS",
 };
 
 export default async function OnboardingPage() {
@@ -34,7 +34,7 @@ export default async function OnboardingPage() {
       <header className="mb-10">
         <h1 className="text-3xl font-semibold tracking-tight">Bot OS onboarding</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Three short steps. We use this to build your Voice DNA — the spine of every script we
+          Three short steps. We use this to build your Voice DNA, the spine of every script we
           generate.
         </p>
       </header>

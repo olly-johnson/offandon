@@ -8,7 +8,7 @@ import { SetPasswordForm } from "./set-password-form";
 const log = createLogger("page.set-password");
 
 export const metadata = {
-  title: "Set a password — Bot OS",
+  title: "Set a password · Bot OS",
 };
 
 export default async function SetPasswordPage() {
@@ -38,7 +38,7 @@ export default async function SetPasswordPage() {
           <p className="mt-2 text-sm text-muted-foreground">First, set a password.</p>
         </header>
         <div className="rounded-lg border border-border bg-card p-6">
-          <SetPasswordForm email={user.email ?? "—"} />
+          <SetPasswordForm email={user.email ?? "your email"} />
         </div>
       </div>
     </main>

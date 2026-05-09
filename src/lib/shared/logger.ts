@@ -70,7 +70,7 @@ function sanitize(value: unknown, depth = 0): unknown {
     return {
       name: value.name,
       message: value.message,
-      // Stack is intentionally not redacted — it's debugging gold.
+      // Stack is intentionally not redacted; it's debugging gold.
       stack: value.stack,
     };
   }

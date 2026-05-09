@@ -108,7 +108,7 @@ export function OnboardingWizard() {
 
       {pending ? (
         <p className="text-xs text-muted-foreground">
-          Claude is distilling your answers into a Voice DNA. This usually takes 5–15 seconds.
+          Claude is distilling your answers into a Voice DNA. This usually takes 5 to 15 seconds.
         </p>
       ) : null}
     </div>
@@ -195,7 +195,7 @@ function StepIdentity({
         <Textarea
           value={data.target_audience}
           onChange={(e) => update("target_audience", e.target.value)}
-          placeholder="The specific person you want to attract — role, stage, what they care about."
+          placeholder="The specific person you want to attract. Role, stage, what they care about."
           rows={3}
         />
       </Field>
@@ -217,7 +217,8 @@ function StepVoice({
       <header>
         <h2 className="text-xl font-semibold">How do you sound?</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Paste 1–3 short samples of your real voice — captions, posts, DMs. Don&apos;t polish them.
+          Paste 1 to 3 short samples of your real voice. Captions, posts, DMs. Don&apos;t polish
+          them.
         </p>
       </header>
       {data.voice_samples.map((sample, i) => (
@@ -225,7 +226,7 @@ function StepVoice({
           <Textarea
             value={sample}
             onChange={(e) => updateArray("voice_samples", i, e.target.value)}
-            placeholder={i === 0 ? "Paste a recent post or caption — at least a couple of sentences." : ""}
+            placeholder={i === 0 ? "Paste a recent post or caption. At least a couple of sentences." : ""}
             rows={4}
           />
         </Field>
@@ -234,7 +235,7 @@ function StepVoice({
         <Textarea
           value={data.what_works}
           onChange={(e) => update("what_works", e.target.value)}
-          placeholder="Posts, hooks, formats — be specific."
+          placeholder="Posts, hooks, formats. Be specific."
           rows={3}
         />
       </Field>

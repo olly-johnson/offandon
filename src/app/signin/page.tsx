@@ -8,7 +8,7 @@ import { SigninForm } from "./signin-form";
 const log = createLogger("page.signin");
 
 export const metadata = {
-  title: "Sign in — Bot OS",
+  title: "Sign in · Bot OS",
 };
 
 export default async function SigninPage() {

@@ -1,5 +1,5 @@
 /**
- * Hand-rolled Supabase Database types — mirror of supabase/migrations/.
+ * Hand-rolled Supabase Database types: mirror of supabase/migrations/.
  *
  * Maintained manually until the Supabase CLI is wired up. When that lands,
  * regenerate with:

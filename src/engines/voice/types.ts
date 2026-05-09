@@ -1,5 +1,5 @@
 /**
- * Voice Engine — public type surface.
+ * Voice Engine: public type surface.
  *
  * The Voice Engine is the only path that creates or refreshes a user's
  * `VoiceDNA`. Other engines (content, social) are consumers, not authors.
