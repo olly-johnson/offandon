@@ -78,8 +78,14 @@ create policy script_batches_update_own
 
 -- ---------------------------------------------------------------------------
 -- Explicit grants ("Automatically expose new tables" is OFF)
+--
+-- service_role bypasses RLS but NOT GRANTs. Without an explicit grant the
+-- Inngest worker (which uses the service-role client) gets 42501 permission
+-- denied before RLS even runs. We retroactively backfill the same grants
+-- for the older tables in 20260509000002_service_role_grants.sql.
 -- ---------------------------------------------------------------------------
 grant select, insert, update on public.script_batches to authenticated;
+grant all                    on public.script_batches to service_role;
 
 -- ---------------------------------------------------------------------------
 -- Update delete_user_data to wipe script_batches

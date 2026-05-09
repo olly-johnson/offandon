@@ -27,13 +27,15 @@ Single source of truth for in-flight and completed work. Update when starting a 
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-017 | Migration: script_batches table + scripts.batch_id + delete_user_data update | claude | In Progress | feature/script-generator |
-| BO-018 | Service-role Supabase admin client | claude | In Progress | feature/script-generator |
-| BO-019 | Content engine: ScriptGenerator + system prompt + anti-slop | claude | In Progress | feature/script-generator |
-| BO-020 | Content engine: persistence (createScriptBatch, saveGeneratedScripts, listBatches, getBatch, updateBatchStatus) | claude | In Progress | feature/script-generator |
-| BO-021 | Inngest: client + generate-scripts function + /api/inngest serve route | claude | In Progress | feature/script-generator |
-| BO-022 | /scripts UI: list page + detail page + GenerateButton + auto-refresh | claude | In Progress | feature/script-generator |
-| BO-023 | Dashboard: link to /scripts + recent batch summary | claude | In Progress | feature/script-generator |
+| BO-017 | Migration: script_batches table + scripts.batch_id + delete_user_data update | claude | Done | PR #5 |
+| BO-018 | Service-role Supabase admin client | claude | Done | PR #5 |
+| BO-019 | Content engine: ScriptGenerator + system prompt + anti-slop | claude | Done | PR #5 |
+| BO-020 | Content engine: persistence (createScriptBatch, saveGeneratedScripts, listBatches, getBatch, updateBatchStatus) | claude | Done | PR #5 |
+| BO-021 | Inngest: client + generate-scripts function + /api/inngest serve route | claude | Done | PR #5 |
+| BO-022 | /scripts UI: list page + detail page + GenerateButton + auto-refresh | claude | Done | PR #5 |
+| BO-023 | Dashboard: link to /scripts + recent batch summary | claude | Done | PR #5 |
+| BO-024 | service_role grant backfill on Phase 0 tables (migration 20260509000002) | claude | Done | PR #5 |
+| BO-025 | Inngest catch-path: don't shadow original error if mark-failed itself fails | claude | Done | PR #5 |
 
 ## Phase 1. Pending
 
@@ -49,6 +51,9 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-014 | Custom email templates (invite, reset, magic link) with branded copy | - | Todo | - |
 | BO-015 | Surface `error` query param on /signin (callback failures, expired links) | - | Todo | - |
 | BO-016 | unwrapSupabaseError helper for the empty-error-on-401 wart | - | Todo | - |
+| BO-026 | Stuck-batch sweeper (cron: mark batches stuck > 5 min as failed) | - | Todo | - |
+| BO-027 | "Cancel batch" button on /scripts to manually clear stuck rows | - | Todo | - |
+| BO-028 | Document the "auto-expose new tables = OFF" Supabase setting in CLAUDE.md so future tables remember to grant service_role | - | Todo | - |
 
 ## Conventions
 

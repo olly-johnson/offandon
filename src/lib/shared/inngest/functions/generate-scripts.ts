@@ -26,10 +26,12 @@ const log = createLogger("inngest.generate-scripts");
  *   4. Insert scripts rows linked to batch_id
  *   5. Mark batch 'complete' with count_generated + completed_at
  *
- * On any thrown error, the function catches and writes status='failed' with
- * a truncated failure_reason before rethrowing so Inngest still records the
- * failure and retries-by-default behaviour kicks in (configurable per
- * function; we leave defaults for MVP).
+ * On any thrown error, the function attempts to write status='failed' with
+ * a truncated failure_reason and ALWAYS rethrows the original error. The
+ * mark-failed write is best-effort: if it itself fails (db unreachable,
+ * grant gap), we log loudly and swallow so the original error still
+ * surfaces to Inngest. The batch row may then sit in pending/running until
+ * cleared manually; a follow-up cron should sweep stuck batches > N min.
  *
  * Uses the SERVICE-ROLE Supabase client because there is no end-user JWT
  * in this context. The function trusts event.data.user_id because Inngest
@@ -52,13 +54,15 @@ export const generateScripts = inngest.createFunction(
 
     const supabase = createSupabaseAdminClient();
 
-    // Mark running so the UI shows 'Generating...' instead of 'Pending'.
-    await step.run("mark-running", async () => {
-      await updateBatchStatus(supabase, batch_id, { status: "running" });
-      log.info("batch running", { batch_id, user_id });
-    });
-
     try {
+      // Mark running so the UI shows 'Generating...' instead of 'Pending'.
+      // Inside the try so a mark-running failure also lands in the
+      // mark-failed path; otherwise the batch sits as 'pending' forever.
+      await step.run("mark-running", async () => {
+        await updateBatchStatus(supabase, batch_id, { status: "running" });
+        log.info("batch running", { batch_id, user_id });
+      });
+
       const { dna, count } = await step.run("load-batch", async () => {
         const { data: row, error } = await supabase
           .from("script_batches")
@@ -107,13 +111,29 @@ export const generateScripts = inngest.createFunction(
     } catch (err) {
       const reason = (err as Error).message.slice(0, 500);
       log.error("batch failed", { batch_id, user_id, reason });
-      await step.run("mark-failed", async () => {
-        await updateBatchStatus(supabase, batch_id, {
-          status: "failed",
-          failure_reason: reason,
-          completed_at: new Date().toISOString(),
+
+      // Mark-failed must NEVER reject and shadow the original error.
+      // If updateBatchStatus itself blows up (e.g. service_role grant gap,
+      // db unreachable), the batch row stays in pending/running and the
+      // user is permanently stuck. Catch separately, log, swallow.
+      try {
+        await step.run("mark-failed", async () => {
+          await updateBatchStatus(supabase, batch_id, {
+            status: "failed",
+            failure_reason: reason,
+            completed_at: new Date().toISOString(),
+          });
         });
-      });
+      } catch (markErr) {
+        log.error("mark-failed itself failed; batch may be stuck until manually cleared", {
+          batch_id,
+          user_id,
+          original_error: reason,
+          mark_failed_error: (markErr as Error).message,
+        });
+      }
+
+      // Always rethrow the ORIGINAL error so Inngest records the true cause.
       throw err;
     }
   },
