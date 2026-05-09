@@ -1,29 +1,21 @@
-# Bot OS - Master System Architecture (v1.1)
+# Bot OS - Master Architecture (v1.3)
 
 ## 🏗 Modular "Engine" Architecture
-To support parallel development, logic is siloed into Engines with strict TypeScript interfaces:
-- `src/engines/voice`: RAG, Voice DNA profiling, Humanization filters.
-- `src/engines/social`: Instagram Graph API, Scraper integration (Apify).
-- `src/engines/content`: Script generation logic, Hook analysis.
-- `src/lib/shared`: Core types, MSW handlers, and Supabase client.
+- **Voice Engine (`src/engines/voice`):** Transforms raw questionnaire data into "Voice DNA." 
+- **Social Engine (`src/engines/social`):** Instagram Graph API + Scraper logic. (Feeds the **Analyst Skill**).
+- **Content Engine (`src/engines/content`):** Script generation + Humanization filtering. (Feeds the **Script Skill**).
 
-## 🚀 2026 Tech Stack
-- **Framework:** Next.js 15 (App Router).
-- **LLM:** Claude 4.6 Sonnet (via Vercel AI SDK).
-- **Database:** Supabase (Postgres + pgvector).
-- **Transcription:** Deepgram Nova-2.
-- **Queueing:** Inngest (Manual triggers for MVP, cron later).
+## 🎯 Skill-to-Surface Mapping
+1. **Chat Skill:** Consumes Voice DNA + Social Context. Surface: `/chat`.
+2. **Analyst Skill:** Consumes Social Engine data. Surface: `/dashboard`.
+3. **Script Writing Skill:** Consumes Voice DNA + Content Engine. Surface: `/scripts`.
 
-## 🛡 Security & Compliance
-- **RLS:** All tables MUST have `(role() = 'authenticated')` and `user_id = auth.uid()` policies.
-- **GDPR:** `profiles` table includes a `data_policy_accepted` flag. A `delete_user_data` edge function is required to wipe vectors and transcripts.
-- **Rate Limiting:** Upstash/Redis middleware on `/api/chat` and `/api/generate`.
+## ✍️ The Humanization Manifesto (Anti-Slop Rules)
+**Strictly Prohibited Patterns:**
+- **Punctuation:** No em-dashes (—). 
+- **Unicode/Emoji Noise:** Absolutely NO "✨", "🚀", "✅", "🔥", or "ready to dive in?". No curly quotes in code-generated scripts (use straight quotes).
+- **Forbidden Buzzwords:** "Delve", "tapestry", "embark", "comprehensive", "nuances", "pivotal", "vibrant".
+- **Structure:** No "Firstly/Secondly/Finally". No robotic summary conclusions.
 
-## 🧪 Testing Strategy (High-Speed TDD)
-- **Unit (Vitest):** Mock all external APIs. Focus on edge cases in the "Voice DNA" questionnaire.
-- **Integration:** Use MSW to simulate Supabase responses.
-- **E2E (Playwright):** Reserved for Auth and Dashboard "Happy Path" only.
-
-## 🎨 Aesthetic: Onyx & Gold
-- **Colors:** BG: `#000000`, Borders: `#1A1A1A`, Accents/Buttons: `#D4AF37`.
-- **Typography:** Sleek, high-contrast sans-serif.
+## 🧪 Testing Strategy
+- **Engine Tests:** Must validate that `Skill` outputs do not contain the prohibited patterns above.

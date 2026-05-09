@@ -1,14 +1,19 @@
-# Bot OS - Agent Protocol & Routing
+# Bot OS - Engineering Control Protocol
 
-## 🤖 Coordination & Workflow
-- **Master Truth:** Always read `AGENTS.md` before starting a task.
-- **Branching Rule:** `git checkout -b feature/[agent-name]-[task-name]`. NEVER commit to `main`.
-- **TDD Requirement:** You must write a `.test.ts` or `.spec.ts` before the implementation.
-- **Parallel Work:** Update `docs/TASK_BOARD.md` to "In Progress" when starting a module to prevent collisions.
+## 🛠 Operational Constraints
+1. **Branching Strategy:** 
+   - `infra/*`: Foundation, DB migrations, config.
+   - `feature/*`: New Engines or UI modules.
+   - `fix/*`: Bug resolution.
+   - `refactor/*`: Performance or code quality improvements.
+   - **Protocol:** NEVER commit to `main`. PRs must pass Vitest `engines` and `app` suites.
+2. **TDD-First:** Logic implementation is forbidden until a corresponding `.test.ts` exists and fails. 
+3. **Architecture Truth:** This file directs to `AGENTS.md`. No architectural changes permitted without updating `AGENTS.md` first.
 
-## 🛠 Command Palette
-- `npm run test`: Run Vitest in focused/watch mode.
-- `npm run build`: Validate types and build engines.
-- `npm run lint`: Enforce code style.
+## 🤖 Multi-Agent Routing
+- **Lead/Infra Agent:** Handles `src/lib/shared`, `supabase/migrations`, and `inngest/`.
+- **Engine Agents:** Work in isolated directories: `src/engines/voice`, `src/engines/social`, `src/engines/content`.
+- **UI Agents:** Work in `src/app` and `src/components`, consuming the Engine interfaces.
 
-**CURRENT STATE:** Project Initialization.
+## 📜 Update Log
+- **2026-05-09:** Phase 0 Steps 1-2 complete. Next 16 pinned. RLS and GDPR wipe verified.
