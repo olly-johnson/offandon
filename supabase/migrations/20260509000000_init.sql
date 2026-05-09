@@ -1,5 +1,6 @@
 -- Bot OS — initial schema
--- Adds: profiles, scripts, RLS policies, GDPR hard-delete function.
+-- Adds: profiles, scripts, voice_dna, RLS policies, replace_voice_dna RPC,
+--       and GDPR hard-delete function.
 --
 -- Conventions:
 --   * Every user-owned table has user_id (or id, for profiles) referencing
@@ -8,6 +9,10 @@
 --   * RLS is ENABLED and FORCED on every user-owned table — table owners
 --     are also subject to policies, preventing accidental bypass.
 --   * Policies require both authenticated role AND user_id = auth.uid().
+--   * Supabase project setting "Automatically expose new tables" is OFF, so
+--     this migration grants table privileges to `authenticated` explicitly.
+--     New tables added later MUST follow the same pattern, otherwise RLS
+--     policies will pass and the underlying GRANT will deny with 42501.
 
 begin;
 
@@ -59,6 +64,42 @@ comment on table  public.scripts is 'Generated and user-edited scripts owned by 
 comment on column public.scripts.voice_dna_snapshot is 'Frozen Voice DNA used at generation time — required for reproducibility.';
 
 -- ---------------------------------------------------------------------------
+-- voice_dna
+--
+-- Append-only history of distilled Voice DNA profiles, one user-row per
+-- regeneration. The active row is the one with superseded_at IS NULL.
+-- Old rows are kept (never deleted via app code) so we can audit drift in
+-- voice over time. The only path that wipes them is delete_user_data().
+--
+-- Atomicity: writes go through replace_voice_dna() which marks the prior
+-- active row superseded and inserts the new one in one transaction.
+-- ---------------------------------------------------------------------------
+create table public.voice_dna (
+    id                          uuid primary key default gen_random_uuid(),
+    user_id                     uuid not null references auth.users (id) on delete cascade,
+    dna                         jsonb not null,
+    source_answers              jsonb not null,
+    source_questionnaire_hash   text not null,
+    generated_at                timestamptz not null default now(),
+    superseded_at               timestamptz
+);
+
+-- Exactly one active Voice DNA row per user. Functionally equivalent to
+-- `EXCLUDE USING btree (user_id WITH =) WHERE (superseded_at IS NULL)`.
+create unique index voice_dna_one_active_per_user
+  on public.voice_dna (user_id)
+  where superseded_at is null;
+
+-- Lookup the user's history fast.
+create index voice_dna_user_id_generated_at_idx
+  on public.voice_dna (user_id, generated_at desc);
+
+comment on table  public.voice_dna is 'Append-only Voice DNA history. Active row has superseded_at IS NULL.';
+comment on column public.voice_dna.dna is 'Full VoiceDNA object as produced by the Voice Engine.';
+comment on column public.voice_dna.source_answers is 'OnboardingAnswers used to generate this row — needed for regeneration audits.';
+comment on column public.voice_dna.source_questionnaire_hash is 'SHA-256 of the answers JSON; mirrors VoiceDNA.source_questionnaire_hash.';
+
+-- ---------------------------------------------------------------------------
 -- updated_at triggers
 -- ---------------------------------------------------------------------------
 create or replace function public.tg_set_updated_at()
@@ -82,10 +123,12 @@ create trigger scripts_set_updated_at
 -- ---------------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------------
-alter table public.profiles enable row level security;
-alter table public.profiles force  row level security;
-alter table public.scripts  enable row level security;
-alter table public.scripts  force  row level security;
+alter table public.profiles  enable row level security;
+alter table public.profiles  force  row level security;
+alter table public.scripts   enable row level security;
+alter table public.scripts   force  row level security;
+alter table public.voice_dna enable row level security;
+alter table public.voice_dna force  row level security;
 
 -- profiles: a user can only see, insert, and update their own profile row.
 -- Deletes are intentionally not exposed via RLS — go through delete_user_data().
@@ -127,9 +170,80 @@ create policy scripts_delete_own
   to authenticated
   using ((select auth.uid()) = user_id);
 
--- Anon role gets nothing.
-revoke all on public.profiles from anon;
-revoke all on public.scripts  from anon;
+-- voice_dna: select/insert/update of own rows. Update is needed by
+-- replace_voice_dna() to mark prior rows superseded. No DELETE policy —
+-- the only path that removes rows is delete_user_data().
+create policy voice_dna_select_own
+  on public.voice_dna for select
+  to authenticated
+  using ((select auth.uid()) = user_id);
+
+create policy voice_dna_insert_self
+  on public.voice_dna for insert
+  to authenticated
+  with check ((select auth.uid()) = user_id);
+
+create policy voice_dna_update_own
+  on public.voice_dna for update
+  to authenticated
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+-- ---------------------------------------------------------------------------
+-- Explicit grants (Data API setting: "Automatically expose new tables" = off)
+--
+-- profiles + voice_dna: no DELETE grant — wipe path is delete_user_data().
+-- scripts: full DML; users may delete their own drafts.
+-- ---------------------------------------------------------------------------
+grant select, insert, update         on public.profiles  to authenticated;
+grant select, insert, update, delete on public.scripts   to authenticated;
+grant select, insert, update         on public.voice_dna to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- replace_voice_dna RPC
+--
+-- Atomically supersedes the caller's currently active Voice DNA row and
+-- inserts a new one. Runs as the caller (SECURITY INVOKER) so the table's
+-- RLS policies still apply — the function adds atomicity, not authority.
+--
+-- The partial unique index voice_dna_one_active_per_user guarantees no
+-- caller can have two active rows at once. Concurrent calls for the same
+-- user serialise on the row lock from the UPDATE; the loser sees a
+-- unique-violation it can retry.
+-- ---------------------------------------------------------------------------
+create or replace function public.replace_voice_dna(
+  p_dna jsonb,
+  p_source_answers jsonb,
+  p_source_questionnaire_hash text
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  caller uuid := auth.uid();
+begin
+  if caller is null then
+    raise exception 'authentication required'
+      using errcode = '42501';
+  end if;
+
+  update public.voice_dna
+     set superseded_at = now()
+   where user_id = caller
+     and superseded_at is null;
+
+  insert into public.voice_dna (user_id, dna, source_answers, source_questionnaire_hash)
+       values (caller, p_dna, p_source_answers, p_source_questionnaire_hash);
+end;
+$$;
+
+revoke all     on function public.replace_voice_dna(jsonb, jsonb, text) from public, anon;
+grant  execute on function public.replace_voice_dna(jsonb, jsonb, text) to authenticated;
+
+comment on function public.replace_voice_dna(jsonb, jsonb, text) is
+  'Atomically supersede the caller''s active Voice DNA and insert a new one.';
 
 -- ---------------------------------------------------------------------------
 -- GDPR hard-delete
@@ -166,9 +280,10 @@ begin
       using errcode = '42501';
   end if;
 
-  delete from public.scripts  where user_id = target_user_id;
-  delete from public.profiles where id      = target_user_id;
-  delete from auth.users      where id      = target_user_id;
+  delete from public.voice_dna where user_id = target_user_id;
+  delete from public.scripts   where user_id = target_user_id;
+  delete from public.profiles  where id      = target_user_id;
+  delete from auth.users       where id      = target_user_id;
 end;
 $$;
 
