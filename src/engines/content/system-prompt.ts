@@ -15,6 +15,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { VoiceDNA } from "@/engines/voice/types";
+import { METHODOLOGY_HOUSE, METHODOLOGY_SCRIPTS_SLICE } from "@/lib/shared/methodology";
 
 const MANIFESTO_HEADER = "## ✍️ The Humanization Manifesto";
 
@@ -81,6 +82,14 @@ export function buildScriptsSystemPrompt(voiceDna: VoiceDNA): string {
     "----- BEGIN HUMANIZATION MANIFESTO (verbatim from AGENTS.md) -----",
     HUMANIZATION_MANIFESTO,
     "----- END HUMANIZATION MANIFESTO -----",
+    "",
+    "----- BEGIN HOUSE METHODOLOGY (verbatim from docs/methodology/01-house.md) -----",
+    METHODOLOGY_HOUSE,
+    "----- END HOUSE METHODOLOGY -----",
+    "",
+    "----- BEGIN SCRIPTS METHODOLOGY SLICE (verbatim from docs/methodology/03-scripts.md) -----",
+    METHODOLOGY_SCRIPTS_SLICE,
+    "----- END SCRIPTS METHODOLOGY SLICE -----",
     "",
     "----- BEGIN CREATOR'S VOICE DNA -----",
     `tone_profile.primary: ${voiceDna.tone_profile.primary}`,
