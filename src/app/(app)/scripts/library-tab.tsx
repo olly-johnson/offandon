@@ -1,17 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye } from "lucide-react";
 
 import type { ScriptLibraryRow } from "@/engines/content/persistence";
 
 interface LibraryTabProps {
   scripts: ScriptLibraryRow[];
+  /** When set, scroll to and auto-open the matching script row. */
+  highlightId?: string | null;
 }
 
-export function LibraryTab({ scripts }: LibraryTabProps) {
+export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState<ScriptLibraryRow | null>(null);
+
+  // Derive the auto-open row from props instead of mirroring it via
+  // setState-in-effect (which the lint rule rejects). The user can
+  // close it; we track that with a separate "dismissed" id.
+  const initialOpen = useMemo<ScriptLibraryRow | null>(() => {
+    if (!highlightId) return null;
+    return scripts.find((s) => s.id === highlightId) ?? null;
+  }, [highlightId, scripts]);
+
+  const [dismissedHighlightId, setDismissedHighlightId] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState<ScriptLibraryRow | null>(null);
+
+  const open: ScriptLibraryRow | null =
+    manualOpen ??
+    (initialOpen && initialOpen.id !== dismissedHighlightId ? initialOpen : null);
+
+  function closeOpen() {
+    if (manualOpen) {
+      setManualOpen(null);
+    } else if (initialOpen) {
+      setDismissedHighlightId(initialOpen.id);
+    }
+  }
+
+  const highlightRowRef = useRef<HTMLTableRowElement | null>(null);
+
+  // After the highlighted row mounts, smooth-scroll it into view. The
+  // effect only does DOM work; no state writes.
+  useEffect(() => {
+    if (!highlightId) return;
+    requestAnimationFrame(() => {
+      highlightRowRef.current?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
+    });
+  }, [highlightId]);
 
   const filtered = query
     ? scripts.filter((s) =>
@@ -51,12 +89,18 @@ export function LibraryTab({ scripts }: LibraryTabProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((s) => (
+            {filtered.map((s) => {
+              const isHighlight = s.id === highlightId;
+              return (
               <tr
                 key={s.id}
+                ref={isHighlight ? highlightRowRef : null}
                 className="group cursor-pointer"
-                style={{ borderBottom: "1px solid var(--oo-border-subtle)" }}
-                onClick={() => setOpen(s)}
+                style={{
+                  borderBottom: "1px solid var(--oo-border-subtle)",
+                  background: isHighlight ? "var(--oo-gold-dim)" : undefined,
+                }}
+                onClick={() => setManualOpen(s)}
               >
                 <td
                   className="max-w-[320px] truncate px-5 py-3.5 font-medium"
@@ -84,7 +128,8 @@ export function LibraryTab({ scripts }: LibraryTabProps) {
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -93,7 +138,7 @@ export function LibraryTab({ scripts }: LibraryTabProps) {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-6"
           style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-          onClick={() => setOpen(null)}
+          onClick={closeOpen}
         >
           <div
             className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6"
@@ -118,7 +163,7 @@ export function LibraryTab({ scripts }: LibraryTabProps) {
               </div>
               <button
                 className="oo-btn-ghost px-3 py-1.5 text-xs"
-                onClick={() => setOpen(null)}
+                onClick={closeOpen}
               >
                 Close
               </button>

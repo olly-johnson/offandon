@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import type { ScriptLibraryRow } from "@/engines/content/persistence";
 
@@ -14,13 +15,22 @@ interface ScriptsTabsProps {
 }
 
 export function ScriptsTabs({ libraryScripts }: ScriptsTabsProps) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("create");
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   return (
     <div className="space-y-5">
       <div className="flex" style={{ borderBottom: "1px solid var(--oo-border)" }}>
         {(["create", "library", "ideas"] as const).map((t) => (
-          <TabButton key={t} active={tab === t} onClick={() => setTab(t)}>
+          <TabButton
+            key={t}
+            active={tab === t}
+            onClick={() => {
+              if (t !== tab) setHighlightId(null);
+              setTab(t);
+            }}
+          >
             {t === "create"
               ? "Create Script"
               : t === "library"
@@ -30,8 +40,20 @@ export function ScriptsTabs({ libraryScripts }: ScriptsTabsProps) {
         ))}
       </div>
 
-      {tab === "create" ? <ScriptWizard /> : null}
-      {tab === "library" ? <LibraryTab scripts={libraryScripts} /> : null}
+      {tab === "create" ? (
+        <ScriptWizard
+          onSaved={(id) => {
+            // Refresh server-rendered libraryScripts so the new row is
+            // included, then jump to the Library tab and auto-open it.
+            router.refresh();
+            setHighlightId(id);
+            setTab("library");
+          }}
+        />
+      ) : null}
+      {tab === "library" ? (
+        <LibraryTab scripts={libraryScripts} highlightId={highlightId} />
+      ) : null}
       {tab === "ideas" ? (
         <div className="oo-card-static p-8 text-center">
           <span className="gold-tag mb-4">Coming soon</span>

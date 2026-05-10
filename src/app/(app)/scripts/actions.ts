@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
@@ -214,6 +215,8 @@ export async function saveScriptToLibraryAction(input: {
       voiceDnaSnapshot: dna,
     });
     log.info("script saved to library", { user_id: user.id, script_id: id });
+    // Re-render the Scripts page so the Library tab picks up the new row.
+    revalidatePath("/scripts");
     return { id };
   } catch (err) {
     log.error("saveScriptToLibraryAction failed", {

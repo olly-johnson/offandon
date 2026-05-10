@@ -35,7 +35,7 @@ function totalPct(s: HookScore): number {
   );
 }
 
-export function ScriptWizard() {
+export function ScriptWizard({ onSaved }: { onSaved?: (id: string) => void }) {
   const [step, setStep] = useState(1);
   const [concept, setConcept] = useState("");
   const [imf, setImf] = useState<IMF>({ idea: "", message: "", feel: "" });
@@ -126,6 +126,7 @@ export function ScriptWizard() {
       return;
     }
     setSavedId(res.id);
+    onSaved?.(res.id);
   }
 
   return (
