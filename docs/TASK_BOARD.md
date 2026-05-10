@@ -54,7 +54,7 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-035 | "Save that as an idea" — give Chat the `save_idea` tool (Anthropic tool-use). New `ideas` table + `/ideas` page. `/scripts` Generate flow can pull from saved ideas as a pillar override. | - | Todo | - |
 | BO-036 | Methodology layer: per-user evergreen principles editable in `/settings/methodology`. Persisted in `profiles.methodology` (text). Injected into chat + scripts system prompts. | - | Todo | - |
 | BO-037 | Methodology layer: load `docs/methodology/01-house.md` + per-surface slice (`02-chat.md` etc.) into chat + scripts + analyst system prompts via the same `extractSection` pattern as the Manifesto. | - | Todo | - |
-| BO-038 | Onboarding refresh: add ICP expansion (2am thoughts, internal battles, dreams), story bank seeds, contrarian belief, signature phrases, example creators. See `docs/methodology/05-onboarding-updates.md`. | - | Todo | - |
+| BO-038 | Onboarding refresh: add ICP expansion (2am thoughts, internal battles, dreams), story bank seeds, contrarian belief, signature phrases, example creators. See `docs/methodology/05-onboarding-updates.md`. | claude | In Progress | feature/onboarding-refresh |
 | BO-039 | Methodology validators: extend anti-slop with structural checks (SCCCC ≥ 3/5 on hooks, ≥ 3 Connection Points per script, word count gate). Wire into ScriptGenerator pre-submission gate. | - | Todo | - |
 
 ## Phase 1. Pending

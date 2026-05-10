@@ -35,7 +35,18 @@ const FIXTURE_ANSWERS: OnboardingAnswers = {
   voice_samples: ["Direct, peer-to-peer."],
   what_works: "Specific case studies.",
   where_stuck: "Lead conversion.",
-  target_audience: "Coaches under 5K MRR.",
+  icp: {
+    pain_points: ["Inconsistent leads"],
+    desires: ["Predictable revenue"],
+    thoughts_at_2am: ["Am I helping anyone?"],
+    internal_battles: ["Depth vs volume"],
+    dreams: ["Brand peers respect"],
+  },
+  positioning: {
+    core_philosophy: "Coaches grow by becoming someone worth paying.",
+    contrarian_belief: "Cold DMs at scale wreck your brand.",
+    differentiator: "I run coaching like a product.",
+  },
 };
 
 function mockClientWithRpc(
