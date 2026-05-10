@@ -1,15 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { listBatchesForUser } from "@/engines/content/persistence";
+import { Topbar } from "@/components/app-shell/topbar";
+import { listScriptsForUser } from "@/engines/content/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
+import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 
-import { Topbar } from "@/components/app-shell/topbar";
-
-import { AutoRefresh } from "./auto-refresh";
-import { GenerateButton } from "./generate-button";
-import { StatusBadge } from "./status-badge";
+import { ScriptsTabs } from "./tabs";
 
 const log = createLogger("page.scripts");
 
@@ -24,84 +22,76 @@ export default async function ScriptsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
-  const batches = await listBatchesForUser(supabase, user.id, 20);
-  const hasInFlight = batches.some((b) => b.status === "pending" || b.status === "running");
+  const dna = await getCurrentVoiceDNA(supabase, user.id);
+  if (!dna) {
+    return (
+      <>
+        <Topbar title="Scripts" />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="oo-card-static max-w-md p-8 text-center">
+            <h2
+              className="text-xl font-semibold"
+              style={{ color: "var(--oo-text-primary)" }}
+            >
+              Finish onboarding first
+            </h2>
+            <p
+              className="mt-2 text-sm"
+              style={{ color: "var(--oo-text-secondary)" }}
+            >
+              The wizard runs against your Voice DNA.{" "}
+              <Link
+                href="/onboarding"
+                className="underline"
+                style={{ color: "var(--oo-gold)" }}
+              >
+                Run onboarding
+              </Link>{" "}
+              to unlock it.
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
-  log.debug("scripts page rendered", { user_id: user.id, batch_count: batches.length, in_flight: hasInFlight });
+  const libraryScripts = await listScriptsForUser(supabase, user.id, 50);
+  log.debug("scripts page rendered", {
+    user_id: user.id,
+    library_count: libraryScripts.length,
+  });
 
   return (
     <>
       <Topbar title="Scripts" />
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto flex max-w-3xl flex-col">
-          {hasInFlight ? <AutoRefresh /> : null}
-
-          <header className="mb-8 flex items-start justify-between gap-4">
+        <div className="mx-auto flex max-w-6xl flex-col">
+          <header className="mb-6 flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight">Scripts</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Bot OS generates 7 scripts per batch, grounded in your Voice DNA.
+              <h2
+                className="text-2xl font-bold"
+                style={{
+                  color: "var(--oo-text-primary)",
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                Scripts
+              </h2>
+              <p className="mt-1 text-sm" style={{ color: "var(--oo-text-secondary)" }}>
+                Build a single script step by step, browse your library, or pull from saved
+                ideas.
               </p>
             </div>
-            <GenerateButton disabled={hasInFlight} />
+            <Link href="/scripts/batches">
+              <button className="gold-btn-outline px-4 py-2 text-xs">
+                Weekly batches &rarr;
+              </button>
+            </Link>
           </header>
 
-          {batches.length === 0 ? (
-            <section className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-              No batches yet. Hit &ldquo;Generate this week&rdquo; to kick off the first one.
-            </section>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {batches.map((b) => (
-                <li
-                  key={b.id}
-                  className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/30"
-                >
-                  <Link
-                    href={`/scripts/${b.id}`}
-                    className="flex items-center justify-between gap-4"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <p className="text-sm">
-                        Batch of {b.count_requested}
-                        {b.count_generated > 0 && b.count_generated !== b.count_requested
-                          ? ` (${b.count_generated} generated)`
-                          : ""}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Started {formatRelative(b.created_at)}
-                        {b.completed_at
-                          ? `, finished in ${diffMs(b.created_at, b.completed_at)}s`
-                          : ""}
-                      </p>
-                      {b.failure_reason ? (
-                        <p className="text-xs text-destructive">{b.failure_reason}</p>
-                      ) : null}
-                    </div>
-                    <StatusBadge status={b.status} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ScriptsTabs libraryScripts={libraryScripts} />
         </div>
       </div>
     </>
   );
-}
-
-function formatRelative(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const sec = Math.floor(ms / 1000);
-  if (sec < 60) return `${sec}s ago`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  return `${day}d ago`;
-}
-
-function diffMs(start: string, end: string): number {
-  return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 1000);
 }

@@ -148,7 +148,7 @@ export default async function DashboardPage() {
                         <td className="py-2.5">
                           {s.batch_id ? (
                             <Link
-                              href={`/scripts/${s.batch_id}`}
+                              href={`/scripts/batches/${s.batch_id}`}
                               className="text-xs"
                               style={{ color: "var(--oo-gold)" }}
                             >

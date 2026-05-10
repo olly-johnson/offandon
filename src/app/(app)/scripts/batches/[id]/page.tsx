@@ -48,7 +48,7 @@ export default async function BatchDetailPage({
         <div className="mx-auto flex max-w-3xl flex-col">
           {inFlight ? <AutoRefresh /> : null}
 
-          <Link href="/scripts" className="text-xs text-muted-foreground hover:text-foreground">
+          <Link href="/scripts/batches" className="text-xs text-muted-foreground hover:text-foreground">
             ← All batches
           </Link>
 
