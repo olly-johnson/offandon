@@ -41,10 +41,21 @@ Single source of truth for in-flight and completed work. Update when starting a 
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-029 | Migration: conversations + messages + delete_user_data update + service_role grants | claude | In Progress | feature/chat-surface |
-| BO-030 | Chat engine: types + system-prompt + ChatEngine + IChatLLMClient + tests | claude | In Progress | feature/chat-surface |
-| BO-031 | Chat persistence: createConversation, listConversationsForUser, getConversationWithMessages, appendMessage | claude | In Progress | feature/chat-surface |
-| BO-032 | /chat list + /chat/[id] thread + send/start server actions + dashboard link | claude | In Progress | feature/chat-surface |
+| BO-029 | Migration: conversations + messages + delete_user_data update + service_role grants | claude | Done | PR #6 |
+| BO-030 | Chat engine: types + system-prompt + ChatEngine + IChatLLMClient + tests | claude | Done | PR #6 |
+| BO-031 | Chat persistence: createConversation, listConversationsForUser, getConversationWithMessages, appendMessage | claude | Done | PR #6 |
+| BO-032 | /chat list + /chat/[id] thread + send/start server actions + dashboard link | claude | Done | PR #6 |
+
+## Phase 4. Personalization (planned)
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-034 | User Memory: post-chat Haiku extractor (Inngest) writes structured facts to a `user_memory` jsonb. Inject into chat + scripts system prompts. Should learn iteratively, not overwrite. | - | Todo | - |
+| BO-035 | "Save that as an idea" — give Chat the `save_idea` tool (Anthropic tool-use). New `ideas` table + `/ideas` page. `/scripts` Generate flow can pull from saved ideas as a pillar override. | - | Todo | - |
+| BO-036 | Methodology layer: per-user evergreen principles editable in `/settings/methodology`. Persisted in `profiles.methodology` (text). Injected into chat + scripts system prompts. | - | Todo | - |
+| BO-037 | Methodology layer: load `docs/methodology/01-house.md` + per-surface slice (`02-chat.md` etc.) into chat + scripts + analyst system prompts via the same `extractSection` pattern as the Manifesto. | - | Todo | - |
+| BO-038 | Onboarding refresh: add ICP expansion (2am thoughts, internal battles, dreams), story bank seeds, contrarian belief, signature phrases, example creators. See `docs/methodology/05-onboarding-updates.md`. | - | Todo | - |
+| BO-039 | Methodology validators: extend anti-slop with structural checks (SCCCC ≥ 3/5 on hooks, ≥ 3 Connection Points per script, word count gate). Wire into ScriptGenerator pre-submission gate. | - | Todo | - |
 
 ## Phase 1. Pending
 
