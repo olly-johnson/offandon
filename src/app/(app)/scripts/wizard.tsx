@@ -378,35 +378,23 @@ function Step2IMF({
       ) : null}
 
       {loading ? (
-        <div className="flex flex-col gap-4">
-          <div
-            className="flex items-center gap-3 rounded-xl px-4 py-3"
-            style={{
-              background: "var(--oo-gold-dim)",
-              border: "1px solid var(--oo-border-gold)",
-            }}
-          >
-            <Loader2
-              className="size-4 animate-spin"
-              style={{ color: "var(--oo-gold)" }}
-            />
-            <p className="text-sm font-medium" style={{ color: "var(--oo-gold)" }}>
-              Drafting IDEA, MESSAGE, and FEEL from your concept...
-            </p>
-          </div>
-          {fields.map(({ label, ph }) => (
-            <div key={label}>
-              <p className="label-xs mb-2">{label}</p>
-              <input
-                className="oo-input"
-                placeholder={ph}
-                value=""
-                disabled
-                readOnly
-                style={{ opacity: 0.5 }}
-              />
-            </div>
-          ))}
+        <div
+          className="flex flex-col items-center gap-3 rounded-xl px-6 py-10"
+          style={{
+            background: "var(--oo-gold-dim)",
+            border: "1px solid var(--oo-border-gold)",
+          }}
+        >
+          <Loader2
+            className="oo-spin size-6"
+            style={{ color: "var(--oo-gold)" }}
+          />
+          <p className="text-sm font-medium" style={{ color: "var(--oo-gold)" }}>
+            Drafting IDEA, MESSAGE, and FEEL from your concept...
+          </p>
+          <p className="text-xs" style={{ color: "var(--oo-text-secondary)" }}>
+            Usually 5 to 10 seconds.
+          </p>
         </div>
       ) : (
         fields.map(({ label, value, set, ph }) => (
