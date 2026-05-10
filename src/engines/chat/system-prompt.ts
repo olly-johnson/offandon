@@ -16,6 +16,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { VoiceDNA } from "@/engines/voice/types";
+import { METHODOLOGY_CHAT_SLICE, METHODOLOGY_HOUSE } from "@/lib/shared/methodology";
 
 const MANIFESTO_HEADER = "## ✍️ The Humanization Manifesto";
 
@@ -82,6 +83,14 @@ export function buildChatSystemPrompt(voiceDna: VoiceDNA): string {
     "----- BEGIN HUMANIZATION MANIFESTO (verbatim from AGENTS.md) -----",
     HUMANIZATION_MANIFESTO,
     "----- END HUMANIZATION MANIFESTO -----",
+    "",
+    "----- BEGIN HOUSE METHODOLOGY (verbatim from docs/methodology/01-house.md) -----",
+    METHODOLOGY_HOUSE,
+    "----- END HOUSE METHODOLOGY -----",
+    "",
+    "----- BEGIN CHAT METHODOLOGY SLICE (verbatim from docs/methodology/02-chat.md) -----",
+    METHODOLOGY_CHAT_SLICE,
+    "----- END CHAT METHODOLOGY SLICE -----",
     "",
     "----- BEGIN CREATOR'S VOICE DNA -----",
     `tone_profile.primary: ${voiceDna.tone_profile.primary}`,

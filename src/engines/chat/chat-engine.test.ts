@@ -69,6 +69,21 @@ describe("Chat system prompt", () => {
     expect(prompt).toMatch(/plain (prose|text)/i);
     expect(prompt).not.toMatch(/return only the json/i);
   });
+
+  it("embeds the house methodology so chat can answer Trust Funnel and SCCCC questions", () => {
+    const prompt = buildChatSystemPrompt(DNA);
+    expect(prompt).toContain("Trust Funnel");
+    expect(prompt).toContain("SCCCC");
+    expect(prompt).toContain("Connection Points");
+    expect(prompt).toContain("Message Lock");
+  });
+
+  it("embeds the chat slice so chat knows storytelling structure names", () => {
+    const prompt = buildChatSystemPrompt(DNA);
+    expect(prompt).toContain("Hero's Journey");
+    expect(prompt).toContain("Man in a Hole");
+    expect(prompt).toContain("peer-level operator");
+  });
 });
 
 describe("ChatEngine.reply", () => {

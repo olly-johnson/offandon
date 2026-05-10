@@ -81,6 +81,22 @@ describe("scripts system prompt", () => {
     expect(prompt).toContain("Required JSON shape");
     expect(prompt).toContain("first character of your response must be {");
   });
+
+  it("embeds the house methodology so the writer knows Trust Funnel and SCCCC", () => {
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA);
+    expect(prompt).toContain("Trust Funnel");
+    expect(prompt).toContain("SCCCC");
+    expect(prompt).toContain("Connection Points");
+    expect(prompt).toContain("Message Lock");
+  });
+
+  it("embeds the scripts slice so the writer has the full structure breakdowns and pre-submission gate", () => {
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA);
+    expect(prompt).toContain("Hero's Journey");
+    expect(prompt).toContain("Man in a Hole");
+    expect(prompt).toContain("Pre-submission gate");
+    expect(prompt).toContain("180");
+  });
 });
 
 describe("ScriptGenerator.generate", () => {
