@@ -1,14 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { listConversationsForUser } from "@/engines/chat/persistence";
-import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
-import { Topbar } from "@/components/app-shell/topbar";
-
-import { NewConversationForm } from "./new-conversation-form";
+import { startConversation } from "./actions";
+import { ChatInput } from "./chat-input";
 
 const log = createLogger("page.chat");
 
@@ -16,85 +12,75 @@ export const metadata = {
   title: "Chat · Bot OS",
 };
 
-export default async function ChatListPage() {
+const SUGGESTED_PROMPTS = [
+  "Give me 3 hook ideas for the contrarian beliefs pillar.",
+  "Critique this hook against SCCCC: ...",
+  "What is a Connection Point I am missing in this draft?",
+  "Plan my week of content across the Trust Funnel.",
+];
+
+export default async function ChatHomePage() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
-  const [dna, conversations] = await Promise.all([
-    getCurrentVoiceDNA(supabase, user.id),
-    listConversationsForUser(supabase, user.id, 30),
-  ]);
-
-  log.debug("chat list rendered", { user_id: user.id, count: conversations.length });
+  log.debug("chat empty state rendered", { user_id: user.id });
 
   return (
     <>
-      <Topbar title="Chat" />
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto flex max-w-3xl flex-col">
-          <header className="mb-8">
-            <h2 className="text-2xl font-semibold tracking-tight">Conversations</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Think out loud with your Bot OS. Replies are grounded in your Voice DNA.
-            </p>
-          </header>
-
-          {dna ? (
-            <section className="mb-10 rounded-lg border border-border bg-card p-6">
-              <h3 className="text-sm uppercase tracking-wide text-muted-foreground">
-                Start a new conversation
-              </h3>
-              <NewConversationForm />
-            </section>
-          ) : (
-            <section className="mb-10 rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-              Finish onboarding before chatting.{" "}
-              <Link href="/onboarding" className="text-primary underline">
-                Run onboarding
-              </Link>
-              .
-            </section>
-          )}
-
-          {conversations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No conversations yet.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {conversations.map((c) => (
-                <li
-                  key={c.id}
-                  className="rounded-lg border border-border bg-card transition-colors hover:bg-muted/30"
-                >
-                  <Link
-                    href={`/chat/${c.id}`}
-                    className="flex items-center justify-between gap-4 p-4"
-                  >
-                    <span className="text-sm">{c.title ?? "Untitled"}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatRelative(c.updated_at)}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6">
+        <div
+          className="flex size-12 items-center justify-center rounded-full text-lg font-bold text-white"
+          style={{
+            background: "linear-gradient(135deg, var(--oo-gold), var(--oo-gold-bright))",
+          }}
+        >
+          O
+        </div>
+        <p
+          className="text-sm font-medium"
+          style={{ color: "var(--oo-text-secondary)" }}
+        >
+          How can I help you today?
+        </p>
+        <div className="grid w-full max-w-2xl grid-cols-1 gap-2 md:grid-cols-2">
+          {SUGGESTED_PROMPTS.map((p) => (
+            <PromptCard key={p} text={p} />
+          ))}
+        </div>
+      </div>
+      <div
+        className="p-4"
+        style={{
+          borderTop: "1px solid var(--oo-border)",
+          background: "var(--oo-bg)",
+        }}
+      >
+        <div className="mx-auto max-w-3xl">
+          <ChatInput
+            action={startConversation}
+            placeholder="Ask anything..."
+            resetOnSuccess={false}
+          />
         </div>
       </div>
     </>
   );
 }
 
-function formatRelative(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const sec = Math.floor(ms / 1000);
-  if (sec < 60) return `${sec}s ago`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  return `${day}d ago`;
+function PromptCard({ text }: { text: string }) {
+  return (
+    <div
+      className="rounded-xl px-4 py-3 text-xs leading-relaxed"
+      style={{
+        background: "var(--oo-bg-raised)",
+        border: "1px solid var(--oo-border)",
+        color: "var(--oo-text-secondary)",
+      }}
+    >
+      {text}
+    </div>
+  );
 }

@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { getConversationWithMessages } from "@/engines/chat/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
-import { Topbar } from "@/components/app-shell/topbar";
-
-import { MessageForm } from "./message-form";
+import { sendMessage } from "../actions";
+import { ChatInput } from "../chat-input";
 
 const log = createLogger("page.chat.detail");
 
@@ -36,50 +34,98 @@ export default async function ConversationPage({
     message_count: result.messages.length,
   });
 
+  // Bind the conversation id to the server action so the ChatInput can
+  // call it with just (prev, form). Bound server actions stay server
+  // actions; the binding survives the client boundary.
+  const action = sendMessage.bind(null, id);
+
   return (
     <>
-      <Topbar title={result.conversation.title ?? "Conversation"} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-y-auto px-6 pt-6">
-          <div className="mx-auto flex w-full max-w-3xl flex-col">
-            <Link
-              href="/chat"
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              ← All conversations
-            </Link>
-
-            <ol className="mt-6 flex flex-col gap-4 pb-6">
-              {result.messages.length === 0 ? (
-                <li className="text-sm text-muted-foreground">
-                  No messages in this conversation yet.
-                </li>
-              ) : (
-                result.messages.map((m) => (
-                  <li
-                    key={m.id}
-                    className={
-                      m.role === "user"
-                        ? "self-end max-w-[85%] rounded-lg bg-primary px-4 py-3 text-sm text-primary-foreground"
-                        : m.role === "assistant"
-                          ? "self-start max-w-[85%] rounded-lg border border-border bg-card px-4 py-3 text-sm"
-                          : "self-center max-w-[85%] rounded-lg border border-dashed border-border px-4 py-2 text-xs text-muted-foreground"
-                    }
-                  >
-                    <p className="whitespace-pre-wrap">{m.content}</p>
-                  </li>
-                ))
-              )}
-            </ol>
-          </div>
-        </div>
-
-        <div className="border-t border-border bg-background px-6 py-4">
-          <div className="mx-auto max-w-3xl">
-            <MessageForm conversationId={id} />
-          </div>
+      <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
+        {result.messages.length === 0 ? (
+          <p
+            className="text-center text-sm"
+            style={{ color: "var(--oo-text-dim)" }}
+          >
+            No messages in this conversation yet.
+          </p>
+        ) : (
+          result.messages.map((m) => (
+            <MessageBubble key={m.id} role={m.role} content={m.content} />
+          ))
+        )}
+      </div>
+      <div
+        className="p-4"
+        style={{
+          borderTop: "1px solid var(--oo-border)",
+          background: "var(--oo-bg)",
+        }}
+      >
+        <div className="mx-auto max-w-3xl">
+          <ChatInput action={action} placeholder="Reply..." resetOnSuccess />
         </div>
       </div>
     </>
+  );
+}
+
+function MessageBubble({ role, content }: { role: string; content: string }) {
+  if (role === "system") {
+    return (
+      <div className="self-center">
+        <p
+          className="rounded-lg px-3 py-2 text-xs"
+          style={{
+            color: "var(--oo-text-dim)",
+            border: "1px dashed var(--oo-border)",
+            background: "var(--oo-bg-raised)",
+          }}
+        >
+          {content}
+        </p>
+      </div>
+    );
+  }
+
+  if (role === "user") {
+    return (
+      <div className="flex justify-end">
+        <div
+          className="max-w-[70%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed text-white"
+          style={{
+            background: "linear-gradient(135deg, var(--oo-gold), var(--oo-gold-bright))",
+            boxShadow: "var(--oo-card-shadow)",
+          }}
+        >
+          <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{content}</pre>
+        </div>
+      </div>
+    );
+  }
+
+  // assistant
+  return (
+    <div className="flex justify-start">
+      <div
+        className="mr-3 mt-1 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+        style={{
+          background: "linear-gradient(135deg, var(--oo-gold), var(--oo-gold-bright))",
+        }}
+      >
+        O
+      </div>
+      <div
+        className="max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed"
+        style={{
+          background: "var(--oo-bg-raised)",
+          border: "1px solid var(--oo-border)",
+          color: "var(--oo-text-primary)",
+          boxShadow: "var(--oo-card-shadow)",
+        }}
+      >
+        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{content}</pre>
+      </div>
+    </div>
   );
 }
