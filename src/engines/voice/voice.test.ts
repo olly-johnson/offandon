@@ -16,7 +16,32 @@ const BRO_INPUT: OnboardingAnswers = {
   ],
   what_works: "Loud confident takes that call out lazy behaviour.",
   where_stuck: "Posts get views but not the right kind of clients.",
-  target_audience: "Men 25-45 who want to look better and earn more.",
+  icp: {
+    pain_points: ["No structured coaching program", "Inconsistent client wins"],
+    desires: ["Predictable monthly revenue", "Reputation as the operator"],
+    thoughts_at_2am: ["Am I actually helping anyone?", "Did I price myself too low?"],
+    internal_battles: ["Pushing volume vs depth", "Selling vs serving"],
+    dreams: ["Own a coaching brand peers respect", "Stop trading hours for money"],
+  },
+  positioning: {
+    core_philosophy: "Coaches grow by becoming someone worth paying, not by posting more.",
+    contrarian_belief: "Cold DMs at scale wreck your brand long before they make you money.",
+    differentiator: "I run coaching like a product, not a hobby with calls attached.",
+  },
+  story_bank: {
+    rock_bottom: "October 2024, three failed launches in a row, considered closing the business.",
+    breakthrough: "Realised the problem was not my offer but my discovery call structure.",
+    current_journey: "Rebuilding the front of the funnel and documenting it.",
+  },
+  voice_signals: {
+    signature_phrases: ["operator energy", "do the work"],
+    swearing_level: "light",
+    humor_style: "dry",
+    energy: "calm_authority",
+  },
+  example_creators: [
+    { name: "Alex Hormozi", platform: "Instagram", why: "Direct teaching with proof" },
+  ],
   preferred_topics: ["client acquisition", "fitness business systems"],
 };
 
@@ -127,6 +152,16 @@ describe("VoiceDNA system prompt", () => {
     expect(prompt).toContain("anti-slop validator");
     expect(prompt).toContain("Voice DNA schema");
   });
+
+  it("tells the LLM about the structured ICP, positioning, and story bank inputs", () => {
+    const prompt = buildVoiceDNASystemPrompt();
+    // Mentions the structured input fields the wizard now collects so the
+    // model knows to weight them when distilling the DNA.
+    expect(prompt).toContain("icp");
+    expect(prompt).toContain("positioning");
+    expect(prompt).toContain("contrarian");
+    expect(prompt).toContain("story_bank");
+  });
 });
 
 describe("VoiceEngine, Scenario 1: bro-marketing input distilled to professional", () => {
@@ -142,6 +177,28 @@ describe("VoiceEngine, Scenario 1: bro-marketing input distilled to professional
     expect(system).toContain("peer-to-peer");
     expect(user).toContain("fitness coaches");
     expect(user).toContain("Crush 100K followers");
+  });
+
+  it("passes the structured ICP, positioning, and story bank through to the LLM", async () => {
+    const llm = new MockLLM(JSON.stringify(PROFESSIONAL_DNA));
+    const engine = new VoiceEngine({ llm, now: FROZEN_NOW });
+
+    await engine.generateDNA(BRO_INPUT);
+
+    const { user } = llm.calls[0];
+    // ICP axes: each one is a distinct creative angle.
+    expect(user).toContain("thoughts_at_2am");
+    expect(user).toContain("internal_battles");
+    expect(user).toContain("Pushing volume vs depth");
+    // Positioning: the contrarian stance powers SCCCC contrast/clarity.
+    expect(user).toContain("contrarian_belief");
+    expect(user).toContain("Cold DMs at scale");
+    // Story bank seeds give the Script Writer named hooks instead of fabrications.
+    expect(user).toContain("rock_bottom");
+    expect(user).toContain("three failed launches");
+    // Voice signals: the dials beyond tone_profile.
+    expect(user).toContain("swearing_level");
+    expect(user).toContain("calm_authority");
   });
 
   it("returns a VoiceDNA whose tone_profile is professional, not bro", async () => {
