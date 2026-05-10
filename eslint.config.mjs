@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Reference frontend dropped in by the user; not part of the build.
+    "examples/**",
   ]),
 ]);
 
