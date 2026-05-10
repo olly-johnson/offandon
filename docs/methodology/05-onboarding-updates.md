@@ -2,11 +2,11 @@
 
 The current onboarding (Voice DNA questionnaire) captures niche, business description, goals, voice samples, what works, where stuck, target audience, preferred topics, banned phrases. That's enough for Voice DNA but **under-feeds** the methodology in three places:
 
-1. The audience-persona it produces is shallow — `pain_points`, `aspirations`, `language_register` only. The methodology asks for **2am thoughts**, **internal battles**, and **dreams** as separate axes (the strategy template's expansion).
+1. The audience-persona it produces is shallow: `pain_points`, `aspirations`, `language_register` only. The methodology asks for **2am thoughts**, **internal battles**, and **dreams** as separate axes (the strategy template's expansion).
 2. The story bank is empty. The Script Writer needs **named, dated stories** to draw from for Hero's Journey / Man in a Hole / Challenge to Victory pieces. Without them it either fabricates (banned) or stays generic (weak).
 3. The creator's **contrarian belief** / core philosophy is not captured. Without it the model defaults to safe centrist takes that don't filter the right audience.
 
-## Proposed new fields (additive — keep all existing fields)
+## Proposed new fields (additive; keep all existing fields)
 
 ### 1. ICP expansion (replaces the current single `target_audience` string)
 
@@ -17,7 +17,7 @@ Each as a free-text field that accepts a ranked list (top 3 minimum, top 6 ideal
 | `icp_pain_points` | What keeps your ICP stuck right now? |
 | `icp_desires` | What do they dream about / what does success look like? |
 | `icp_2am_thoughts` | What do they think about lying in bed at 2am? |
-| `icp_internal_battles` | The war inside their head — what are they arguing with themselves about? |
+| `icp_internal_battles` | The war inside their head. What are they arguing with themselves about? |
 | `icp_dreams` | The big-picture life they want, beyond business. |
 
 Why split: each axis powers a different content angle. Pain points → Common Mistake / Myth Busting. 2am thoughts → Mirror Thinking lines. Internal battles → Big Goal / About Me. Dreams → BOF Selling pieces.
@@ -77,7 +77,7 @@ Why: feeds the future analyst surface (competitor gap analysis) and gives the ch
 ## Cost
 
 - Voice DNA prompt grows by maybe 200–300 tokens (the new ICP and positioning fields). Cached, so the cost is one-time per generation.
-- Database: extend `voice_dna.source_answers` schema (jsonb — additive, no migration needed) and `OnboardingAnswers` TypeScript type.
+- Database: extend `voice_dna.source_answers` schema (jsonb, additive, no migration needed) and `OnboardingAnswers` TypeScript type.
 - Onboarding form: ~6 new inputs. One additional wizard step.
 
 ## Tracking

@@ -1,23 +1,23 @@
-# Bot OS Methodology — Overview
+# Bot OS Methodology Overview
 
 Source: distilled from `/examples/` (Alex / ABS Method, Frederick Behus YouTube, etc.). The originals are agency-specific. The extraction below is **generic**: any creator using Bot OS gets it.
 
 ## Layering
 
-The methodology is layered so each surface (chat, scripts, analyst, future) loads only what it needs. Anything unused is bloat — every token in a system prompt costs latency, money, and attention.
+The methodology is layered so each surface (chat, scripts, analyst, future) loads only what it needs. Anything unused is bloat. Every token in a system prompt costs latency, money, and attention.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ Layer 1: HOUSE METHODOLOGY (loaded by every LLM-using surface)   │
 │  - Trust Equation, Trust Funnel, "show don't tell", specificity, │
 │    anti-guru positioning, conversational voice, Connection Points│
-│    (named only). 01-house.md — keep under ~700 tokens.           │
+│    (named only). See 01-house.md, kept under ~700 tokens.        │
 ├──────────────────────────────────────────────────────────────────┤
 │ Layer 2: SURFACE SLICE (one of: chat / scripts / analyst / ...)  │
 │  - Just the parts of the methodology this surface needs to ACT.  │
 │  - 02-chat.md, 03-scripts.md, 04-analyst.md.                     │
 ├──────────────────────────────────────────────────────────────────┤
-│ Layer 3: PER-USER VOICE DNA (already built — VoiceDNA)           │
+│ Layer 3: PER-USER VOICE DNA (already built; see VoiceDNA type)   │
 │  - tone, pillars, persona, prohibited phrases.                   │
 ├──────────────────────────────────────────────────────────────────┤
 │ Layer 4: PER-USER METHODOLOGY OVERLAY (future, optional)         │
@@ -37,7 +37,7 @@ The methodology is layered so each surface (chat, scripts, analyst, future) load
 
 ## Loading mechanism
 
-Same `extractSection` pattern we use for the Humanization Manifesto. Each surface's `system-prompt.ts` reads its slice + the house layer at module-load and embeds them verbatim. If a section header is renamed, the engine throws — methodology and prompts cannot drift.
+Same `extractSection` pattern we use for the Humanization Manifesto. Each surface's `system-prompt.ts` reads its slice + the house layer at module-load and embeds them verbatim. If a section header is renamed, the engine throws. Methodology and prompts cannot drift.
 
 ## File map
 
@@ -51,5 +51,5 @@ Same `extractSection` pattern we use for the Humanization Manifesto. Each surfac
 
 ## What this is NOT
 
-- A full doctrine. It distils a working agency's methodology into the smallest set of rules that actually changes outputs. Nuance lives in the source files in `/examples/` — go there if you ever need to defend a specific rule.
+- A full doctrine. It distils a working agency's methodology into the smallest set of rules that actually changes outputs. Nuance lives in the source files in `/examples/`. Go there if you ever need to defend a specific rule.
 - A copy of Alex / ABS. All client-specific positioning has been stripped. What remains is the principles any creator could plug into.

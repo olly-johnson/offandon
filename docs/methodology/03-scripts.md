@@ -1,4 +1,4 @@
-# Methodology Slice — Script Writer
+# Methodology Slice: Script Writer
 
 Loaded by the Content Engine's Script Generator on top of the house methodology. This is the heaviest slice: the Script Writer is the surface that produces finished, post-ready copy.
 
@@ -24,39 +24,39 @@ Produce short-form video scripts (Instagram Reels, TikTok) that sound like the c
 
 Each script ladders to ONE structure. Pick from the matrix. Each structure has 4 sections in fixed order.
 
-### TOF — Connect
+### TOF (Connect)
 
-**Hero's Journey** — Ordinary World → Challenge → Transformation → Return (pivot to viewer).
+**Hero's Journey.** Ordinary World → Challenge → Transformation → Return (pivot to viewer).
 
-**About Me** — Origin → Turning Point → What I Do Now → Landing (why this matters for the viewer).
+**About Me.** Origin → Turning Point → What I Do Now → Landing (why this matters for the viewer).
 
-**The Lesson** — The Experience → The Realisation → Why This Matters → Quotable close.
+**The Lesson.** The Experience → The Realisation → Why This Matters → Quotable close.
 
-**The Big Goal/Dream** — Where I Am Now → The Vision → Why This Matters → Invitation (their version).
+**The Big Goal/Dream.** Where I Am Now → The Vision → Why This Matters → Invitation (their version).
 
-**Challenge to Victory** — The Struggle → The Action → The Victory → The Lesson for the viewer.
+**Challenge to Victory.** The Struggle → The Action → The Victory → The Lesson for the viewer.
 
-**Man in a Hole** — The Fall → Rock Bottom → The Climb → The New Normal (close with hope).
+**Man in a Hole.** The Fall → Rock Bottom → The Climb → The New Normal (close with hope).
 
-**Broad → Narrow → Niche** — Universal pain → Your specific journey → What you do now and who you help → Soft CTA.
+**Broad → Narrow → Niche.** Universal pain → Your specific journey → What you do now and who you help → Soft CTA.
 
-### MOF — Nurture
+### MOF (Nurture)
 
-**The Breakthrough** — The Problem (viewer's words) → Failed Attempts → The Breakthrough → Result + Takeaway.
+**The Breakthrough.** The Problem (viewer's words) → Failed Attempts → The Breakthrough → Result + Takeaway.
 
-**Educational Tip/Hack** — The Tip (one sentence) → How-To → Why It Works → Apply This Today.
+**Educational Tip/Hack.** The Tip (one sentence) → How-To → Why It Works → Apply This Today.
 
-**Myth Busting** — The Myth → The Debunk (with evidence) → The Truth → Landing (new lens).
+**Myth Busting.** The Myth → The Debunk (with evidence) → The Truth → Landing (new lens).
 
-**Step-by-Step System** — The Framework (named) → Steps 1–2 → Steps 3+ → Tie it together.
+**Step-by-Step System.** The Framework (named) → Steps 1–2 → Steps 3+ → Tie it together.
 
-**Common Mistake** — The Mistake (viewer's words) → The Impact → The Fix → Landing.
+**Common Mistake.** The Mistake (viewer's words) → The Impact → The Fix → Landing.
 
-### BOF — Convert
+### BOF (Convert)
 
-**Authority** — The Proof (numbers, names) → The How → The Takeaway → Clear, confident CTA.
+**Authority.** The Proof (numbers, names) → The How → The Takeaway → Clear, confident CTA.
 
-**Selling Product/Service** — The Pain (deep empathy) → The Solution → The Proof → CTA (clear, natural).
+**Selling Product/Service.** The Pain (deep empathy) → The Solution → The Proof → CTA (clear, natural).
 
 ## Connection Points (use ≥ 3 per script, label them)
 
@@ -73,7 +73,7 @@ From house methodology. Apply per-piece counts:
 
 | Funnel | Style | Examples |
 |---|---|---|
-| TOF | Soft / philosophical close | "Follow the journey." Or no explicit CTA — let the close land. |
+| TOF | Soft / philosophical close | "Follow the journey." Or no explicit CTA; let the close land. |
 | MOF | Value exchange | "Comment KEYWORD and I'll send you the [resource]." |
 | BOF | Direct | "DM me KEYWORD if you want the same." / "Link in bio." |
 
@@ -106,4 +106,4 @@ If ANY item fails → DO NOT submit. Fix it.
 - Use generic motivational speak ("crushing it", "level up", "boss moves").
 - Open with a structural list ("Firstly...", "Let me tell you something...").
 - Echo the creator's Voice DNA labels back at them in the copy.
-- Promise revenue numbers in TOF/MOF — proof belongs in BOF only.
+- Promise revenue numbers in TOF/MOF. Proof belongs in BOF only.
