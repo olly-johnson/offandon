@@ -1,3 +1,5 @@
+import { LogOut, Settings } from "lucide-react";
+
 import { signout } from "@/app/(app)/dashboard/actions";
 
 import { NewChatButton, SidebarNav } from "./sidebar-nav";
@@ -8,35 +10,82 @@ interface SidebarProps {
 }
 
 export function Sidebar({ email, displayName }: SidebarProps) {
-  const initial = (displayName ?? email).slice(0, 1).toUpperCase();
+  const initials = (displayName ?? email).slice(0, 2).toUpperCase();
   const label = displayName ?? email.split("@")[0];
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card md:flex">
-      <div className="flex h-14 items-center gap-2 border-b border-border px-4">
-        <div className="flex size-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
+    <aside
+      className="hidden h-screen w-64 shrink-0 flex-col md:flex"
+      style={{
+        background: "var(--oo-bg-sidebar)",
+        borderRight: "1px solid var(--oo-border)",
+      }}
+    >
+      <div
+        className="flex items-center gap-2.5 px-4"
+        style={{ height: 56, borderBottom: "1px solid var(--oo-border)" }}
+      >
+        <div
+          className="flex size-7 items-center justify-center rounded-lg text-xs font-bold text-white"
+          style={{ background: "linear-gradient(135deg, var(--oo-gold), var(--oo-gold-bright))" }}
+        >
           O
         </div>
-        <span className="text-sm font-semibold tracking-tight">Off&amp;On OS</span>
+        <span className="text-sm font-bold" style={{ color: "var(--oo-gold)" }}>
+          Off&amp;On
+        </span>
+        <span className="text-sm font-bold" style={{ color: "var(--oo-text-primary)" }}>
+          OS
+        </span>
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
-        <NewChatButton />
-        <SidebarNav />
-      </div>
+      <NewChatButton />
+      <SidebarNav />
 
-      <form action={signout} className="border-t border-border p-3">
-        <button
-          type="submit"
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-secondary/60"
-        >
-          <span className="flex size-7 items-center justify-center rounded-full bg-secondary text-xs font-medium">
-            {initial}
-          </span>
-          <span className="flex-1 truncate">{label}</span>
-          <span className="text-xs text-muted-foreground">Sign out</span>
-        </button>
-      </form>
+      <div style={{ borderTop: "1px solid var(--oo-border)" }} className="px-3 pb-3 pt-2">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+            style={{
+              background: "var(--oo-gold-dim)",
+              color: "var(--oo-gold)",
+              border: "1px solid var(--oo-border-gold)",
+            }}
+          >
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p
+              className="truncate text-sm font-semibold"
+              style={{ color: "var(--oo-text-primary)" }}
+            >
+              {label}
+            </p>
+            <p className="text-xs" style={{ color: "var(--oo-text-dim)" }}>
+              Client
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled
+            aria-label="Settings"
+            className="rounded-lg p-1.5 disabled:opacity-50"
+            style={{ color: "var(--oo-text-dim)" }}
+          >
+            <Settings className="size-3.5" />
+          </button>
+          <form action={signout}>
+            <button
+              type="submit"
+              aria-label="Sign out"
+              className="rounded-lg p-1.5"
+              style={{ color: "var(--oo-text-dim)" }}
+            >
+              <LogOut className="size-3.5" />
+            </button>
+          </form>
+        </div>
+      </div>
     </aside>
   );
 }

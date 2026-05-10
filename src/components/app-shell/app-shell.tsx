@@ -13,7 +13,7 @@ interface AppShellProps {
  */
 export function AppShell({ email, displayName, children }: AppShellProps) {
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex h-screen w-full overflow-hidden">
       <Sidebar email={email} displayName={displayName} />
       <main className="flex flex-1 flex-col overflow-hidden">{children}</main>
     </div>

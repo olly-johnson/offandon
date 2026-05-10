@@ -3,20 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
-  Calendar as CalendarIcon,
-  GraduationCap,
+  BarChart2,
+  BookOpen,
+  Calendar,
+  FileText,
   LayoutDashboard,
   type LucideIcon,
   MessageSquare,
-  Microscope,
-  Palette,
-  PenLine,
-  ScrollText,
-  Wallet,
+  Plus,
+  Search,
+  Target,
+  Zap,
 } from "lucide-react";
-
-import { cn } from "@/lib/utils";
 
 interface NavItem {
   label: string;
@@ -27,21 +25,22 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
-  { label: "Scripts", href: "/scripts", icon: ScrollText, enabled: true },
-  { label: "Research", href: "/research", icon: Microscope, enabled: false },
-  { label: "Brand", href: "/brand", icon: Palette, enabled: false },
-  { label: "Calendar", href: "/calendar", icon: CalendarIcon, enabled: false },
-  { label: "Performance", href: "/performance", icon: BarChart3, enabled: false },
-  { label: "Chats", href: "/chat", icon: MessageSquare, enabled: true },
-  { label: "Off&On Pocket", href: "/pocket", icon: Wallet, enabled: false },
-  { label: "Learn", href: "/learn", icon: GraduationCap, enabled: false },
+  { label: "Scripts", href: "/scripts", icon: FileText, enabled: true },
+  { label: "Research", href: "/research", icon: Search, enabled: false },
+  { label: "Brand", href: "/brand", icon: Target, enabled: false },
+  { label: "Calendar", href: "/calendar", icon: Calendar, enabled: false },
+  { label: "Performance", href: "/performance", icon: BarChart2, enabled: false },
+  { label: "Chat", href: "/chat", icon: MessageSquare, enabled: true },
+  { label: "Off&On Pocket", href: "/pocket", icon: Zap, enabled: false },
+  { label: "Learn", href: "/learn", icon: BookOpen, enabled: false },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex-1 overflow-y-auto py-1.5">
+      <p className="label-xs px-4 pb-2 pt-2">Navigation</p>
       {NAV.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
@@ -50,18 +49,14 @@ export function SidebarNav() {
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-              active
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-              !item.enabled && "opacity-60",
-            )}
+            className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-all ${
+              active ? "sidebar-active" : "sidebar-item"
+            }`}
           >
-            <Icon className="size-4" />
+            <Icon className="size-4 shrink-0" />
             <span className="flex-1">{item.label}</span>
             {!item.enabled ? (
-              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <span className="rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide" style={{ background: "var(--oo-bg-hover)", color: "var(--oo-text-dim)" }}>
                 Soon
               </span>
             ) : null}
@@ -74,12 +69,14 @@ export function SidebarNav() {
 
 export function NewChatButton() {
   return (
-    <Link
-      href="/chat"
-      className="flex items-center justify-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80"
-    >
-      <PenLine className="size-4" />
-      New chat
-    </Link>
+    <div className="px-3 pb-2 pt-3">
+      <Link
+        href="/chat"
+        className="gold-btn-outline flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-xs"
+      >
+        <Plus className="size-3.5" />
+        New chat
+      </Link>
+    </div>
   );
 }

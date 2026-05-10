@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Lightbulb, MessageCircleQuestion, ScrollText, Video } from "lucide-react";
+import { FileText, Lightbulb, Search, Sparkles, Zap } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Topbar } from "@/components/app-shell/topbar";
+import { MetricCard } from "@/components/app-shell/metric-card";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
@@ -29,8 +29,7 @@ export default async function DashboardPage() {
     getCurrentVoiceDNA(supabase, user.id),
   ]);
   const suggestions = buildSuggestions(snapshot);
-  const greetingName = user.email?.split("@")[0] ?? "there";
-  const greeting = `${timeOfDayGreeting()}, ${greetingName}`;
+  const firstName = user.email?.split("@")[0] ?? "there";
 
   log.debug("dashboard rendered", {
     user_id: user.id,
@@ -44,28 +43,203 @@ export default async function DashboardPage() {
       <Topbar title="Dashboard" />
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto flex max-w-6xl flex-col gap-6">
-          <h2 className="text-2xl font-semibold tracking-tight">{greeting}</h2>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="mb-1 text-xs" style={{ color: "var(--oo-text-dim)" }}>
+                {formatDate()}
+              </p>
+              <h2
+                className="text-2xl font-bold"
+                style={{ color: "var(--oo-text-primary)", letterSpacing: "-0.03em" }}
+              >
+                {timeOfDayGreeting()}, {firstName}
+              </h2>
+            </div>
+          </div>
 
-          <MetricRow
-            scripts={snapshot.totals.scripts}
-            batches={snapshot.totals.batches}
-            conversations={snapshot.totals.conversations}
-          />
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <MetricCard
+              label="Followers"
+              value="n/a"
+              trend="Connect Instagram"
+              up={null}
+              sub="not yet linked"
+            />
+            <MetricCard
+              label="Total scripts"
+              value={snapshot.totals.scripts.toLocaleString()}
+              sub="all time"
+            />
+            <MetricCard
+              label="Recent batches"
+              value={snapshot.totals.batches.toLocaleString()}
+              sub="last 5"
+            />
+            <MetricCard
+              label="Conversations"
+              value={snapshot.totals.conversations.toLocaleString()}
+              sub="active threads"
+            />
+          </div>
 
-          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-            <ContentPlanCard
-              recentScripts={snapshot.recentScripts}
-              hasDna={Boolean(dna)}
-            />
-            <FunnelBalanceCard
-              percent={snapshot.funnelPercent}
-              total={snapshot.funnel.total}
-            />
+          <div className="grid gap-5 lg:grid-cols-3">
+            <div className="oo-card-static p-6 lg:col-span-2">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h3
+                    className="text-sm font-bold"
+                    style={{ color: "var(--oo-text-primary)" }}
+                  >
+                    This week&apos;s content plan
+                  </h3>
+                  <p
+                    className="mt-0.5 text-xs"
+                    style={{ color: "var(--oo-text-dim)" }}
+                  >
+                    {snapshot.recentScripts.length} scripts across recent batches
+                  </p>
+                </div>
+                {dna ? (
+                  <Link href="/scripts">
+                    <button className="gold-btn flex items-center gap-1.5 px-4 py-2.5 text-xs">
+                      <Zap className="size-3.5" /> Generate plan
+                    </button>
+                  </Link>
+                ) : (
+                  <Link href="/onboarding">
+                    <button className="gold-btn-outline px-4 py-2.5 text-xs">
+                      Finish onboarding
+                    </button>
+                  </Link>
+                )}
+              </div>
+
+              {snapshot.recentScripts.length === 0 ? (
+                <p
+                  className="py-8 text-center text-sm"
+                  style={{ color: "var(--oo-text-dim)" }}
+                >
+                  No scripts yet. Hit &ldquo;Generate plan&rdquo; to create your first batch.
+                </p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--oo-border)" }}>
+                      <th className="label-xs pb-3 pr-4 text-left">Script</th>
+                      <th className="label-xs pb-3 pr-4 text-left">Status</th>
+                      <th className="label-xs pb-3 text-left">Open</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {snapshot.recentScripts.map((s) => (
+                      <tr
+                        key={s.id}
+                        style={{ borderBottom: "1px solid var(--oo-border-subtle)" }}
+                      >
+                        <td
+                          className="max-w-[320px] truncate py-2.5 pr-4 font-medium"
+                          style={{ color: "var(--oo-text-primary)" }}
+                        >
+                          {s.title}
+                        </td>
+                        <td className="py-2.5 pr-4">
+                          <span className="gold-tag">{s.status}</span>
+                        </td>
+                        <td className="py-2.5">
+                          {s.batch_id ? (
+                            <Link
+                              href={`/scripts/${s.batch_id}`}
+                              className="text-xs"
+                              style={{ color: "var(--oo-gold)" }}
+                            >
+                              View batch
+                            </Link>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="oo-card-static flex flex-col p-6">
+              <div className="mb-4">
+                <h3
+                  className="text-sm font-bold"
+                  style={{ color: "var(--oo-text-primary)" }}
+                >
+                  Trust Funnel balance
+                </h3>
+                <p
+                  className="mt-0.5 text-xs"
+                  style={{ color: "var(--oo-text-dim)" }}
+                >
+                  Target: 50% Connect / 35% Nurture / 15% Convert
+                </p>
+              </div>
+              <div className="flex flex-1 flex-col items-center justify-center gap-4">
+                <FunnelChart
+                  percent={snapshot.funnelPercent}
+                  total={snapshot.funnel.total}
+                />
+              </div>
+            </div>
           </div>
 
           <QuickActions />
 
-          <SuggestionsCard suggestions={suggestions} />
+          {suggestions.length > 0 ? (
+            <div className="oo-card-static p-6">
+              <div className="mb-5 flex items-center gap-2.5">
+                <div
+                  className="flex size-8 items-center justify-center rounded-xl"
+                  style={{
+                    background: "var(--oo-gold-dim)",
+                    border: "1px solid var(--oo-border-gold)",
+                  }}
+                >
+                  <Sparkles className="size-4" style={{ color: "var(--oo-gold)" }} />
+                </div>
+                <div>
+                  <h3
+                    className="text-sm font-bold"
+                    style={{ color: "var(--oo-text-primary)" }}
+                  >
+                    AI suggestions
+                  </h3>
+                  <p className="text-xs" style={{ color: "var(--oo-text-dim)" }}>
+                    Based on your recent batches
+                  </p>
+                </div>
+              </div>
+              {suggestions.map((s, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 py-3.5"
+                  style={{
+                    borderBottom:
+                      i < suggestions.length - 1
+                        ? "1px solid var(--oo-border-subtle)"
+                        : "none",
+                  }}
+                >
+                  <div
+                    className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg"
+                    style={{ background: "var(--oo-bg-hover)" }}
+                  >
+                    <Sparkles className="size-3.5" style={{ color: "var(--oo-gold)" }} />
+                  </div>
+                  <p
+                    className="flex-1 text-sm leading-relaxed"
+                    style={{ color: "var(--oo-text-secondary)" }}
+                  >
+                    {s.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     </>
@@ -75,191 +249,98 @@ export default async function DashboardPage() {
 function timeOfDayGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
+  if (h < 17) return "Good afternoon";
   return "Good evening";
 }
 
-function MetricRow({
-  scripts,
-  batches,
-  conversations,
-}: {
-  scripts: number;
-  batches: number;
-  conversations: number;
-}) {
-  const cards = [
-    { label: "Total followers", value: "n/a", hint: "Connect Instagram" },
-    { label: "Total scripts", value: scripts.toLocaleString(), hint: "" },
-    { label: "Recent batches", value: batches.toLocaleString(), hint: "" },
-    { label: "Conversations", value: conversations.toLocaleString(), hint: "" },
-  ];
-  return (
-    <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {cards.map((c) => (
-        <li
-          key={c.label}
-          className="rounded-lg border border-border bg-card p-4"
-        >
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{c.label}</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">{c.value}</p>
-          {c.hint ? (
-            <p className="mt-1 text-xs text-muted-foreground">{c.hint}</p>
-          ) : null}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ContentPlanCard({
-  recentScripts,
-  hasDna,
-}: {
-  recentScripts: Array<{ id: string; title: string; status: string; batch_id: string | null }>;
-  hasDna: boolean;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-card p-6">
-      <header className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-semibold">This week&apos;s content plan</h3>
-          <p className="text-xs text-muted-foreground">Last 12 scripts across your batches.</p>
-        </div>
-        {hasDna ? (
-          <Link href="/scripts">
-            <Button size="sm">Generate plan</Button>
-          </Link>
-        ) : (
-          <Link href="/onboarding">
-            <Button size="sm" variant="outline">Finish onboarding</Button>
-          </Link>
-        )}
-      </header>
-
-      {recentScripts.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          No scripts yet. Hit &ldquo;Generate plan&rdquo; to kick off the first batch.
-        </p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-border">
-          {recentScripts.map((s) => (
-            <li key={s.id} className="flex items-center justify-between gap-3 py-2.5">
-              <Link
-                href={s.batch_id ? `/scripts/${s.batch_id}` : "/scripts"}
-                className="flex-1 truncate text-sm hover:text-primary"
-              >
-                {s.title}
-              </Link>
-              <span className="rounded bg-secondary px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                {s.status}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function FunnelBalanceCard({
-  percent,
-  total,
-}: {
-  percent: { TOF: number; MOF: number; BOF: number };
-  total: number;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-card p-6">
-      <h3 className="text-sm font-semibold">Trust Funnel balance</h3>
-      <p className="mb-4 text-xs text-muted-foreground">Target 50 / 35 / 15.</p>
-      <FunnelChart percent={percent} total={total} />
-    </section>
-  );
+function formatDate(): string {
+  return new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function QuickActions() {
   const actions = [
     {
-      icon: ScrollText,
+      icon: FileText,
       title: "Generate scripts",
-      blurb: "7 fresh scripts grounded in your Voice DNA.",
+      desc: "Create this week's scripts from your Voice DNA.",
       href: "/scripts",
-      cta: "Open Scripts",
-      disabled: false,
+      cta: "Generate now",
+      primary: true,
     },
     {
-      icon: MessageCircleQuestion,
+      icon: Lightbulb,
       title: "I'm stuck",
-      blurb: "Talk it out. Chat will sound like you and apply your methodology.",
+      desc: "Talk it out. Chat applies your methodology and voice.",
       href: "/chat",
-      cta: "Start chat",
-      disabled: false,
+      cta: "Start",
+      primary: false,
     },
     {
-      icon: Video,
+      icon: Search,
       title: "Analyse a video",
-      blurb: "Paste a competitor's reel and get a Trust-Funnel audit.",
+      desc: "Paste a competitor's reel for a Trust Funnel breakdown.",
       href: "/research",
       cta: "Coming soon",
+      primary: false,
       disabled: true,
     },
   ];
 
   return (
-    <section>
-      <h3 className="mb-3 text-sm font-semibold">Quick actions</h3>
-      <ul className="grid gap-3 md:grid-cols-3">
-        {actions.map((a) => {
-          const Icon = a.icon;
-          return (
-            <li
-              key={a.title}
-              className="rounded-lg border border-border bg-card p-4"
-            >
-              <div className="flex items-center gap-2">
-                <Icon className="size-4 text-primary" />
-                <h4 className="text-sm font-medium">{a.title}</h4>
+    <div>
+      <p
+        className="mb-3 text-xs font-semibold"
+        style={{ color: "var(--oo-text-secondary)" }}
+      >
+        Quick actions
+      </p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {actions.map(({ icon: Icon, title, desc, href, cta, primary, disabled }) => {
+          const Inner = (
+            <div className="oo-card cursor-pointer p-5">
+              <div
+                className="mb-4 flex size-9 items-center justify-center rounded-xl"
+                style={{
+                  background: "var(--oo-gold-dim)",
+                  border: "1px solid var(--oo-border-gold)",
+                }}
+              >
+                <Icon className="size-4" style={{ color: "var(--oo-gold)" }} />
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">{a.blurb}</p>
-              <div className="mt-4">
-                {a.disabled ? (
-                  <Button size="sm" variant="outline" disabled>
-                    {a.cta}
-                  </Button>
-                ) : (
-                  <Link href={a.href}>
-                    <Button size="sm">{a.cta}</Button>
-                  </Link>
-                )}
-              </div>
-            </li>
+              <p
+                className="mb-1 text-sm font-semibold"
+                style={{ color: "var(--oo-text-primary)" }}
+              >
+                {title}
+              </p>
+              <p
+                className="mb-4 text-xs leading-relaxed"
+                style={{ color: "var(--oo-text-secondary)" }}
+              >
+                {desc}
+              </p>
+              <button
+                disabled={disabled}
+                className={`rounded-lg px-4 py-2 text-xs font-semibold ${primary ? "gold-btn" : "gold-btn-outline"}`}
+              >
+                {cta}
+              </button>
+            </div>
+          );
+          return disabled ? (
+            <div key={title}>{Inner}</div>
+          ) : (
+            <Link key={title} href={href}>
+              {Inner}
+            </Link>
           );
         })}
-      </ul>
-    </section>
-  );
-}
-
-function SuggestionsCard({
-  suggestions,
-}: {
-  suggestions: Array<{ kind: string; text: string }>;
-}) {
-  if (suggestions.length === 0) return null;
-  return (
-    <section className="rounded-lg border border-border bg-card p-6">
-      <header className="mb-3 flex items-center gap-2">
-        <Lightbulb className="size-4 text-primary" />
-        <h3 className="text-sm font-semibold">AI suggestions</h3>
-      </header>
-      <ul className="flex flex-col gap-2 text-sm">
-        {suggestions.map((s, i) => (
-          <li key={i} className="rounded-md border border-border bg-background p-3">
-            {s.text}
-          </li>
-        ))}
-      </ul>
-    </section>
+      </div>
+    </div>
   );
 }
