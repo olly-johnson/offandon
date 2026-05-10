@@ -37,6 +37,15 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-024 | service_role grant backfill on Phase 0 tables (migration 20260509000002) | claude | Done | PR #5 |
 | BO-025 | Inngest catch-path: don't shadow original error if mark-failed itself fails | claude | Done | PR #5 |
 
+## Phase 3. Chat surface
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-029 | Migration: conversations + messages + delete_user_data update + service_role grants | claude | In Progress | feature/chat-surface |
+| BO-030 | Chat engine: types + system-prompt + ChatEngine + IChatLLMClient + tests | claude | In Progress | feature/chat-surface |
+| BO-031 | Chat persistence: createConversation, listConversationsForUser, getConversationWithMessages, appendMessage | claude | In Progress | feature/chat-surface |
+| BO-032 | /chat list + /chat/[id] thread + send/start server actions + dashboard link | claude | In Progress | feature/chat-surface |
+
 ## Phase 1. Pending
 
 | Task ID | Description | Owner | Status | Branch / PR |

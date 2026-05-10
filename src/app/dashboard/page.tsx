@@ -106,8 +106,24 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      <section className="mt-6 rounded-lg border border-border bg-card p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm uppercase tracking-wide text-muted-foreground">Chat</h2>
+            <p className="mt-3 text-sm">
+              Think out loud with your Bot OS. Replies are grounded in your Voice DNA.
+            </p>
+          </div>
+          <Link href="/chat">
+            <Button variant="ghost" size="sm">
+              Open chat
+            </Button>
+          </Link>
+        </div>
+      </section>
+
       <p className="mt-8 text-xs text-muted-foreground">
-        Dashboard is a stub. Chat and IG analytics land in upcoming PRs.
+        Dashboard is a stub. IG analytics lands in an upcoming PR.
       </p>
     </main>
   );
