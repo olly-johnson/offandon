@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { CheckCircle, Copy, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle, Copy, Loader2, RefreshCw } from "lucide-react";
 
 import {
   extractIMFAction,
@@ -56,8 +56,6 @@ export function ScriptWizard({ onSaved }: { onSaved?: (id: string) => void }) {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-
-  const [, startTransition] = useTransition();
 
   async function autoExtractIMF(force = false) {
     if (!concept.trim() || concept.trim().length < 8) return;
@@ -139,8 +137,12 @@ export function ScriptWizard({ onSaved }: { onSaved?: (id: string) => void }) {
           setConcept={setConcept}
           onContinue={() => {
             if (concept.trim().length >= 8) {
+              // Set both states synchronously so React batches them and
+              // Step 2 paints with loading=true on its first render.
+              setImfLoading(true);
+              setImfError("");
               setStep(2);
-              startTransition(() => autoExtractIMF());
+              autoExtractIMF();
             }
           }}
         />
@@ -376,9 +378,36 @@ function Step2IMF({
       ) : null}
 
       {loading ? (
-        <p className="text-sm" style={{ color: "var(--oo-text-dim)" }}>
-          Extracting IDEA / MESSAGE / FEEL...
-        </p>
+        <div className="flex flex-col gap-4">
+          <div
+            className="flex items-center gap-3 rounded-xl px-4 py-3"
+            style={{
+              background: "var(--oo-gold-dim)",
+              border: "1px solid var(--oo-border-gold)",
+            }}
+          >
+            <Loader2
+              className="size-4 animate-spin"
+              style={{ color: "var(--oo-gold)" }}
+            />
+            <p className="text-sm font-medium" style={{ color: "var(--oo-gold)" }}>
+              Drafting IDEA, MESSAGE, and FEEL from your concept...
+            </p>
+          </div>
+          {fields.map(({ label, ph }) => (
+            <div key={label}>
+              <p className="label-xs mb-2">{label}</p>
+              <input
+                className="oo-input"
+                placeholder={ph}
+                value=""
+                disabled
+                readOnly
+                style={{ opacity: 0.5 }}
+              />
+            </div>
+          ))}
+        </div>
       ) : (
         fields.map(({ label, value, set, ph }) => (
           <div key={label}>
