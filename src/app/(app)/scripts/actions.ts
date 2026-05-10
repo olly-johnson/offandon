@@ -1,59 +1,228 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createScriptBatch } from "@/engines/content/persistence";
+import {
+  HookGenerator,
+  IMFExtractor,
+  SingleScriptGenerator,
+  type GeneratedHookBatch,
+  type GeneratedSingleScript,
+  type IMF,
+} from "@/engines/content";
+import { saveSingleScript } from "@/engines/content/persistence";
+import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
-import { createLogger } from "@/lib/shared/logger";
-import { INNGEST_EVENTS, inngest } from "@/lib/shared/inngest/client";
+import { SlopError } from "@/lib/shared/anti-slop";
+import { createLogger, timed } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
-const log = createLogger("scripts.generate");
+const log = createLogger("scripts.wizard.actions");
 
-export type GenerateState = { error?: string };
+export type WizardError = { error: string };
 
-const DEFAULT_COUNT = 7;
+/**
+ * Step 2: extract IMF (Idea / Message / Feel) from the concept.
+ * Called from the client when the user lands on step 2 with a concept.
+ */
+export async function extractIMFAction(
+  concept: string,
+): Promise<{ imf: IMF } | WizardError> {
+  if (!concept || concept.trim().length < 8) {
+    return { error: "Concept is too short to extract from. Add a couple of sentences first." };
+  }
 
-export async function startGeneration(): Promise<GenerateState> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    log.warn("startGeneration without user");
+    log.warn("extractIMFAction without user");
     redirect("/signin");
   }
-
   const dna = await getCurrentVoiceDNA(supabase, user.id);
-  if (!dna) {
-    log.warn("startGeneration without DNA", { user_id: user.id });
-    return { error: "You need to complete onboarding before we can generate scripts." };
-  }
-
-  let batchId: string;
-  try {
-    batchId = await createScriptBatch(supabase, {
-      userId: user.id,
-      voiceDnaSnapshot: dna,
-      countRequested: DEFAULT_COUNT,
-    });
-  } catch (err) {
-    log.error("createScriptBatch failed", { user_id: user.id, error: err });
-    return { error: "Could not start generation. Try again." };
-  }
+  if (!dna) return { error: "You need to complete onboarding first." };
 
   try {
-    await inngest.send({
-      name: INNGEST_EVENTS.ScriptsBatchRequested,
-      data: { batch_id: batchId, user_id: user.id },
-    });
+    const imf = await timed(
+      log,
+      "imf.extract",
+      async () => {
+        const extractor = new IMFExtractor({ llm: new AnthropicLLMClient() });
+        return extractor.extract({ voiceDna: dna, concept });
+      },
+      { user_id: user.id, concept_chars: concept.length },
+    );
+    return { imf };
   } catch (err) {
-    log.error("inngest.send failed", { batch_id: batchId, user_id: user.id, error: err });
+    log.error("extractIMFAction failed", {
+      user_id: user.id,
+      slop: err instanceof SlopError,
+      error: (err as Error).message,
+    });
     return {
-      error: "Started the batch but could not enqueue the worker. Try again or contact support.",
+      error:
+        err instanceof SlopError
+          ? "The extractor produced output that failed the slop validator. Try rephrasing the concept."
+          : "Could not extract IMF. Try filling in the fields manually.",
     };
   }
+}
 
-  log.info("batch enqueued", { batch_id: batchId, user_id: user.id, count: DEFAULT_COUNT });
-  redirect(`/scripts/${batchId}`);
+/**
+ * Step 3: generate a batch of hooks from concept + (optional) IMF.
+ */
+export async function generateHooksAction(input: {
+  concept: string;
+  imf?: IMF;
+  count?: number;
+}): Promise<{ batch: GeneratedHookBatch } | WizardError> {
+  if (!input.concept || input.concept.trim().length < 8) {
+    return { error: "Concept is required." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    log.warn("generateHooksAction without user");
+    redirect("/signin");
+  }
+  const dna = await getCurrentVoiceDNA(supabase, user.id);
+  if (!dna) return { error: "You need to complete onboarding first." };
+
+  try {
+    const batch = await timed(
+      log,
+      "hooks.generate",
+      async () => {
+        const generator = new HookGenerator({ llm: new AnthropicLLMClient() });
+        return generator.generateHooks({
+          voiceDna: dna,
+          concept: input.concept,
+          imf: input.imf,
+          count: input.count ?? 6,
+        });
+      },
+      { user_id: user.id, count: input.count ?? 6 },
+    );
+    return { batch };
+  } catch (err) {
+    log.error("generateHooksAction failed", {
+      user_id: user.id,
+      slop: err instanceof SlopError,
+      error: (err as Error).message,
+    });
+    return {
+      error:
+        err instanceof SlopError
+          ? "Hooks failed the slop validator. Try regenerating."
+          : "Could not generate hooks. Try again.",
+    };
+  }
+}
+
+/**
+ * Step 4: generate ONE finished script from concept + IMF + locked hook.
+ * Optional refinement note is appended (used by step 5's regenerate).
+ */
+export async function generateSingleScriptAction(input: {
+  concept: string;
+  imf?: IMF;
+  hook: string;
+  refinement?: string;
+}): Promise<{ script: GeneratedSingleScript } | WizardError> {
+  if (!input.concept || input.concept.trim().length < 8) {
+    return { error: "Concept is required." };
+  }
+  if (!input.hook || input.hook.trim().length === 0) {
+    return { error: "Pick a hook before generating a script." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    log.warn("generateSingleScriptAction without user");
+    redirect("/signin");
+  }
+  const dna = await getCurrentVoiceDNA(supabase, user.id);
+  if (!dna) return { error: "You need to complete onboarding first." };
+
+  try {
+    const script = await timed(
+      log,
+      "single-script.generate",
+      async () => {
+        const generator = new SingleScriptGenerator({ llm: new AnthropicLLMClient() });
+        return generator.generateOne({
+          voiceDna: dna,
+          concept: input.concept,
+          imf: input.imf,
+          hook: input.hook,
+          refinement: input.refinement,
+        });
+      },
+      { user_id: user.id, hook_chars: input.hook.length, has_refinement: !!input.refinement },
+    );
+    return { script };
+  } catch (err) {
+    log.error("generateSingleScriptAction failed", {
+      user_id: user.id,
+      slop: err instanceof SlopError,
+      error: (err as Error).message,
+    });
+    return {
+      error:
+        err instanceof SlopError
+          ? "Script failed the slop validator. Try refining or regenerating."
+          : "Could not generate the script. Try again.",
+    };
+  }
+}
+
+/**
+ * Step 5: persist the finished script to the user's library. Single row,
+ * batch_id NULL, status 'draft'.
+ */
+export async function saveScriptToLibraryAction(input: {
+  hook: string;
+  body: string;
+}): Promise<{ id: string } | WizardError> {
+  if (!input.hook || !input.body) {
+    return { error: "Nothing to save. Generate a script first." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    log.warn("saveScriptToLibraryAction without user");
+    redirect("/signin");
+  }
+  const dna = await getCurrentVoiceDNA(supabase, user.id);
+  if (!dna) return { error: "You need to complete onboarding first." };
+
+  try {
+    const id = await saveSingleScript(supabase, {
+      userId: user.id,
+      hook: input.hook,
+      body: input.body,
+      voiceDnaSnapshot: dna,
+    });
+    log.info("script saved to library", { user_id: user.id, script_id: id });
+    // Re-render the Scripts page so the Library tab picks up the new row.
+    revalidatePath("/scripts");
+    return { id };
+  } catch (err) {
+    log.error("saveScriptToLibraryAction failed", {
+      user_id: user.id,
+      error: (err as Error).message,
+    });
+    return { error: "Could not save the script. Try again." };
+  }
 }

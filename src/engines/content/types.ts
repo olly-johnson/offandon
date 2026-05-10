@@ -55,3 +55,104 @@ export interface IScriptGenerator {
    */
   generate(input: GenerateScriptsInput): Promise<GeneratedBatch>;
 }
+
+/**
+ * IMF triple. Idea / Message / Feel — the three locked inputs the
+ * methodology demands before a script can be written.
+ *
+ *   idea    one sentence: what is this video specifically about
+ *   message what should the viewer walk away understanding
+ *   feel    how should they feel about the creator after watching
+ */
+export interface IMF {
+  idea: string;
+  message: string;
+  feel: string;
+}
+
+/**
+ * Hook archetype the wizard surfaces. Drawn from the methodology's
+ * SCCCC framework + the funnel-stage taxonomy in 03-scripts.md.
+ */
+export type HookType =
+  | "STORYTELLING"
+  | "CONFRONTATIONAL"
+  | "VULNERABILITY"
+  | "CURIOSITY"
+  | "PROOF"
+  | "EDUCATIONAL";
+
+/**
+ * Self-scored hook. The model rates its own hook against the
+ * methodology's primary signals so the UI can sort and recommend.
+ * All scores 0..1 inclusive.
+ */
+export interface HookScore {
+  curiosity: number;
+  specificity: number;
+  voice_match: number;
+  brevity: number;
+  identity_alignment: number;
+}
+
+export interface GeneratedHook {
+  text: string;
+  type: HookType;
+  score: HookScore;
+}
+
+export interface GeneratedHookBatch {
+  hooks: GeneratedHook[];
+  /** Index of the hook the engine recommends as the strongest. */
+  suggested_index: number;
+  meta: {
+    generated_at: string;
+  };
+}
+
+export interface GenerateHooksInput {
+  voiceDna: VoiceDNA;
+  /** Free-text concept the creator typed in step 1. */
+  concept: string;
+  /** Optional IMF triple from step 2. When present, weights heavier than concept alone. */
+  imf?: IMF;
+  /** How many hooks to generate. 4..8 supported; default 6. */
+  count?: number;
+}
+
+export interface GeneratedSingleScript {
+  hook: string;
+  body: string;
+  pillar: string;
+  angle: ScriptAngle;
+  word_count: number;
+  meta: {
+    generated_at: string;
+  };
+}
+
+export interface GenerateSingleScriptInput {
+  voiceDna: VoiceDNA;
+  concept: string;
+  imf?: IMF;
+  /** Locked hook the creator picked in step 3. */
+  hook: string;
+  /** Optional refinement note from step 5; appended to the user payload. */
+  refinement?: string;
+}
+
+export interface IIMFExtractor {
+  /**
+   * Distil a free-text concept into an IMF triple. Used by the wizard's
+   * step 2 auto-extract.
+   */
+  extract(input: { voiceDna: VoiceDNA; concept: string }): Promise<IMF>;
+}
+
+export interface IHookGenerator {
+  generateHooks(input: GenerateHooksInput): Promise<GeneratedHookBatch>;
+}
+
+export interface ISingleScriptGenerator {
+  generateOne(input: GenerateSingleScriptInput): Promise<GeneratedSingleScript>;
+}

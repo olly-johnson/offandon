@@ -353,6 +353,18 @@
     background: var(--oo-bg-hover);
     color: var(--oo-text-primary);
   }
+
+  /* Spinner used by inline loaders. Defined explicitly so it cannot
+     be stripped by the build, and won't conflict with Tailwind's own
+     animate-spin utility if that ever changes. */
+  @keyframes oo-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .oo-spin {
+    animation: oo-spin 1s linear infinite;
+    transform-origin: center;
+  }
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }

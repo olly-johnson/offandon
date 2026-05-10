@@ -159,6 +159,83 @@ export async function getBatch(
 }
 
 /**
+ * Persist one wizard-generated script. Unlike saveGeneratedScripts which
+ * is the batch path, this writes a single row with batch_id NULL,
+ * source 'generated', status 'draft'. Returns the new id.
+ */
+export async function saveSingleScript(
+  supabase: ContentSupabaseClient,
+  args: {
+    userId: string;
+    hook: string;
+    body: string;
+    voiceDnaSnapshot: VoiceDNA;
+    /** Optional title override. Defaults to truncated hook. */
+    title?: string;
+  },
+): Promise<string> {
+  const title =
+    args.title?.trim() ||
+    (args.hook.length > 80 ? `${args.hook.slice(0, 77)}...` : args.hook);
+
+  const { data, error } = await supabase
+    .from("scripts")
+    .insert({
+      user_id: args.userId,
+      batch_id: null,
+      hook: args.hook,
+      body: args.body,
+      title,
+      voice_dna_snapshot: args.voiceDnaSnapshot as unknown as Json,
+      source: "generated" as const,
+      status: "draft" as const,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    log.error("scripts insert (single) failed", {
+      user_id: args.userId,
+      code: error?.code,
+      message: error?.message,
+    });
+    throw new Error(`saveSingleScript: ${error?.message ?? "unknown"}`);
+  }
+  return data.id;
+}
+
+export interface ScriptLibraryRow {
+  id: string;
+  title: string | null;
+  hook: string | null;
+  body: string;
+  status: "draft" | "published" | "archived";
+  created_at: string;
+  updated_at: string;
+  batch_id: string | null;
+}
+
+/**
+ * Read all scripts owned by a user, newest first. Powers the wizard's
+ * Library tab. Pagination by `limit`; the caller can chain calls with
+ * `before` (created_at cursor) for infinite scroll if needed later.
+ */
+export async function listScriptsForUser(
+  supabase: ContentSupabaseClient,
+  userId: string,
+  limit = 50,
+): Promise<ScriptLibraryRow[]> {
+  const { data, error } = await supabase
+    .from("scripts")
+    .select("id, title, hook, body, status, created_at, updated_at, batch_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`listScriptsForUser: ${error.message}`);
+  return (data ?? []) as ScriptLibraryRow[];
+}
+
+/**
  * Update a batch's status. Used by the Inngest worker to mark running,
  * complete, or failed.
  */
