@@ -61,7 +61,7 @@ export interface StoryBankSeed {
 /**
  * Voice dials the methodology actually pulls when shaping a hook's energy
  * or a script's register. Distinct from `tone_profile` (which is the LLM's
- * derived label) — these are the creator's stated preferences.
+ * derived label). These are the creator's stated preferences.
  */
 export interface VoiceSignals {
   /** Phrases the creator actually uses that should appear in their content. */

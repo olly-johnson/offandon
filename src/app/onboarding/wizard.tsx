@@ -479,7 +479,7 @@ function StepAudience({
           Top 1 to {ICP_SLOTS} per axis. Rank them; the first slot matters most.
         </p>
         {ICP_AXES.map(({ key, label, hint, placeholder }) => (
-          <Field key={key} label={`${label} — ${hint}`}>
+          <Field key={key} label={`${label}. ${hint}`}>
             <div className="flex flex-col gap-2">
               {data.icp[key].map((value, i) => (
                 <Input
