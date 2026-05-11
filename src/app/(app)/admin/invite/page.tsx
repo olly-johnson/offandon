@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
 import { isAdmin } from "@/engines/admin/auth";
 import { listRecentInvites } from "@/engines/admin/persistence";
 import { createLogger } from "@/lib/shared/logger";
@@ -28,14 +26,15 @@ function formatDate(iso: string): string {
 }
 
 export default async function AdminInvitePage() {
+  // The (app) layout already enforces signed-in + onboarded; we only
+  // need the user object here for the admin check + logging.
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/signin");
 
   if (!isAdmin(user)) {
-    log.warn("non-admin viewed admin invite", { user_id: user.id });
+    log.warn("non-admin viewed admin invite", { user_id: user?.id });
     return (
       <main className="mx-auto max-w-2xl px-4 py-12">
         <h1 className="text-2xl font-semibold tracking-tight">Admin only</h1>
@@ -50,7 +49,7 @@ export default async function AdminInvitePage() {
   const invites = await listRecentInvites(adminClient, { limit: 20 });
 
   log.info("admin invite page viewed", {
-    user_id: user.id,
+    user_id: user?.id,
     recent_count: invites.length,
   });
 
