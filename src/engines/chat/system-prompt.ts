@@ -15,6 +15,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { MemoryRow } from "@/engines/memory/persistence";
 import type { VoiceDNA } from "@/engines/voice/types";
 import { METHODOLOGY_CHAT_SLICE, METHODOLOGY_HOUSE } from "@/lib/shared/methodology";
 
@@ -58,7 +59,83 @@ export const HUMANIZATION_MANIFESTO: string = extractSection(
   MANIFESTO_HEADER,
 );
 
-export function buildChatSystemPrompt(voiceDna: VoiceDNA): string {
+/**
+ * Render a relative-date suffix that the model can reason about. Recent
+ * facts get human-friendly relatives ("3d ago"); anything older falls
+ * back to month-year so the model can still phrase temporal arcs
+ * ("you mentioned that back in March").
+ *
+ * Note: this is a single point-in-time stamp per fact. It does NOT
+ * give the model a timeline of how a metric evolved (e.g. 1 -> 3 -> 5
+ * paying clients). For that we'd need a separate append-only
+ * `creator_events` log; see memory/project_events_log_plan note.
+ */
+function formatRelativeAge(iso: string, now: Date): string {
+  const created = new Date(iso);
+  const ms = now.getTime() - created.getTime();
+  const day = 86_400_000;
+  const days = Math.floor(ms / day);
+  if (Number.isNaN(days) || days < 0) return "today";
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return created.toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
+ * Render the Haiku-extracted memories as a compact block the chat model
+ * can scan. Grouped by category so it can pull the right facts for the
+ * current turn (a script question needs ongoing_project, a voice question
+ * needs preference). Each fact carries a relative-age suffix so the
+ * model can reason about temporal arcs across multiple facts in the
+ * same category. Empty when the user has no memories yet, in which
+ * case we skip the whole block to keep the prompt clean.
+ */
+function renderMemoryBlock(memories: MemoryRow[], now: Date = new Date()): string {
+  if (memories.length === 0) return "";
+
+  const order: MemoryRow["category"][] = [
+    "ongoing_project",
+    "creator_context",
+    "preference",
+    "recent_topic",
+  ];
+
+  const grouped = new Map<MemoryRow["category"], MemoryRow[]>();
+  for (const cat of order) grouped.set(cat, []);
+  for (const m of memories) {
+    grouped.get(m.category)?.push(m);
+  }
+
+  const lines: string[] = [];
+  for (const cat of order) {
+    const rows = grouped.get(cat) ?? [];
+    if (rows.length === 0) continue;
+    lines.push(`${cat}:`);
+    for (const r of rows) {
+      lines.push(`  - ${r.fact} (${formatRelativeAge(r.created_at, now)})`);
+    }
+  }
+
+  return [
+    "",
+    "----- BEGIN CREATOR MEMORY (incremental facts from prior chats) -----",
+    "Reference these when relevant. Do NOT cite them verbatim or list them back at the creator. Do NOT bring up an ongoing project unless they raise it first.",
+    "Each fact is followed by a relative age stamp (today / 3d ago / 2w ago / Mar 2026). Use these to phrase temporal arcs naturally when the creator asks recall-shaped questions; do not read the stamp out loud.",
+    "",
+    lines.join("\n"),
+    "----- END CREATOR MEMORY -----",
+  ].join("\n");
+}
+
+export function buildChatSystemPrompt(
+  voiceDna: VoiceDNA,
+  memories: MemoryRow[] = [],
+): string {
   const pillarLines = voiceDna.content_pillars
     .map(
       (p, i) =>
@@ -106,13 +183,15 @@ export function buildChatSystemPrompt(voiceDna: VoiceDNA): string {
     "",
     `prohibited_phrases (in addition to the Humanization Manifesto): ${voiceDna.prohibited_phrases.join(", ")}`,
     "----- END CREATOR'S VOICE DNA -----",
+    renderMemoryBlock(memories),
     "",
     "Reply rules:",
-    "1. Default short. Two to six sentences unless the user asks for more. If they ask for a list, use plain dashes, not numbered lists with structural openers.",
-    "2. Stay inside the creator's voice. Match the tone_profile. No hype words, no coach-speak, no motivational filler.",
-    "3. Specifics over abstractions. Concrete examples, numbers, named moves. Never end with a generic wrap-up sentence.",
-    "4. If the user asks for a hook or script, sound like THEM, not like a generic copywriter. Pillar names are valid context to reference.",
-    "5. If the request is unclear, ask one tight clarifying question and stop. Do not guess and pad.",
+    "1. The conversation history IS your data. Treat every prior user turn in the thread as an authoritative fact the creator has told you about themselves and their work. When they ask 'what did I say about X', 'remind me what...', 'what did my client buy', 'what's my goal' or similar recall questions, look back at the history and answer directly from it. NEVER reply with 'I don't have data about your clients/business/past' when the answer is in the visible history. If genuinely nothing in history covers the question, say so explicitly and ask them to fill in the gap.",
+    "2. Default short. Two to six sentences unless the user asks for more. If they ask for a list, use plain dashes, not numbered lists with structural openers.",
+    "3. Stay inside the creator's voice. Match the tone_profile. No hype words, no coach-speak, no motivational filler.",
+    "4. Specifics over abstractions. Concrete examples, numbers, named moves. Never end with a generic wrap-up sentence.",
+    "5. If the user asks for a hook or script, sound like THEM, not like a generic copywriter. Pillar names are valid context to reference.",
+    "6. If the request is unclear AND the history does not resolve it, ask one tight clarifying question and stop. Do not guess and pad.",
     "",
     "Return ONLY the assistant message as plain text. No JSON, no markdown headers, no preamble like 'Here is your reply.'",
   ].join("\n");

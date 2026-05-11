@@ -6,6 +6,7 @@
  * ordering (the caller passes a complete history each turn).
  */
 
+import type { MemoryRow } from "@/engines/memory/persistence";
 import type { VoiceDNA } from "@/engines/voice/types";
 
 export type ChatRole = "user" | "assistant" | "system";
@@ -41,6 +42,12 @@ export interface ChatReplyInput {
   history: ChatMessage[];
   /** Optional tool defs the model can call during this turn. */
   tools?: ChatToolDefinition[];
+  /**
+   * Optional Haiku-extracted memories about this user. Rendered into the
+   * system prompt so the assistant can reference ongoing projects, stated
+   * preferences, etc. without the user re-stating them every turn.
+   */
+  memories?: MemoryRow[];
 }
 
 export interface ChatToolAction {

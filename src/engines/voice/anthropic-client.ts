@@ -20,6 +20,13 @@ const log = createLogger("voice.anthropic");
 export const VOICE_DNA_MODEL = "claude-sonnet-4-6";
 
 /**
+ * Lightweight model used by background passes like the post-chat memory
+ * extractor. Haiku 4.5 is fast and cheap; quality is sufficient for
+ * structured-JSON extraction tasks where the output schema is tight.
+ */
+export const MEMORY_EXTRACTOR_MODEL = "claude-haiku-4-5-20251001";
+
+/**
  * Generous cap. Voice DNA JSON sits well under 1k tokens; the headroom is
  * for slow-typing models and any future schema growth.
  */

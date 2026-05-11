@@ -212,6 +212,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_memories: {
+        Row: {
+          id: string;
+          user_id: string;
+          fact: string;
+          category:
+            | "ongoing_project"
+            | "creator_context"
+            | "preference"
+            | "recent_topic";
+          priority: number;
+          source_conversation_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          fact: string;
+          category:
+            | "ongoing_project"
+            | "creator_context"
+            | "preference"
+            | "recent_topic";
+          priority?: number;
+          source_conversation_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          fact?: string;
+          category?:
+            | "ongoing_project"
+            | "creator_context"
+            | "preference"
+            | "recent_topic";
+          priority?: number;
+          source_conversation_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       voice_dna: {
         Row: {
           id: string;
