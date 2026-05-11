@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useOptimistic, useRef, useState } from "react";
+import {
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Loader2, Send } from "lucide-react";
 
 import { startConversation } from "./actions";
@@ -38,6 +44,7 @@ export function ChatHome({ prompts }: ChatHomeProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   const [optimisticMessages, addOptimistic] = useOptimistic<
     ChatMessage[],
@@ -53,32 +60,38 @@ export function ChatHome({ prompts }: ChatHomeProps) {
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [sending, optimisticMessages.length]);
 
-  async function send(message: string) {
+  // Both entry points (form submit AND card onClick) flow through here,
+  // so the transition wrapper goes here. <form action> already creates a
+  // transition for the form path; nesting is fine and keeps both paths
+  // identical instead of branching on caller.
+  function send(message: string) {
     const trimmed = message.trim();
     if (!trimmed) return;
     setError(null);
 
-    addOptimistic({
-      id: `optimistic-user-${Date.now()}`,
-      role: "user",
-      content: trimmed,
-    });
+    startTransition(async () => {
+      addOptimistic({
+        id: `optimistic-user-${Date.now()}`,
+        role: "user",
+        content: trimmed,
+      });
 
-    const fd = new FormData();
-    fd.set("message", trimmed);
-    const result = await startConversation({}, fd);
-    // Success: server-side redirect already fired; we never reach here.
-    if (result?.error) setError(result.error);
+      const fd = new FormData();
+      fd.set("message", trimmed);
+      const result = await startConversation({}, fd);
+      // Success: server-side redirect already fired; we never reach here.
+      if (result?.error) setError(result.error);
+    });
   }
 
-  async function handleSubmit(formData: FormData) {
+  function handleSubmit(formData: FormData) {
     const message = (formData.get("message") ?? "").toString();
     formRef.current?.reset();
-    await send(message);
+    send(message);
   }
 
   function handleCardClick(prompt: string) {
-    void send(prompt);
+    send(prompt);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
