@@ -9,6 +9,7 @@ import {
   Calendar,
   FileText,
   LayoutDashboard,
+  Library,
   type LucideIcon,
   MessageSquare,
   Plus,
@@ -28,6 +29,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
   { label: "Scripts", href: "/scripts", icon: FileText, enabled: true },
+  { label: "Library", href: "/library", icon: Library, enabled: true },
   { label: "Research", href: "/research", icon: Search, enabled: false },
   { label: "Brand", href: "/brand", icon: Target, enabled: false },
   { label: "Calendar", href: "/calendar", icon: Calendar, enabled: false },

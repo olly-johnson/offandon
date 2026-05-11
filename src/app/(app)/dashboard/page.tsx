@@ -4,6 +4,10 @@ import { FileText, Lightbulb, Search, Sparkles, Zap } from "lucide-react";
 
 import { Topbar } from "@/components/app-shell/topbar";
 import { MetricCard } from "@/components/app-shell/metric-card";
+import {
+  getConnection,
+  listMediaForUser,
+} from "@/engines/instagram/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
@@ -24,12 +28,19 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
-  const [snapshot, dna] = await Promise.all([
+  const [snapshot, dna, igConnection, igMedia] = await Promise.all([
     loadDashboard(user.id),
     getCurrentVoiceDNA(supabase, user.id),
+    getConnection(supabase, user.id),
+    listMediaForUser(supabase, user.id, 50),
   ]);
   const suggestions = buildSuggestions(snapshot);
   const firstName = user.email?.split("@")[0] ?? "there";
+
+  // Weekly reach = sum of `reach` across media posted in the last 7 days.
+  // Nulls are skipped; if nothing posted this week we render "-" so the
+  // card doesn't lie with a misleading 0.
+  const weeklyReach = sumWeeklyReach(igMedia);
 
   log.debug("dashboard rendered", {
     user_id: user.id,
@@ -58,13 +69,38 @@ export default async function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <MetricCard
-              label="Followers"
-              value="n/a"
-              trend="Connect Instagram"
-              up={null}
-              sub="not yet linked"
-            />
+            {igConnection ? (
+              <>
+                <MetricCard
+                  label="Followers"
+                  value={
+                    igConnection.followers_count !== null
+                      ? igConnection.followers_count.toLocaleString()
+                      : "-"
+                  }
+                  sub={
+                    igConnection.ig_username
+                      ? `@${igConnection.ig_username}`
+                      : "Instagram linked"
+                  }
+                />
+                <MetricCard
+                  label="Reach (7d)"
+                  value={
+                    weeklyReach !== null ? weeklyReach.toLocaleString() : "-"
+                  }
+                  sub="across posts this week"
+                />
+              </>
+            ) : (
+              <MetricCard
+                label="Followers"
+                value="n/a"
+                trend="Connect Instagram"
+                up={null}
+                sub="not yet linked"
+              />
+            )}
             <MetricCard
               label="Total scripts"
               value={snapshot.totals.scripts.toLocaleString()}
@@ -75,11 +111,13 @@ export default async function DashboardPage() {
               value={snapshot.totals.batches.toLocaleString()}
               sub="last 5"
             />
-            <MetricCard
-              label="Conversations"
-              value={snapshot.totals.conversations.toLocaleString()}
-              sub="active threads"
-            />
+            {igConnection ? null : (
+              <MetricCard
+                label="Conversations"
+                value={snapshot.totals.conversations.toLocaleString()}
+                sub="active threads"
+              />
+            )}
           </div>
 
           <div className="grid gap-5 lg:grid-cols-3">
@@ -244,6 +282,22 @@ export default async function DashboardPage() {
       </div>
     </>
   );
+}
+
+function sumWeeklyReach(
+  media: Array<{ reach: number | null; posted_at: string | null }>,
+): number | null {
+  const weekAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  let any = false;
+  let sum = 0;
+  for (const m of media) {
+    if (!m.posted_at) continue;
+    if (new Date(m.posted_at).getTime() < weekAgoMs) continue;
+    if (m.reach === null) continue;
+    sum += m.reach;
+    any = true;
+  }
+  return any ? sum : null;
 }
 
 function timeOfDayGreeting(): string {

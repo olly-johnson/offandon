@@ -212,6 +212,102 @@ export type Database = {
         };
         Relationships: [];
       };
+      instagram_connections: {
+        Row: {
+          user_id: string;
+          access_token: string;
+          ig_user_id: string;
+          ig_username: string | null;
+          followers_count: number | null;
+          follows_count: number | null;
+          media_count: number | null;
+          last_synced_at: string | null;
+          last_sync_error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          access_token: string;
+          ig_user_id: string;
+          ig_username?: string | null;
+          followers_count?: number | null;
+          follows_count?: number | null;
+          media_count?: number | null;
+          last_synced_at?: string | null;
+          last_sync_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          access_token?: string;
+          ig_user_id?: string;
+          ig_username?: string | null;
+          followers_count?: number | null;
+          follows_count?: number | null;
+          media_count?: number | null;
+          last_synced_at?: string | null;
+          last_sync_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      instagram_media: {
+        Row: {
+          id: string;
+          user_id: string;
+          media_type: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM" | "REELS";
+          caption: string | null;
+          permalink: string | null;
+          media_url: string | null;
+          thumbnail_url: string | null;
+          posted_at: string | null;
+          like_count: number | null;
+          comments_count: number | null;
+          reach: number | null;
+          plays: number | null;
+          saved: number | null;
+          shares: number | null;
+          synced_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          media_type: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM" | "REELS";
+          caption?: string | null;
+          permalink?: string | null;
+          media_url?: string | null;
+          thumbnail_url?: string | null;
+          posted_at?: string | null;
+          like_count?: number | null;
+          comments_count?: number | null;
+          reach?: number | null;
+          plays?: number | null;
+          saved?: number | null;
+          shares?: number | null;
+          synced_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          media_type?: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM" | "REELS";
+          caption?: string | null;
+          permalink?: string | null;
+          media_url?: string | null;
+          thumbnail_url?: string | null;
+          posted_at?: string | null;
+          like_count?: number | null;
+          comments_count?: number | null;
+          reach?: number | null;
+          plays?: number | null;
+          saved?: number | null;
+          shares?: number | null;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
       user_methodology: {
         Row: {
           user_id: string;
