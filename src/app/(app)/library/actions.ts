@@ -7,7 +7,6 @@ import { InstagramClient, InstagramTokenError } from "@/engines/instagram/client
 import {
   deleteConnection,
   getConnection,
-  isConnectionFresh,
 } from "@/engines/instagram/persistence";
 import { runInstagramSync } from "@/engines/instagram/sync";
 import { createLogger } from "@/lib/shared/logger";
@@ -72,12 +71,13 @@ export async function connectInstagramAction(
   return { ok: true };
 }
 
-export type RefreshState = { error?: string; cached?: boolean };
+export type RefreshState = { error?: string };
 
 /**
- * Manual refresh. Enforces the 24h cache: if last_synced_at is within
- * the window we return { cached: true } without hitting IG. Otherwise
- * we run the sync.
+ * Manual refresh. Always pulls fresh from Instagram regardless of when
+ * the last sync ran. The 24h cache window is for the nightly Inngest
+ * cron, not the user clicking the button. They're hitting Refresh
+ * because they want new data NOW.
  */
 export async function refreshInstagramAction(): Promise<RefreshState> {
   const supabase = await createSupabaseServerClient();
@@ -89,10 +89,6 @@ export async function refreshInstagramAction(): Promise<RefreshState> {
   const conn = await getConnection(supabase, user.id);
   if (!conn) {
     return { error: "Instagram is not connected." };
-  }
-
-  if (isConnectionFresh(conn.last_synced_at, new Date())) {
-    return { cached: true };
   }
 
   const client = new InstagramClient();

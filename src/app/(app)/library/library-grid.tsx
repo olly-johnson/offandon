@@ -124,11 +124,6 @@ export function LibraryGrid({ connection, media }: LibraryGridProps) {
         </div>
       </header>
 
-      {refreshState?.cached ? (
-        <p className="text-xs" style={{ color: "var(--oo-text-dim)" }}>
-          Cache still fresh. Last sync was within the 24h window.
-        </p>
-      ) : null}
       {refreshState?.error ? (
         <p className="text-xs" role="alert" style={{ color: "var(--oo-bof)" }}>
           {refreshState.error}
