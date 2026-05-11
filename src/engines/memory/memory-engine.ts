@@ -1,3 +1,4 @@
+import { validateAntiSlop } from "@/lib/shared/anti-slop";
 import { createLogger } from "@/lib/shared/logger";
 import type { ILLMClient } from "@/engines/voice/voice";
 import type { VoiceDNA } from "@/engines/voice/types";
@@ -116,6 +117,22 @@ export function parseExtractedFacts(raw: string): ExtractedFact[] {
 
     const fact = typeof c.fact === "string" ? c.fact.trim() : "";
     if (fact.length === 0 || fact.length > MEMORY_MAX_FACT_CHARS) continue;
+
+    // Saved facts get embedded into future system prompts. If we let an
+    // em-dash or a buzzword through here, the assistant sees the bad
+    // pattern in context and starts mirroring it; then its OWN output
+    // trips the anti-slop validator and the chat breaks. Drop dirty
+    // facts at the extraction boundary so memory can never poison the
+    // downstream prompt.
+    const slopCheck = validateAntiSlop(fact);
+    if (!slopCheck.ok) {
+      log.debug("memory: dropping fact that failed anti-slop", {
+        fact_preview: fact.slice(0, 80),
+        violation_count: slopCheck.violations.length,
+        first_type: slopCheck.violations[0]?.type,
+      });
+      continue;
+    }
 
     const category =
       typeof c.category === "string" && CATEGORY_SET.has(c.category as MemoryCategory)
