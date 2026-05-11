@@ -4,9 +4,7 @@ import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
-import { startConversation } from "./actions";
-import { ChatInput } from "./chat-input";
-import { PromptCards } from "./prompt-cards";
+import { ChatHome } from "./chat-home";
 
 const log = createLogger("page.chat");
 
@@ -47,48 +45,12 @@ export default async function ChatHomePage() {
   // suggested-prompt seeds; cheap single-row read.
   const dna = await getCurrentVoiceDNA(supabase, user.id);
   const pillarNames = dna?.content_pillars.map((p) => p.name) ?? [];
-  const suggestedPrompts = buildSuggestedPrompts(pillarNames);
+  const prompts = buildSuggestedPrompts(pillarNames);
 
   log.debug("chat empty state rendered", {
     user_id: user.id,
     pillar_count: pillarNames.length,
   });
 
-  return (
-    <>
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6">
-        <div
-          className="flex size-12 items-center justify-center rounded-full text-lg font-bold text-white"
-          style={{
-            background: "linear-gradient(135deg, var(--oo-gold), var(--oo-gold-bright))",
-          }}
-        >
-          O
-        </div>
-        <p
-          className="text-sm font-medium"
-          style={{ color: "var(--oo-text-secondary)" }}
-        >
-          How can I help you today?
-        </p>
-        <PromptCards prompts={suggestedPrompts} />
-      </div>
-      <div
-        className="p-4"
-        style={{
-          borderTop: "1px solid var(--oo-border)",
-          background: "var(--oo-bg)",
-        }}
-      >
-        <div className="mx-auto max-w-3xl">
-          <ChatInput
-            action={startConversation}
-            placeholder="Ask anything..."
-            resetOnSuccess={false}
-          />
-        </div>
-      </div>
-    </>
-  );
+  return <ChatHome prompts={prompts} />;
 }
-
