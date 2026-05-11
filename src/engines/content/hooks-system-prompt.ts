@@ -3,7 +3,11 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { VoiceDNA } from "@/engines/voice/types";
-import { METHODOLOGY_HOUSE, METHODOLOGY_SCRIPTS_SLICE } from "@/lib/shared/methodology";
+import {
+  METHODOLOGY_HOUSE,
+  METHODOLOGY_SCRIPTS_SLICE,
+  renderUserMethodologyBlock,
+} from "@/lib/shared/methodology";
 
 import type { IMF } from "./types";
 
@@ -53,7 +57,12 @@ const HUMANIZATION_MANIFESTO: string = extractSection(
  * archetypes, each self-scored across the SCCCC-aligned signals so the
  * UI can sort and recommend.
  */
-export function buildHooksSystemPrompt(voiceDna: VoiceDNA, count: number, imf?: IMF): string {
+export function buildHooksSystemPrompt(
+  voiceDna: VoiceDNA,
+  count: number,
+  imf?: IMF,
+  userMethodology?: string | null,
+): string {
   const pillarLines = voiceDna.content_pillars
     .map((p, i) => `  ${i + 1}. ${p.name}: ${p.description}`)
     .join("\n");
@@ -94,6 +103,7 @@ export function buildHooksSystemPrompt(voiceDna: VoiceDNA, count: number, imf?: 
     "----- BEGIN SCRIPTS METHODOLOGY SLICE -----",
     METHODOLOGY_SCRIPTS_SLICE,
     "----- END SCRIPTS METHODOLOGY SLICE -----",
+    renderUserMethodologyBlock(userMethodology),
     "",
     "----- BEGIN CREATOR'S VOICE DNA -----",
     `tone_profile.primary: ${voiceDna.tone_profile.primary}`,

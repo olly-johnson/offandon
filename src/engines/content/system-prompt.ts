@@ -15,7 +15,11 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { VoiceDNA } from "@/engines/voice/types";
-import { METHODOLOGY_HOUSE, METHODOLOGY_SCRIPTS_SLICE } from "@/lib/shared/methodology";
+import {
+  METHODOLOGY_HOUSE,
+  METHODOLOGY_SCRIPTS_SLICE,
+  renderUserMethodologyBlock,
+} from "@/lib/shared/methodology";
 
 const MANIFESTO_HEADER = "## ✍️ The Humanization Manifesto";
 
@@ -57,7 +61,10 @@ export const HUMANIZATION_MANIFESTO: string = extractSection(
   MANIFESTO_HEADER,
 );
 
-export function buildScriptsSystemPrompt(voiceDna: VoiceDNA): string {
+export function buildScriptsSystemPrompt(
+  voiceDna: VoiceDNA,
+  userMethodology?: string | null,
+): string {
   const pillarLines = voiceDna.content_pillars
     .map(
       (p, i) =>
@@ -90,6 +97,7 @@ export function buildScriptsSystemPrompt(voiceDna: VoiceDNA): string {
     "----- BEGIN SCRIPTS METHODOLOGY SLICE (verbatim from docs/methodology/03-scripts.md) -----",
     METHODOLOGY_SCRIPTS_SLICE,
     "----- END SCRIPTS METHODOLOGY SLICE -----",
+    renderUserMethodologyBlock(userMethodology),
     "",
     "----- BEGIN CREATOR'S VOICE DNA -----",
     `tone_profile.primary: ${voiceDna.tone_profile.primary}`,

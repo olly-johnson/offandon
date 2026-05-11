@@ -12,6 +12,7 @@ import {
   type IMF,
 } from "@/engines/content";
 import { saveSingleScript } from "@/engines/content/persistence";
+import { getUserMethodology } from "@/engines/methodology/persistence";
 import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 import { SlopError } from "@/lib/shared/anti-slop";
@@ -44,13 +45,15 @@ export async function extractIMFAction(
   const dna = await getCurrentVoiceDNA(supabase, user.id);
   if (!dna) return { error: "You need to complete onboarding first." };
 
+  const userMethodology = await getUserMethodology(supabase, user.id);
+
   try {
     const imf = await timed(
       log,
       "imf.extract",
       async () => {
         const extractor = new IMFExtractor({ llm: new AnthropicLLMClient() });
-        return extractor.extract({ voiceDna: dna, concept });
+        return extractor.extract({ voiceDna: dna, concept, userMethodology });
       },
       { user_id: user.id, concept_chars: concept.length },
     );
@@ -93,6 +96,8 @@ export async function generateHooksAction(input: {
   const dna = await getCurrentVoiceDNA(supabase, user.id);
   if (!dna) return { error: "You need to complete onboarding first." };
 
+  const userMethodology = await getUserMethodology(supabase, user.id);
+
   try {
     const batch = await timed(
       log,
@@ -104,6 +109,7 @@ export async function generateHooksAction(input: {
           concept: input.concept,
           imf: input.imf,
           count: input.count ?? 6,
+          userMethodology,
         });
       },
       { user_id: user.id, count: input.count ?? 6 },
@@ -152,6 +158,8 @@ export async function generateSingleScriptAction(input: {
   const dna = await getCurrentVoiceDNA(supabase, user.id);
   if (!dna) return { error: "You need to complete onboarding first." };
 
+  const userMethodology = await getUserMethodology(supabase, user.id);
+
   try {
     const script = await timed(
       log,
@@ -164,6 +172,7 @@ export async function generateSingleScriptAction(input: {
           imf: input.imf,
           hook: input.hook,
           refinement: input.refinement,
+          userMethodology,
         });
       },
       { user_id: user.id, hook_chars: input.hook.length, has_refinement: !!input.refinement },

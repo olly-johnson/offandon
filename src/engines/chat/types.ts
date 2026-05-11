@@ -48,6 +48,11 @@ export interface ChatReplyInput {
    * preferences, etc. without the user re-stating them every turn.
    */
   memories?: MemoryRow[];
+  /**
+   * Optional per-user methodology overlay (BO-036). Plain text the creator
+   * wrote in /methodology. Stacks on top of the house methodology + slices.
+   */
+  userMethodology?: string | null;
 }
 
 export interface ChatToolAction {

@@ -78,9 +78,20 @@ export const generateScripts = inngest.createFunction(
         };
       });
 
+      const userMethodology = await step.run("load-user-methodology", async () => {
+        const { getUserMethodology } = await import(
+          "@/engines/methodology/persistence"
+        );
+        return getUserMethodology(supabase, user_id);
+      });
+
       const batch = await step.run("generate", async () => {
         const generator = new ScriptGenerator({ llm: new AnthropicLLMClient() });
-        const result = await generator.generate({ voiceDna: dna, count });
+        const result = await generator.generate({
+          voiceDna: dna,
+          count,
+          userMethodology,
+        });
         log.info("generation ok", {
           batch_id,
           requested: result.meta.requested_count,

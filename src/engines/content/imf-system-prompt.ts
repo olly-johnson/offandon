@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { VoiceDNA } from "@/engines/voice/types";
-import { METHODOLOGY_HOUSE } from "@/lib/shared/methodology";
+import { METHODOLOGY_HOUSE, renderUserMethodologyBlock } from "@/lib/shared/methodology";
 
 const MANIFESTO_HEADER = "## ✍️ The Humanization Manifesto";
 
@@ -52,7 +52,10 @@ const HUMANIZATION_MANIFESTO: string = extractSection(
  *
  * Returns ONE JSON object, never prose.
  */
-export function buildIMFSystemPrompt(voiceDna: VoiceDNA): string {
+export function buildIMFSystemPrompt(
+  voiceDna: VoiceDNA,
+  userMethodology?: string | null,
+): string {
   return [
     "You are the IMF Extractor for Bot OS, a content operating system for Instagram creators.",
     "",
@@ -67,6 +70,7 @@ export function buildIMFSystemPrompt(voiceDna: VoiceDNA): string {
     "----- BEGIN HOUSE METHODOLOGY (verbatim from docs/methodology/01-house.md) -----",
     METHODOLOGY_HOUSE,
     "----- END HOUSE METHODOLOGY -----",
+    renderUserMethodologyBlock(userMethodology),
     "",
     "----- BEGIN CREATOR'S VOICE DNA -----",
     `tone_profile.primary: ${voiceDna.tone_profile.primary}`,

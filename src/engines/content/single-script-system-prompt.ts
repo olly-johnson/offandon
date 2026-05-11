@@ -3,7 +3,11 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { VoiceDNA } from "@/engines/voice/types";
-import { METHODOLOGY_HOUSE, METHODOLOGY_SCRIPTS_SLICE } from "@/lib/shared/methodology";
+import {
+  METHODOLOGY_HOUSE,
+  METHODOLOGY_SCRIPTS_SLICE,
+  renderUserMethodologyBlock,
+} from "@/lib/shared/methodology";
 
 import type { IMF } from "./types";
 
@@ -56,6 +60,7 @@ export function buildSingleScriptSystemPrompt(
   voiceDna: VoiceDNA,
   hook: string,
   imf?: IMF,
+  userMethodology?: string | null,
 ): string {
   const pillarLines = voiceDna.content_pillars
     .map((p, i) => `  ${i + 1}. ${p.name}: ${p.description}`)
@@ -97,6 +102,7 @@ export function buildSingleScriptSystemPrompt(
     "----- BEGIN SCRIPTS METHODOLOGY SLICE -----",
     METHODOLOGY_SCRIPTS_SLICE,
     "----- END SCRIPTS METHODOLOGY SLICE -----",
+    renderUserMethodologyBlock(userMethodology),
     "",
     "----- BEGIN CREATOR'S VOICE DNA -----",
     `tone_profile.primary: ${voiceDna.tone_profile.primary}`,

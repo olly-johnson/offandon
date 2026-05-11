@@ -17,7 +17,11 @@ import { fileURLToPath } from "node:url";
 
 import type { MemoryRow } from "@/engines/memory/persistence";
 import type { VoiceDNA } from "@/engines/voice/types";
-import { METHODOLOGY_CHAT_SLICE, METHODOLOGY_HOUSE } from "@/lib/shared/methodology";
+import {
+  METHODOLOGY_CHAT_SLICE,
+  METHODOLOGY_HOUSE,
+  renderUserMethodologyBlock,
+} from "@/lib/shared/methodology";
 
 const MANIFESTO_HEADER = "## ✍️ The Humanization Manifesto";
 
@@ -135,6 +139,7 @@ function renderMemoryBlock(memories: MemoryRow[], now: Date = new Date()): strin
 export function buildChatSystemPrompt(
   voiceDna: VoiceDNA,
   memories: MemoryRow[] = [],
+  userMethodology?: string | null,
 ): string {
   const pillarLines = voiceDna.content_pillars
     .map(
@@ -168,6 +173,7 @@ export function buildChatSystemPrompt(
     "----- BEGIN CHAT METHODOLOGY SLICE (verbatim from docs/methodology/02-chat.md) -----",
     METHODOLOGY_CHAT_SLICE,
     "----- END CHAT METHODOLOGY SLICE -----",
+    renderUserMethodologyBlock(userMethodology),
     "",
     "----- BEGIN CREATOR'S VOICE DNA -----",
     `tone_profile.primary: ${voiceDna.tone_profile.primary}`,

@@ -41,3 +41,27 @@ function load(name: string): string {
 export const METHODOLOGY_HOUSE: string = load("01-house.md");
 export const METHODOLOGY_CHAT_SLICE: string = load("02-chat.md");
 export const METHODOLOGY_SCRIPTS_SLICE: string = load("03-scripts.md");
+
+/**
+ * Render the per-user methodology overlay (BO-036) as a system-prompt
+ * block. Stacks on top of the house methodology + slices: house rules
+ * are universal, the overlay is the creator's living preferences and
+ * private rules. Returns an empty string when there's no overlay so
+ * the prompt builder can concatenate unconditionally without producing
+ * dangling whitespace.
+ *
+ * The overlay is rendered verbatim. We do NOT lint or trim its contents
+ * beyond a final whitespace strip; the creator owns this layer.
+ */
+export function renderUserMethodologyBlock(content?: string | null): string {
+  const trimmed = (content ?? "").trim();
+  if (trimmed.length === 0) return "";
+  return [
+    "",
+    "----- BEGIN CREATOR'S METHODOLOGY OVERLAY (their personal rules; stacks on top of the house) -----",
+    "These are the creator's own rules. Treat them as ABSOLUTE. They override the house methodology and the slices above when they conflict (the creator knows their audience).",
+    "",
+    trimmed,
+    "----- END CREATOR'S METHODOLOGY OVERLAY -----",
+  ].join("\n");
+}
