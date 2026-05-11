@@ -15,6 +15,22 @@ export interface ChatMessage {
   content: string;
 }
 
+/**
+ * A tool the engine can hand to the LLM. The `handler` runs on our side once
+ * the model emits a tool_use block; whatever string it returns is sent back
+ * to the model as a tool_result for the next round-trip.
+ */
+export interface ChatToolDefinition {
+  name: string;
+  description: string;
+  input_schema: {
+    type: "object";
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+  handler: (input: Record<string, unknown>) => Promise<string>;
+}
+
 export interface ChatReplyInput {
   voiceDna: VoiceDNA;
   /**
@@ -23,10 +39,19 @@ export interface ChatReplyInput {
    * a system message here.
    */
   history: ChatMessage[];
+  /** Optional tool defs the model can call during this turn. */
+  tools?: ChatToolDefinition[];
+}
+
+export interface ChatToolAction {
+  name: string;
+  input: Record<string, unknown>;
+  /** Whatever the handler returned. Passed back to the model as tool_result. */
+  result: string;
 }
 
 export interface ChatReply {
-  /** The assistant message to append to the conversation. */
+  /** The final assistant message to append to the conversation. */
   message: ChatMessage;
   meta: {
     /** ISO-8601, stamped at engine return time. */
@@ -34,6 +59,8 @@ export interface ChatReply {
     /** Number of history messages the engine saw, including the latest user turn. */
     history_length: number;
   };
+  /** Every tool call the engine executed during this reply, in order. */
+  tool_actions: ChatToolAction[];
 }
 
 export interface IChatEngine {

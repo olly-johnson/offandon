@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Topbar } from "@/components/app-shell/topbar";
+import { listIdeasForUser } from "@/engines/content/ideas-persistence";
 import { listScriptsForUser } from "@/engines/content/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
@@ -55,10 +56,14 @@ export default async function ScriptsPage() {
     );
   }
 
-  const libraryScripts = await listScriptsForUser(supabase, user.id, 50);
+  const [libraryScripts, ideas] = await Promise.all([
+    listScriptsForUser(supabase, user.id, 50),
+    listIdeasForUser(supabase, user.id, 50),
+  ]);
   log.debug("scripts page rendered", {
     user_id: user.id,
     library_count: libraryScripts.length,
+    idea_count: ideas.length,
   });
 
   return (
@@ -89,7 +94,7 @@ export default async function ScriptsPage() {
             </Link>
           </header>
 
-          <ScriptsTabs libraryScripts={libraryScripts} />
+          <ScriptsTabs libraryScripts={libraryScripts} ideas={ideas} />
         </div>
       </div>
     </>

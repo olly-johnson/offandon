@@ -10,6 +10,8 @@ import {
   getConversationWithMessages,
   toEngineHistory,
 } from "@/engines/chat/persistence";
+import type { ChatToolDefinition } from "@/engines/chat/types";
+import { saveIdea } from "@/engines/content/ideas-persistence";
 import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 import { SlopError } from "@/lib/shared/anti-slop";
@@ -21,6 +23,77 @@ const log = createLogger("chat.actions");
 const TITLE_FALLBACK = "New conversation";
 
 export type SendState = { error?: string };
+
+/**
+ * Build the save_idea tool for the chat engine, scoped to the calling
+ * user + conversation. The handler runs server-side inside the engine's
+ * tool loop; whatever it returns gets fed back to the LLM as a
+ * tool_result.
+ *
+ * We do not link message_id because the trigger message (the user's
+ * "save that as an idea" turn) hasn't been persisted yet at the time
+ * this tool fires, and the upcoming assistant message id isn't known
+ * either. Conversation linkage is enough provenance.
+ */
+function buildSaveIdeaTool(args: {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  userId: string;
+  conversationId: string;
+}): ChatToolDefinition {
+  return {
+    name: "save_idea",
+    description:
+      "Save a short content idea to the user's Ideas Bank. Call this when the user explicitly asks to save something as an idea (for example: 'save that as an idea', 'put that in my ideas bank', 'remember this for later'). Capture the idea in their own words; do not paraphrase.",
+    input_schema: {
+      type: "object",
+      properties: {
+        content: {
+          type: "string",
+          description:
+            "The idea text in 1 to 2 sentences. Be specific. No fluff or editorial framing.",
+        },
+        pillar: {
+          type: "string",
+          description:
+            "Optional. The content pillar this idea ladders into, if the user named one or you can infer one confidently.",
+        },
+      },
+      required: ["content"],
+    },
+    handler: async (input) => {
+      const content = typeof input.content === "string" ? input.content : "";
+      const pillar = typeof input.pillar === "string" ? input.pillar : undefined;
+      if (content.trim().length === 0) {
+        return "Error: content was empty; nothing saved.";
+      }
+      try {
+        const id = await saveIdea(args.supabase, {
+          userId: args.userId,
+          content,
+          source: "chat",
+          conversationId: args.conversationId,
+          pillar,
+        });
+        log.info("idea saved via tool-use", {
+          idea_id: id,
+          user_id: args.userId,
+          conversation_id: args.conversationId,
+          pillar_set: pillar !== undefined,
+        });
+        return `Saved as idea ${id}.`;
+      } catch (err) {
+        log.error("save_idea tool failed", {
+          user_id: args.userId,
+          conversation_id: args.conversationId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return `Error saving idea: ${
+          err instanceof Error ? err.message : "unknown"
+        }`;
+      }
+    },
+  };
+}
 
 /**
  * Start a brand-new conversation from the /chat list page. Title is derived
@@ -71,10 +144,17 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       content: message,
     });
 
+    const tool = buildSaveIdeaTool({
+      supabase,
+      userId: user.id,
+      conversationId,
+    });
+
     const engine = new ChatEngine({ llm: new AnthropicLLMClient() });
     const reply = await engine.reply({
       voiceDna: dna,
       history: [{ role: "user", content: message }],
+      tools: [tool],
     });
 
     await appendMessage(supabase, {
@@ -84,7 +164,11 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       content: reply.message.content,
     });
 
-    log.info("conversation started", { conversation_id: conversationId, user_id: user.id });
+    log.info("conversation started", {
+      conversation_id: conversationId,
+      user_id: user.id,
+      tool_call_count: reply.tool_actions.length,
+    });
   } catch (err) {
     log.error("startConversation reply failed", {
       conversation_id: conversationId,
@@ -159,8 +243,14 @@ export async function sendMessage(
     const history = toEngineHistory(loaded.messages.filter((m) => m.role !== "system"));
     history.push({ role: "user", content: message });
 
+    const tool = buildSaveIdeaTool({
+      supabase,
+      userId: user.id,
+      conversationId,
+    });
+
     const engine = new ChatEngine({ llm: new AnthropicLLMClient() });
-    const reply = await engine.reply({ voiceDna: dna, history });
+    const reply = await engine.reply({ voiceDna: dna, history, tools: [tool] });
 
     await appendMessage(supabase, {
       conversationId,
@@ -173,6 +263,7 @@ export async function sendMessage(
       conversation_id: conversationId,
       user_id: user.id,
       history_length: history.length,
+      tool_call_count: reply.tool_actions.length,
     });
   } catch (err) {
     log.error("sendMessage reply failed", {

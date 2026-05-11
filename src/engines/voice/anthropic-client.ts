@@ -1,7 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-import type { IChatLLMClient } from "@/engines/chat/chat-engine";
-import type { ChatMessage } from "@/engines/chat/types";
+import type {
+  ChatLLMMessage,
+  ChatLLMResponse,
+  ChatLLMTool,
+  ChatLLMToolUseBlock,
+  IChatLLMClient,
+} from "@/engines/chat/chat-engine";
 import { createLogger, timed } from "@/lib/shared/logger";
 
 import type { ILLMClient } from "./voice";
@@ -106,16 +111,16 @@ export class AnthropicLLMClient implements ILLMClient, IChatLLMClient {
   /**
    * Multi-turn chat completion. Used by the Chat Engine.
    *
-   * Same prompt-cache treatment on the system block. The history array is
-   * passed to the SDK as-is; system messages in `args.messages` are filtered
-   * out because Anthropic only accepts user/assistant turns in the messages
-   * array. The Chat Engine never persists or sends a system role anyway.
+   * Same prompt-cache treatment on the system block. Messages flow through
+   * as the SDK expects: plain string content for normal turns, content-block
+   * arrays for tool-use and tool-result turns. The engine is responsible for
+   * building the right structure; this client just translates and ferries.
    */
-  async chat(args: { system: string; messages: ChatMessage[] }): Promise<string> {
-    const turns = args.messages
-      .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
-
+  async chat(args: {
+    system: string;
+    messages: ChatLLMMessage[];
+    tools?: ChatLLMTool[];
+  }): Promise<ChatLLMResponse> {
     return timed(
       log,
       "anthropic.messages.create.chat",
@@ -130,7 +135,21 @@ export class AnthropicLLMClient implements ILLMClient, IChatLLMClient {
               cache_control: { type: "ephemeral" },
             },
           ],
-          messages: turns,
+          // The SDK's MessageParam type is a union we already model exactly
+          // in ChatLLMMessage. Cast is safe and avoids a redundant mapping
+          // pass over every block.
+          messages: args.messages as Parameters<
+            typeof this.client.messages.create
+          >[0]["messages"],
+          ...(args.tools && args.tools.length > 0
+            ? {
+                tools: args.tools.map((t) => ({
+                  name: t.name,
+                  description: t.description,
+                  input_schema: t.input_schema,
+                })),
+              }
+            : {}),
         });
 
         log.debug("anthropic chat usage", {
@@ -140,21 +159,34 @@ export class AnthropicLLMClient implements ILLMClient, IChatLLMClient {
           cache_read_tokens: response.usage.cache_read_input_tokens ?? 0,
           output_tokens: response.usage.output_tokens,
           stop_reason: response.stop_reason,
-          turn_count: turns.length,
+          turn_count: args.messages.length,
+          tools_offered: args.tools?.length ?? 0,
         });
 
-        const first = response.content[0];
-        if (!first || first.type !== "text") {
-          throw new Error(
-            `AnthropicLLMClient.chat: expected text block, got ${first?.type ?? "nothing"}`,
-          );
+        let text = "";
+        const tool_uses: ChatLLMToolUseBlock[] = [];
+        for (const block of response.content) {
+          if (block.type === "text") {
+            text += block.text;
+          } else if (block.type === "tool_use") {
+            tool_uses.push({
+              type: "tool_use",
+              id: block.id,
+              name: block.name,
+              input: (block.input ?? {}) as Record<string, unknown>,
+            });
+          }
         }
-        return first.text;
+        return {
+          text,
+          tool_uses,
+          stop_reason: response.stop_reason ?? "end_turn",
+        };
       },
       {
         model: this.model,
         system_chars: args.system.length,
-        turn_count: turns.length,
+        turn_count: args.messages.length,
       },
     );
   }
