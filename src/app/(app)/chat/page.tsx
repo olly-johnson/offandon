@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
 import { startConversation } from "./actions";
 import { ChatInput } from "./chat-input";
+import { PromptCards } from "./prompt-cards";
 
 const log = createLogger("page.chat");
 
@@ -45,11 +46,7 @@ export default async function ChatHomePage() {
         >
           How can I help you today?
         </p>
-        <div className="grid w-full max-w-2xl grid-cols-1 gap-2 md:grid-cols-2">
-          {SUGGESTED_PROMPTS.map((p) => (
-            <PromptCard key={p} text={p} />
-          ))}
-        </div>
+        <PromptCards prompts={SUGGESTED_PROMPTS} />
       </div>
       <div
         className="p-4"
@@ -70,17 +67,3 @@ export default async function ChatHomePage() {
   );
 }
 
-function PromptCard({ text }: { text: string }) {
-  return (
-    <div
-      className="rounded-xl px-4 py-3 text-xs leading-relaxed"
-      style={{
-        background: "var(--oo-bg-raised)",
-        border: "1px solid var(--oo-border)",
-        color: "var(--oo-text-secondary)",
-      }}
-    >
-      {text}
-    </div>
-  );
-}
