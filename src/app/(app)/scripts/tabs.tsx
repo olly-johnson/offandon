@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import type { IdeaRow } from "@/engines/content/ideas-persistence";
 import type { ScriptLibraryRow } from "@/engines/content/persistence";
 
+import { IdeasTab } from "./ideas-tab";
 import { LibraryTab } from "./library-tab";
 import { ScriptWizard } from "./wizard";
 
@@ -12,9 +14,10 @@ type Tab = "create" | "library" | "ideas";
 
 interface ScriptsTabsProps {
   libraryScripts: ScriptLibraryRow[];
+  ideas: IdeaRow[];
 }
 
-export function ScriptsTabs({ libraryScripts }: ScriptsTabsProps) {
+export function ScriptsTabs({ libraryScripts, ideas }: ScriptsTabsProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("create");
   const [highlightId, setHighlightId] = useState<string | null>(null);
@@ -54,24 +57,7 @@ export function ScriptsTabs({ libraryScripts }: ScriptsTabsProps) {
       {tab === "library" ? (
         <LibraryTab scripts={libraryScripts} highlightId={highlightId} />
       ) : null}
-      {tab === "ideas" ? (
-        <div className="oo-card-static p-8 text-center">
-          <span className="gold-tag mb-4">Coming soon</span>
-          <h2
-            className="text-xl font-semibold tracking-tight"
-            style={{ color: "var(--oo-text-primary)" }}
-          >
-            Ideas Bank
-          </h2>
-          <p
-            className="mx-auto mt-2 max-w-md text-sm leading-relaxed"
-            style={{ color: "var(--oo-text-secondary)" }}
-          >
-            Save raw ideas during chat with &ldquo;save that as an idea&rdquo;, then turn them
-            into scripts in one click.
-          </p>
-        </div>
-      ) : null}
+      {tab === "ideas" ? <IdeasTab ideas={ideas} /> : null}
     </div>
   );
 }

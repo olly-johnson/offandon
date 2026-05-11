@@ -179,6 +179,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      ideas: {
+        Row: {
+          id: string;
+          user_id: string;
+          content: string;
+          pillar: string | null;
+          source: "chat" | "manual";
+          conversation_id: string | null;
+          message_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          content: string;
+          pillar?: string | null;
+          source: "chat" | "manual";
+          conversation_id?: string | null;
+          message_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          content?: string;
+          pillar?: string | null;
+          source?: "chat" | "manual";
+          conversation_id?: string | null;
+          message_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       voice_dna: {
         Row: {
           id: string;
