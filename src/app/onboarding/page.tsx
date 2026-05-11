@@ -8,7 +8,7 @@ import { OnboardingWizard } from "./wizard";
 const log = createLogger("page.onboarding");
 
 export const metadata = {
-  title: "Onboarding · Bot OS",
+  title: "Onboarding . Bot OS",
 };
 
 export default async function OnboardingPage() {
@@ -30,13 +30,36 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-12">
-      <header className="mb-10">
-        <h1 className="text-3xl font-semibold tracking-tight">Bot OS onboarding</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Four short steps. We use this to build your Voice DNA, the spine of every script and chat
-          reply we generate.
-        </p>
+    <main className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+      <header className="mb-10 flex items-start gap-4">
+        <div
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--oo-gold), var(--oo-gold-bright))",
+            boxShadow: "var(--oo-shadow-md)",
+          }}
+        >
+          O
+        </div>
+        <div>
+          <h1
+            className="text-3xl font-bold"
+            style={{
+              color: "var(--oo-text-primary)",
+              letterSpacing: "-0.03em",
+            }}
+          >
+            Bot OS onboarding
+          </h1>
+          <p
+            className="mt-2 text-sm"
+            style={{ color: "var(--oo-text-secondary)" }}
+          >
+            Four short steps. We use this to build your Voice DNA, the spine of
+            every script and chat reply we generate.
+          </p>
+        </div>
       </header>
       <OnboardingWizard />
     </main>

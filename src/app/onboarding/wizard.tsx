@@ -1,11 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
 
 import { submitOnboarding, type OnboardingState } from "./actions";
 
@@ -183,47 +179,71 @@ export function OnboardingWizard() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <Progress current={step} labels={STEP_LABELS} />
 
-      {step === 0 ? <StepIdentity data={data} update={update} /> : null}
-      {step === 1 ? <StepVoice data={data} update={update} updateArray={updateArray} /> : null}
-      {step === 2 ? (
-        <StepAudience
-          data={data}
-          updateICP={updateICP}
-          updatePositioning={updatePositioning}
-          updateStoryBank={updateStoryBank}
-          updateVoiceSignal={updateVoiceSignal}
-          updateSignaturePhrase={updateSignaturePhrase}
-        />
-      ) : null}
-      {step === 3 ? <StepGoals data={data} updateArray={updateArray} /> : null}
+      <div className="oo-card-static p-6 sm:p-8">
+        {step === 0 ? <StepIdentity data={data} update={update} /> : null}
+        {step === 1 ? (
+          <StepVoice data={data} update={update} updateArray={updateArray} />
+        ) : null}
+        {step === 2 ? (
+          <StepAudience
+            data={data}
+            updateICP={updateICP}
+            updatePositioning={updatePositioning}
+            updateStoryBank={updateStoryBank}
+            updateVoiceSignal={updateVoiceSignal}
+            updateSignaturePhrase={updateSignaturePhrase}
+          />
+        ) : null}
+        {step === 3 ? <StepGoals data={data} updateArray={updateArray} /> : null}
+      </div>
 
       <div className="flex items-center justify-between gap-4">
-        <Button variant="ghost" onClick={back} disabled={step === 0 || pending}>
+        <button
+          onClick={back}
+          disabled={step === 0 || pending}
+          className="oo-btn-ghost px-5 py-2.5 text-sm disabled:opacity-50"
+        >
           Back
-        </Button>
+        </button>
         {step < STEP_LABELS.length - 1 ? (
-          <Button onClick={next} disabled={!isStepValid(step, data)}>
+          <button
+            onClick={next}
+            disabled={!isStepValid(step, data)}
+            className="gold-btn px-6 py-2.5 text-sm disabled:opacity-50"
+          >
             Continue
-          </Button>
+          </button>
         ) : (
-          <Button onClick={submit} disabled={pending || !isStepValid(3, data)}>
-            {pending ? "Generating Voice DNA…" : "Generate Voice DNA"}
-          </Button>
+          <button
+            onClick={submit}
+            disabled={pending || !isStepValid(3, data)}
+            className="gold-btn flex items-center gap-2 px-6 py-2.5 text-sm disabled:opacity-50"
+          >
+            {pending ? (
+              <>
+                <Loader2 className="oo-spin size-4" />
+                Generating Voice DNA...
+              </>
+            ) : (
+              "Generate Voice DNA"
+            )}
+          </button>
         )}
       </div>
 
       {state.error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm" role="alert" style={{ color: "var(--oo-bof)" }}>
           {state.error}
         </p>
       ) : null}
 
       {pending ? (
-        <p className="text-xs text-muted-foreground">
-          Claude is distilling your answers into a Voice DNA. This usually takes 5 to 15 seconds.
+        <p className="text-xs" style={{ color: "var(--oo-text-secondary)" }}>
+          Claude is distilling your answers into a Voice DNA. This usually takes
+          5 to 15 seconds.
         </p>
       ) : null}
     </div>
@@ -286,25 +306,57 @@ function isStepValid(step: number, d: WizardData): boolean {
 
 function Progress({ current, labels }: { current: number; labels: string[] }) {
   return (
-    <ol className="flex items-center gap-2 text-xs uppercase tracking-wide">
-      {labels.map((label, i) => (
-        <li key={label} className="flex items-center gap-2">
-          <span
-            className={[
-              "flex size-6 items-center justify-center rounded-full border",
-              i === current
-                ? "border-primary bg-primary text-primary-foreground"
-                : i < current
-                  ? "border-primary text-primary"
-                  : "border-border text-muted-foreground",
-            ].join(" ")}
-          >
-            {i + 1}
-          </span>
-          <span className={i === current ? "text-foreground" : "text-muted-foreground"}>{label}</span>
-          {i < labels.length - 1 ? <span className="mx-1 text-muted-foreground">›</span> : null}
-        </li>
-      ))}
+    <ol className="flex flex-wrap items-center gap-2">
+      {labels.map((label, i) => {
+        const active = i === current;
+        const done = i < current;
+        const circleStyle = active
+          ? {
+              background: "var(--oo-gold)",
+              borderColor: "var(--oo-gold)",
+              color: "#FFFFFF",
+            }
+          : done
+            ? {
+                background: "var(--oo-gold-dim)",
+                borderColor: "var(--oo-border-gold)",
+                color: "var(--oo-gold)",
+              }
+            : {
+                background: "transparent",
+                borderColor: "var(--oo-border)",
+                color: "var(--oo-text-dim)",
+              };
+        return (
+          <li key={label} className="flex items-center gap-2">
+            <span
+              className="flex size-6 items-center justify-center rounded-full border text-[11px] font-semibold"
+              style={circleStyle}
+            >
+              {i + 1}
+            </span>
+            <span
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{
+                color: active
+                  ? "var(--oo-text-primary)"
+                  : "var(--oo-text-secondary)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              {label}
+            </span>
+            {i < labels.length - 1 ? (
+              <span
+                className="mx-1"
+                style={{ color: "var(--oo-text-dim)" }}
+              >
+                /
+              </span>
+            ) : null}
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -318,21 +370,22 @@ function StepIdentity({
 }) {
   return (
     <section className="flex flex-col gap-6">
-      <header>
-        <h2 className="text-xl font-semibold">Who are you?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Bot OS uses these answers as the spine of every script and chat reply.
-        </p>
-      </header>
+      <SectionHeader
+        title="Who are you?"
+        subtitle="Bot OS uses these answers as the spine of every script and chat reply."
+      />
       <Field label="Your niche">
-        <Input
+        <input
+          type="text"
+          className="oo-input"
           value={data.niche}
           onChange={(e) => update("niche", e.target.value)}
           placeholder="e.g. fitness coaches, B2B SaaS founders"
         />
       </Field>
       <Field label="Your business in one paragraph">
-        <Textarea
+        <textarea
+          className="oo-input resize-none"
           value={data.business_description}
           onChange={(e) => update("business_description", e.target.value)}
           placeholder="What you do, who you sell to, what makes you different."
@@ -354,25 +407,28 @@ function StepVoice({
 }) {
   return (
     <section className="flex flex-col gap-6">
-      <header>
-        <h2 className="text-xl font-semibold">How do you sound?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Paste 1 to 3 short samples of your real voice. Captions, posts, DMs. Don&apos;t polish
-          them.
-        </p>
-      </header>
+      <SectionHeader
+        title="How do you sound?"
+        subtitle="Paste 1 to 3 short samples of your real voice. Captions, posts, DMs. Don't polish them."
+      />
       {data.voice_samples.map((sample, i) => (
         <Field key={i} label={`Voice sample ${i + 1}${i === 0 ? "" : " (optional)"}`}>
-          <Textarea
+          <textarea
+            className="oo-input resize-none"
             value={sample}
             onChange={(e) => updateArray("voice_samples", i, e.target.value)}
-            placeholder={i === 0 ? "Paste a recent post or caption. At least a couple of sentences." : ""}
+            placeholder={
+              i === 0
+                ? "Paste a recent post or caption. At least a couple of sentences."
+                : ""
+            }
             rows={4}
           />
         </Field>
       ))}
       <Field label="What's been working">
-        <Textarea
+        <textarea
+          className="oo-input resize-none"
           value={data.what_works}
           onChange={(e) => update("what_works", e.target.value)}
           placeholder="Posts, hooks, formats. Be specific."
@@ -380,7 +436,8 @@ function StepVoice({
         />
       </Field>
       <Field label="Where you're stuck">
-        <Textarea
+        <textarea
+          className="oo-input resize-none"
           value={data.where_stuck}
           onChange={(e) => update("where_stuck", e.target.value)}
           placeholder="What isn't landing? Where do you run out of ideas?"
@@ -465,25 +522,23 @@ function StepAudience({
 }) {
   return (
     <section className="flex flex-col gap-8">
-      <header>
-        <h2 className="text-xl font-semibold">Who are you for, and where do you stand?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          The more specific you are here, the more your scripts and chat will sound like you, not
-          like every other coach.
-        </p>
-      </header>
+      <SectionHeader
+        title="Who are you for, and where do you stand?"
+        subtitle="The more specific you are here, the more your scripts and chat will sound like you, not like every other coach."
+      />
 
-      <fieldset className="flex flex-col gap-6">
-        <legend className="text-sm font-medium">Audience profile</legend>
-        <p className="text-xs text-muted-foreground">
-          Top 1 to {ICP_SLOTS} per axis. Rank them; the first slot matters most.
-        </p>
+      <SubSection
+        title="Audience profile"
+        hint={`Top 1 to ${ICP_SLOTS} per axis. Rank them; the first slot matters most.`}
+      >
         {ICP_AXES.map(({ key, label, hint, placeholder }) => (
           <Field key={key} label={`${label}. ${hint}`}>
             <div className="flex flex-col gap-2">
               {data.icp[key].map((value, i) => (
-                <Input
+                <input
                   key={i}
+                  type="text"
+                  className="oo-input"
                   value={value}
                   onChange={(e) => updateICP(key, i, e.target.value)}
                   placeholder={i === 0 ? placeholder : ""}
@@ -492,12 +547,12 @@ function StepAudience({
             </div>
           </Field>
         ))}
-      </fieldset>
+      </SubSection>
 
-      <fieldset className="flex flex-col gap-6">
-        <legend className="text-sm font-medium">Positioning</legend>
+      <SubSection title="Positioning">
         <Field label="Core philosophy">
-          <Textarea
+          <textarea
+            className="oo-input resize-none"
             value={data.positioning.core_philosophy}
             onChange={(e) => updatePositioning("core_philosophy", e.target.value)}
             rows={2}
@@ -505,7 +560,8 @@ function StepAudience({
           />
         </Field>
         <Field label="Contrarian belief">
-          <Textarea
+          <textarea
+            className="oo-input resize-none"
             value={data.positioning.contrarian_belief}
             onChange={(e) => updatePositioning("contrarian_belief", e.target.value)}
             rows={2}
@@ -513,22 +569,23 @@ function StepAudience({
           />
         </Field>
         <Field label="Differentiator">
-          <Textarea
+          <textarea
+            className="oo-input resize-none"
             value={data.positioning.differentiator}
             onChange={(e) => updatePositioning("differentiator", e.target.value)}
             rows={2}
             placeholder="What separates you from every other person in your niche?"
           />
         </Field>
-      </fieldset>
+      </SubSection>
 
-      <fieldset className="flex flex-col gap-6">
-        <legend className="text-sm font-medium">Story bank seed (optional)</legend>
-        <p className="text-xs text-muted-foreground">
-          Three seed moments. Skip any you do not have to hand. You can grow the bank later.
-        </p>
+      <SubSection
+        title="Story bank seed (optional)"
+        hint="Three seed moments. Skip any you do not have to hand. You can grow the bank later."
+      >
         <Field label="Rock bottom moment">
-          <Textarea
+          <textarea
+            className="oo-input resize-none"
             value={data.story_bank.rock_bottom}
             onChange={(e) => updateStoryBank("rock_bottom", e.target.value)}
             rows={2}
@@ -536,7 +593,8 @@ function StepAudience({
           />
         </Field>
         <Field label="Breakthrough moment">
-          <Textarea
+          <textarea
+            className="oo-input resize-none"
             value={data.story_bank.breakthrough}
             onChange={(e) => updateStoryBank("breakthrough", e.target.value)}
             rows={2}
@@ -544,22 +602,24 @@ function StepAudience({
           />
         </Field>
         <Field label="Current journey">
-          <Textarea
+          <textarea
+            className="oo-input resize-none"
             value={data.story_bank.current_journey}
             onChange={(e) => updateStoryBank("current_journey", e.target.value)}
             rows={2}
             placeholder="What you are chasing or building right now that the audience can follow along."
           />
         </Field>
-      </fieldset>
+      </SubSection>
 
-      <fieldset className="flex flex-col gap-6">
-        <legend className="text-sm font-medium">Voice signals</legend>
+      <SubSection title="Voice signals">
         <Field label="Signature phrases (optional)">
           <div className="flex flex-col gap-2">
             {data.voice_signals.signature_phrases.map((value, i) => (
-              <Input
+              <input
                 key={i}
+                type="text"
+                className="oo-input"
                 value={value}
                 onChange={(e) => updateSignaturePhrase(i, e.target.value)}
                 placeholder={i === 0 ? "Phrases or slang you actually use" : ""}
@@ -585,7 +645,7 @@ function StepAudience({
           options={ENERGY_OPTIONS}
           onChange={(v) => updateVoiceSignal("energy", v)}
         />
-      </fieldset>
+      </SubSection>
     </section>
   );
 }
@@ -599,26 +659,30 @@ function StepGoals({
 }) {
   return (
     <section className="flex flex-col gap-6">
-      <header>
-        <h2 className="text-xl font-semibold">What are you here to do?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Concrete outcomes. Followers is fine; revenue is better.
-        </p>
-      </header>
+      <SectionHeader
+        title="What are you here to do?"
+        subtitle="Concrete outcomes. Followers is fine; revenue is better."
+      />
       {data.goals.map((goal, i) => (
         <Field key={i} label={`Goal ${i + 1}${i === 0 ? "" : " (optional)"}`}>
-          <Input
+          <input
+            type="text"
+            className="oo-input"
             value={goal}
             onChange={(e) => updateArray("goals", i, e.target.value)}
-            placeholder={i === 0 ? "e.g. 5K MRR from coaching clients in 90 days" : ""}
+            placeholder={
+              i === 0 ? "e.g. 5K MRR from coaching clients in 90 days" : ""
+            }
           />
         </Field>
       ))}
       <Field label="Topics you want to own (optional)">
         <div className="flex flex-col gap-2">
           {data.preferred_topics.map((topic, i) => (
-            <Input
+            <input
               key={i}
+              type="text"
+              className="oo-input"
               value={topic}
               onChange={(e) => updateArray("preferred_topics", i, e.target.value)}
               placeholder={`Topic ${i + 1}`}
@@ -630,10 +694,73 @@ function StepGoals({
   );
 }
 
+function SectionHeader({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <header>
+      <h2
+        className="text-xl font-bold"
+        style={{
+          color: "var(--oo-text-primary)",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        {title}
+      </h2>
+      <p
+        className="mt-1 text-sm"
+        style={{ color: "var(--oo-text-secondary)" }}
+      >
+        {subtitle}
+      </p>
+    </header>
+  );
+}
+
+function SubSection({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <fieldset
+      className="flex flex-col gap-5 pt-5"
+      style={{ borderTop: "1px solid var(--oo-border-subtle)" }}
+    >
+      <div>
+        <legend
+          className="label-xs"
+          style={{ color: "var(--oo-gold)" }}
+        >
+          {title}
+        </legend>
+        {hint ? (
+          <p
+            className="mt-1 text-xs"
+            style={{ color: "var(--oo-text-secondary)" }}
+          >
+            {hint}
+          </p>
+        ) : null}
+      </div>
+      {children}
+    </fieldset>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <Label>{label}</Label>
+      <p className="label-xs">{label}</p>
       {children}
     </div>
   );
@@ -655,7 +782,7 @@ function SelectField<T extends string>({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+        className="oo-input"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
