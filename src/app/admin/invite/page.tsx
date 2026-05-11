@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 
+import { isAdmin } from "@/engines/admin/auth";
+import { listRecentInvites } from "@/engines/admin/persistence";
 import { createLogger } from "@/lib/shared/logger";
+import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
+
+import { InviteForm } from "./invite-form";
 
 const log = createLogger("page.admin.invite");
 
@@ -9,22 +14,19 @@ export const metadata = {
   title: "Invite · Bot OS Admin",
 };
 
-/**
- * Admin invite page. STUB.
- *
- * MVP path: send invites from the Supabase dashboard
- *   Authentication > Users > Invite User
- *
- * TODO (post-MVP):
- *   1. Add an `is_admin` claim or role check (custom claims on auth.users
- *      app_metadata, set via service-role API).
- *   2. Build a server action that calls
- *      `supabase.auth.admin.inviteUserByEmail(email)` using the
- *      service-role client (NOT the anon client; admin endpoints require
- *      service role and must NEVER be reachable from the browser).
- *   3. Audit-log every invite to a new `admin_invites` table.
- *   4. Rate-limit by admin user_id to prevent accidental floods.
- */
+const STATUS_STYLES: Record<string, { label: string; color: string }> = {
+  sent:     { label: "Sent",     color: "var(--oo-tof)" },
+  accepted: { label: "Accepted", color: "var(--oo-gold)" },
+  revoked:  { label: "Revoked",  color: "var(--oo-text-dim)" },
+  failed:   { label: "Failed",   color: "var(--oo-bof)" },
+};
+
+function formatDate(iso: string): string {
+  // ISO date only (no locale-formatted time) to dodge SSR/client
+  // hydration mismatches; see PR #23.
+  return iso.slice(0, 10);
+}
+
 export default async function AdminInvitePage() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -32,33 +34,73 @@ export default async function AdminInvitePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
-  log.info("admin invite stub viewed", { user_id: user.id });
+  if (!isAdmin(user)) {
+    log.warn("non-admin viewed admin invite", { user_id: user.id });
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-12">
+        <h1 className="text-2xl font-semibold tracking-tight">Admin only</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This page is gated. Speak to whoever runs Bot OS if you think you should have access.
+        </p>
+      </main>
+    );
+  }
+
+  const adminClient = createSupabaseAdminClient();
+  const invites = await listRecentInvites(adminClient, { limit: 20 });
+
+  log.info("admin invite page viewed", {
+    user_id: user.id,
+    recent_count: invites.length,
+  });
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Invite a creator</h1>
-      <p className="mt-2 text-sm text-muted-foreground">This page is a stub.</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Sends a Supabase invite email. They click through, set a password, and land in onboarding.
+      </p>
 
       <section className="mt-8 rounded-lg border border-border bg-card p-6">
-        <h2 className="text-sm font-medium">For now: invite via the Supabase dashboard</h2>
-        <ol className="mt-3 list-decimal pl-5 text-sm text-muted-foreground space-y-1">
-          <li>Open the project in Supabase.</li>
-          <li>Authentication, Users, Invite User.</li>
-          <li>Paste their email and send.</li>
-        </ol>
-        <a
-          href="https://supabase.com/dashboard/project/zihfgidtoqwcnnjnlvof/auth/users"
-          target="_blank"
-          rel="noreferrer"
-          className="mt-4 inline-block text-sm text-primary underline"
-        >
-          Open Supabase users
-        </a>
+        <InviteForm />
       </section>
 
-      <section className="mt-6 rounded-lg border border-dashed border-border p-6 text-xs text-muted-foreground">
-        Programmatic invites (auth.admin.inviteUserByEmail) ship in a follow-up PR. They need the
-        service-role key + an admin role check + an audit log.
+      <section className="mt-8">
+        <h2 className="text-sm font-medium">Recent invites</h2>
+        {invites.length === 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">No invites issued yet.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-card">
+            {invites.map((row) => {
+              const style = STATUS_STYLES[row.status] ?? STATUS_STYLES.sent;
+              return (
+                <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{row.email}</p>
+                    {row.error ? (
+                      <p
+                        className="mt-0.5 truncate text-xs"
+                        style={{ color: "var(--oo-bof)" }}
+                        title={row.error}
+                      >
+                        {row.error}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 text-xs">
+                    <span style={{ color: style.color }}>{style.label}</span>
+                    <time
+                      dateTime={row.created_at}
+                      className="text-muted-foreground"
+                    >
+                      {formatDate(row.created_at)}
+                    </time>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </main>
   );

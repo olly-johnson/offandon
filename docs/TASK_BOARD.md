@@ -50,9 +50,9 @@ Single source of truth for in-flight and completed work. Update when starting a 
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-034 | User Memory: post-chat Haiku extractor (Inngest) writes structured facts to a `user_memory` jsonb. Inject into chat + scripts system prompts. Should learn iteratively, not overwrite. | - | Todo | - |
-| BO-035 | "Save that as an idea" — give Chat the `save_idea` tool (Anthropic tool-use). New `ideas` table + `/ideas` page. `/scripts` Generate flow can pull from saved ideas as a pillar override. | - | Todo | - |
-| BO-036 | Methodology layer: per-user evergreen principles editable in `/settings/methodology`. Persisted in `profiles.methodology` (text). Injected into chat + scripts system prompts. | - | Todo | - |
+| BO-034 | User Memory: post-chat Haiku extractor writes structured facts to `user_memories`. Injected into chat + scripts system prompts. Learns iteratively. | claude | Done | PR #21 |
+| BO-035 | "Save that as an idea" — Chat `save_idea` tool-use, `ideas` table, Ideas Bank tab on /scripts, Pocket page. | claude | Done | PR #20 |
+| BO-036 | Methodology layer: per-user evergreen principles editable on /methodology. Persisted in `user_methodology`. Injected into chat + scripts system prompts. | claude | Done | PR #22 |
 | BO-037 | Methodology layer: load `docs/methodology/01-house.md` + per-surface slice into chat + scripts system prompts (analyst will follow when the engine exists). | claude | Done | PR #10 |
 | BO-038 | Onboarding refresh: add ICP expansion (2am thoughts, internal battles, dreams), story bank seeds, contrarian belief, signature phrases, example creators. See `docs/methodology/05-onboarding-updates.md`. | claude | Done | PR #9 |
 | BO-039 | Methodology validators: extend anti-slop with structural checks (SCCCC ≥ 3/5 on hooks, ≥ 3 Connection Points per script, word count gate). Wire into ScriptGenerator pre-submission gate. | - | Deferred | revisit if outputs degrade (short bodies, weak hooks, missing Connection Points across batches) |
@@ -61,20 +61,20 @@ Single source of truth for in-flight and completed work. Update when starting a 
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-005 | Social: Instagram auth + last 30 videos | - | Todo | - |
+| BO-005 | Social: Instagram OAuth (Path A) + content library + follower/reach dashboard + nightly Inngest sync | claude | Done | PR #26 |
 
 ## Phase 1. Follow-ups discovered during smoke-testing
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-013 | Programmatic admin invite endpoint (replaces dashboard invite) | - | Todo | - |
+| BO-013 | Programmatic admin invite endpoint (replaces dashboard invite) | claude | In Progress | feature/admin-invite-endpoint |
 | BO-014 | Custom email templates (invite, reset, magic link) with branded copy | - | Todo | - |
 | BO-015 | Surface `error` query param on /signin (callback failures, expired links) | - | Todo | - |
 | BO-016 | unwrapSupabaseError helper for the empty-error-on-401 wart | - | Todo | - |
 | BO-026 | Stuck-batch sweeper (cron: mark batches stuck > 5 min as failed) | - | Todo | - |
 | BO-027 | "Cancel batch" button on /scripts to manually clear stuck rows | - | Todo | - |
 | BO-028 | Document the "auto-expose new tables = OFF" Supabase setting in CLAUDE.md so future tables remember to grant service_role | - | Todo | - |
-| BO-040 | Auth refresh-token race: detect `refresh_token_already_used` / `refresh_token_not_found` in middleware, clear dead Supabase auth cookies on the response, downgrade noisy log to debug. | claude | In Progress | fix/auth-refresh-race |
+| BO-040 | Auth refresh-token race: detect `refresh_token_already_used` / `refresh_token_not_found` in middleware, clear dead Supabase auth cookies on the response, downgrade noisy log to debug. | claude | Done | PR #12 |
 
 ## Conventions
 
