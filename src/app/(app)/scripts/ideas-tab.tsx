@@ -132,7 +132,7 @@ export function IdeasTab({ ideas, onPick }: IdeasTabProps) {
                   className="px-5 py-3.5 text-xs"
                   style={{ color: "var(--oo-text-secondary)" }}
                 >
-                  {new Date(i.created_at).toLocaleDateString()}
+                  {i.created_at.slice(0, 10)}
                 </td>
                 <td className="px-5 py-3.5">
                   <span

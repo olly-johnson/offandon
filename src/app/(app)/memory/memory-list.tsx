@@ -79,7 +79,7 @@ function MemoryRowItem({ memory }: { memory: MemoryRow }) {
           style={{ color: "var(--oo-text-dim)" }}
         >
           priority {memory.priority} . saved{" "}
-          {new Date(memory.created_at).toLocaleDateString()}
+          {memory.created_at.slice(0, 10)}
         </p>
         {state.error ? (
           <p

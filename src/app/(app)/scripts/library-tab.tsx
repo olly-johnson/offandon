@@ -117,7 +117,7 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
                   className="px-5 py-3.5 text-xs"
                   style={{ color: "var(--oo-text-secondary)" }}
                 >
-                  {new Date(s.updated_at).toLocaleDateString()}
+                  {s.updated_at.slice(0, 10)}
                 </td>
                 <td className="px-5 py-3.5">
                   <button
@@ -158,7 +158,7 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
                   {open.title ?? open.hook ?? "Untitled"}
                 </h3>
                 <p className="mt-1 text-xs" style={{ color: "var(--oo-text-dim)" }}>
-                  {new Date(open.updated_at).toLocaleString()} · {open.status}
+                  {open.updated_at.slice(0, 16).replace("T", " ")} · {open.status}
                 </p>
               </div>
               <button
