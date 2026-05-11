@@ -21,19 +21,12 @@ Supabase uses Go template syntax. The variables vary by template type; common on
 
 ## Asset hosting
 
-The logo is base64-embedded directly in `invite.html`, so the email is self-contained and works without any deployed site. Trade-off: a logo update means regenerating the inlined base64. Easiest way:
+The logo is loaded from GitHub raw at `https://raw.githubusercontent.com/olly-johnson/offandon/main/public/logo.png`. This works because the repo is public; Gmail strips base64 `data:` URIs as an anti-tracking measure, so a hosted URL is the only path that renders the image in every client.
 
-```bash
-python3 - <<'PY'
-import base64
-b64 = base64.b64encode(open("public/logo.png","rb").read()).decode()
-print(f"data:image/png;base64,{b64}")
-PY
-```
+If you ever flip the repo private, the email image will break. Two ways out:
 
-Paste the output as the new `src` value.
-
-Final file is ~70KB. Gmail clips message bodies over 102KB, so leave headroom; if the design grows past ~85KB, switch to a publicly hosted image URL instead of base64.
+1. Push `public/logo.png` into a Supabase Storage public bucket and use that URL instead. The bucket URL is permanent and doesn't depend on repo visibility.
+2. Deploy the app, set the Supabase Site URL to the deployed origin, and switch the `<img src>` back to `{{ .SiteURL }}/logo.png`.
 
 ## Files
 
