@@ -124,6 +124,22 @@ export async function deleteConnection(
   supabase: InstagramSupabaseClient,
   userId: string,
 ): Promise<void> {
+  // Wipe media rows first. Without this, a future Reconnect (especially
+  // via OAuth, where the post mix may shift) can hit RLS UPDATE-policy
+  // failures on conflicting media ids from a stale session. Disconnect
+  // means "clean slate"; the next sync rebuilds the library anyway.
+  const { error: mediaErr } = await supabase
+    .from("instagram_media")
+    .delete()
+    .eq("user_id", userId);
+  if (mediaErr) {
+    log.error("instagram_media delete failed during disconnect", {
+      user_id: userId,
+      message: mediaErr.message,
+    });
+    throw new Error(`deleteConnection (media wipe): ${mediaErr.message}`);
+  }
+
   const { error } = await supabase
     .from("instagram_connections")
     .delete()
