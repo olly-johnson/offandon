@@ -36,10 +36,10 @@ export default async function OnboardingPage() {
         <Image
           src="/logo.png"
           alt="ABS Creative Studios"
-          width={64}
-          height={64}
+          width={80}
+          height={80}
           priority
-          className="size-14 shrink-0 rounded-xl"
+          className="size-10 shrink-0 rounded-full object-cover"
           style={{ boxShadow: "var(--oo-shadow-md)" }}
         />
         <div>

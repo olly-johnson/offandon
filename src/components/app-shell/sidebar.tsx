@@ -24,17 +24,23 @@ export function Sidebar({ email, displayName, isAdmin }: SidebarProps) {
       }}
     >
       <div
-        className="flex items-center justify-center px-4"
+        className="flex items-center gap-2.5 px-4"
         style={{ height: 56, borderBottom: "1px solid var(--oo-border)" }}
       >
         <Image
           src="/logo.png"
           alt="ABS Creative Studios"
-          width={160}
-          height={40}
+          width={56}
+          height={56}
           priority
-          className="h-9 w-auto"
+          className="size-7 shrink-0 rounded-full object-cover"
         />
+        <span className="text-sm font-bold" style={{ color: "var(--oo-gold)" }}>
+          Off&amp;On
+        </span>
+        <span className="text-sm font-bold" style={{ color: "var(--oo-text-primary)" }}>
+          OS
+        </span>
       </div>
 
       <NewChatButton />
