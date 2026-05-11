@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { getBatch } from "@/engines/content/persistence";
 import { createLogger } from "@/lib/shared/logger";
@@ -13,7 +14,7 @@ import { StatusBadge } from "../status-badge";
 const log = createLogger("page.scripts.batch");
 
 export const metadata = {
-  title: "Batch · Bot OS",
+  title: "Batch . Bot OS",
 };
 
 export default async function BatchDetailPage({
@@ -43,19 +44,35 @@ export default async function BatchDetailPage({
 
   return (
     <>
-      <Topbar title={`Batch · ${batch.status}`} />
+      <Topbar title={`Batch . ${batch.status}`} />
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto flex max-w-3xl flex-col">
+        <div className="mx-auto flex max-w-4xl flex-col">
           {inFlight ? <AutoRefresh /> : null}
 
-          <Link href="/scripts/batches" className="text-xs text-muted-foreground hover:text-foreground">
-            ← All batches
+          <Link
+            href="/scripts/batches"
+            className="mb-4 inline-flex items-center gap-1.5 text-xs"
+            style={{ color: "var(--oo-text-secondary)" }}
+          >
+            <ArrowLeft className="size-3.5" />
+            All batches
           </Link>
 
-          <header className="mt-4 mb-8 flex items-start justify-between gap-4">
+          <header className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight">Batch</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <h2
+                className="text-2xl font-bold"
+                style={{
+                  color: "var(--oo-text-primary)",
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                Batch
+              </h2>
+              <p
+                className="mt-1 text-sm"
+                style={{ color: "var(--oo-text-secondary)" }}
+              >
                 Requested {batch.count_requested} scripts.
                 {batch.completed_at
                   ? ` Finished in ${Math.round(
@@ -70,33 +87,71 @@ export default async function BatchDetailPage({
           </header>
 
           {batch.status === "failed" ? (
-            <section className="mb-6 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm">
-              <strong className="text-destructive">Generation failed.</strong>
-              <p className="mt-1 text-muted-foreground">
+            <div
+              className="mb-6 rounded-xl p-4 text-sm"
+              style={{
+                background: "rgba(192,57,43,0.06)",
+                border: "1px solid rgba(192,57,43,0.25)",
+              }}
+            >
+              <p className="font-semibold" style={{ color: "var(--oo-bof)" }}>
+                Generation failed.
+              </p>
+              <p
+                className="mt-1"
+                style={{ color: "var(--oo-text-secondary)" }}
+              >
                 {batch.failure_reason ?? "Unknown error."}
               </p>
-            </section>
+            </div>
           ) : null}
 
           {inFlight ? (
-            <section className="mb-6 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-              Claude is generating {batch.count_requested} scripts. Page refreshes automatically
-              every few seconds.
-            </section>
+            <div
+              className="mb-6 flex items-center gap-3 rounded-xl px-5 py-4 text-sm"
+              style={{
+                background: "var(--oo-gold-dim)",
+                border: "1px solid var(--oo-border-gold)",
+              }}
+            >
+              <Loader2
+                className="oo-spin size-4"
+                style={{ color: "var(--oo-gold)" }}
+              />
+              <p style={{ color: "var(--oo-gold)" }}>
+                Claude is generating {batch.count_requested} scripts. This page
+                refreshes automatically every few seconds.
+              </p>
+            </div>
           ) : null}
 
           {scripts.length === 0 && !inFlight && batch.status !== "failed" ? (
-            <p className="text-sm text-muted-foreground">No scripts in this batch yet.</p>
+            <div className="oo-card-static p-8 text-center">
+              <p
+                className="text-sm"
+                style={{ color: "var(--oo-text-secondary)" }}
+              >
+                No scripts in this batch yet.
+              </p>
+            </div>
           ) : null}
 
-          <ol className="flex flex-col gap-6">
+          <ol className="flex flex-col gap-4">
             {scripts.map((s, i) => (
-              <li key={s.id} className="rounded-lg border border-border bg-card p-6">
-                <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
-                  <span>Script {i + 1}</span>
-                </div>
-                <p className="mt-3 text-lg font-semibold">{s.hook}</p>
-                <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{s.body}</p>
+              <li key={s.id} className="oo-card-static p-6">
+                <p className="label-xs">Script {i + 1}</p>
+                <p
+                  className="mt-3 text-base font-semibold leading-snug"
+                  style={{ color: "var(--oo-text-primary)" }}
+                >
+                  {s.hook}
+                </p>
+                <p
+                  className="mt-3 whitespace-pre-wrap text-sm leading-relaxed"
+                  style={{ color: "var(--oo-text-secondary)" }}
+                >
+                  {s.body}
+                </p>
               </li>
             ))}
           </ol>
