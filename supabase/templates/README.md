@@ -21,12 +21,9 @@ Supabase uses Go template syntax. The variables vary by template type; common on
 
 ## Asset hosting
 
-The logo is loaded from GitHub raw at `https://raw.githubusercontent.com/olly-johnson/offandon/main/public/logo.png`. This works because the repo is public; Gmail strips base64 `data:` URIs as an anti-tracking measure, so a hosted URL is the only path that renders the image in every client.
+No image is currently used. Gmail rendered both `data:` URIs and the GitHub raw URL unreliably (broken-image icon in the preview pane even though the asset returned 200), so brand presence is carried by the headline and the "ABS CREATIVE STUDIOS" wordmark in the footer.
 
-If you ever flip the repo private, the email image will break. Two ways out:
-
-1. Push `public/logo.png` into a Supabase Storage public bucket and use that URL instead. The bucket URL is permanent and doesn't depend on repo visibility.
-2. Deploy the app, set the Supabase Site URL to the deployed origin, and switch the `<img src>` back to `{{ .SiteURL }}/logo.png`.
+When the app is deployed, the cleanest reinstate path is to upload the logo into a Supabase Storage public bucket and reference that URL — it survives repo visibility changes and has CDN caching baked in. The image markup that previously sat above the headline is preserved in git history if you want to restore it.
 
 ## Files
 

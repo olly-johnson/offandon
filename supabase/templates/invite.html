@@ -14,8 +14,9 @@
     - Inline styles only (Gmail strips most <style> blocks).
     - Web-safe font stack with fallbacks.
     - Light background by default; most clients force light mode anyway.
-    - Logo hosted on GitHub raw (repo is public). Gmail strips data: URIs,
-      so a hosted image URL is the only path that works in every client.
+    - No logo image: hosted URLs and data: URIs both rendered unreliably in
+      Gmail's preview pane. Brand presence comes from the headline + footer
+      wordmark.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -30,12 +31,7 @@
         <td align="center" style="padding:40px 16px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E1D7;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
             <tr>
-              <td align="center" style="padding:40px 32px 24px 32px;">
-                <img src="https://raw.githubusercontent.com/olly-johnson/offandon/main/public/logo.png" alt="ABS Creative Studios" width="72" height="72" style="display:block;border-radius:50%;border:1px solid #E5E1D7;" />
-              </td>
-            </tr>
-            <tr>
-              <td align="center" style="padding:0 32px 8px 32px;">
+              <td align="center" style="padding:40px 32px 8px 32px;">
                 <h1 style="margin:0;font-size:24px;line-height:1.25;font-weight:600;letter-spacing:-0.01em;color:#1A1A1A;">
                   You're invited to Bot OS
                 </h1>
