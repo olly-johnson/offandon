@@ -2,6 +2,7 @@ import { serve } from "inngest/next";
 
 import { inngest } from "@/lib/shared/inngest/client";
 import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts";
+import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
 
 /**
  * Inngest serve endpoint. Inngest cloud (and the local dev CLI) hit this
@@ -13,5 +14,5 @@ import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts
  */
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [generateScripts],
+  functions: [generateScripts, syncInstagram],
 });

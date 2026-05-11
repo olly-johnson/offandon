@@ -47,3 +47,5 @@ next-env.d.ts
 # the distilled, generic methodology lives in docs/methodology/.
 # remove this line if you want to track the source files in the repo.
 /examples/
+
+certificates
