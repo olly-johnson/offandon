@@ -212,6 +212,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_methodology: {
+        Row: {
+          user_id: string;
+          content: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          content?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          content?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       user_memories: {
         Row: {
           id: string;

@@ -55,7 +55,12 @@ export class HookGenerator implements IHookGenerator {
       throw new Error("HookGenerator: concept too short (need at least 8 chars)");
     }
 
-    const system = buildHooksSystemPrompt(input.voiceDna, count, input.imf);
+    const system = buildHooksSystemPrompt(
+      input.voiceDna,
+      count,
+      input.imf,
+      input.userMethodology,
+    );
     const user = JSON.stringify(
       {
         concept,

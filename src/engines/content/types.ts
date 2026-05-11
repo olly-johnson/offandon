@@ -45,6 +45,8 @@ export interface GenerateScriptsInput {
   voiceDna: VoiceDNA;
   /** Number of scripts to ask for. Validated 1..30 in DB; sane MVP default is 7. */
   count: number;
+  /** Optional per-user methodology overlay (BO-036). */
+  userMethodology?: string | null;
 }
 
 export interface IScriptGenerator {
@@ -118,6 +120,8 @@ export interface GenerateHooksInput {
   imf?: IMF;
   /** How many hooks to generate. 4..8 supported; default 6. */
   count?: number;
+  /** Optional per-user methodology overlay (BO-036). */
+  userMethodology?: string | null;
 }
 
 export interface GeneratedSingleScript {
@@ -139,6 +143,8 @@ export interface GenerateSingleScriptInput {
   hook: string;
   /** Optional refinement note from step 5; appended to the user payload. */
   refinement?: string;
+  /** Optional per-user methodology overlay (BO-036). */
+  userMethodology?: string | null;
 }
 
 export interface IIMFExtractor {
@@ -146,7 +152,11 @@ export interface IIMFExtractor {
    * Distil a free-text concept into an IMF triple. Used by the wizard's
    * step 2 auto-extract.
    */
-  extract(input: { voiceDna: VoiceDNA; concept: string }): Promise<IMF>;
+  extract(input: {
+    voiceDna: VoiceDNA;
+    concept: string;
+    userMethodology?: string | null;
+  }): Promise<IMF>;
 }
 
 export interface IHookGenerator {

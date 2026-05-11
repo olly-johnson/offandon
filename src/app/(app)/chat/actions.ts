@@ -15,6 +15,7 @@ import type { ChatToolDefinition } from "@/engines/chat/types";
 import { saveIdea } from "@/engines/content/ideas-persistence";
 import { listMemoriesForUser } from "@/engines/memory/persistence";
 import { runMemoryExtractor } from "@/engines/memory/run-extractor";
+import { getUserMethodology } from "@/engines/methodology/persistence";
 import {
   AnthropicLLMClient,
   MEMORY_EXTRACTOR_MODEL,
@@ -156,7 +157,10 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       conversationId,
     });
 
-    const memories = await listMemoriesForUser(supabase, user.id, 8);
+    const [memories, userMethodology] = await Promise.all([
+      listMemoriesForUser(supabase, user.id, 8),
+      getUserMethodology(supabase, user.id),
+    ]);
 
     const engine = new ChatEngine({ llm: new AnthropicLLMClient() });
     const reply = await engine.reply({
@@ -164,6 +168,7 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       history: [{ role: "user", content: message }],
       tools: [tool],
       memories,
+      userMethodology,
     });
 
     await appendMessage(supabase, {
@@ -276,7 +281,10 @@ export async function sendMessage(
       conversationId,
     });
 
-    const memories = await listMemoriesForUser(supabase, user.id, 8);
+    const [memories, userMethodology] = await Promise.all([
+      listMemoriesForUser(supabase, user.id, 8),
+      getUserMethodology(supabase, user.id),
+    ]);
 
     const engine = new ChatEngine({ llm: new AnthropicLLMClient() });
     const reply = await engine.reply({
@@ -284,6 +292,7 @@ export async function sendMessage(
       history,
       tools: [tool],
       memories,
+      userMethodology,
     });
 
     await appendMessage(supabase, {

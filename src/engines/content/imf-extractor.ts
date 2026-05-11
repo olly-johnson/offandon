@@ -19,13 +19,17 @@ export class IMFExtractor implements IIMFExtractor {
     this.llm = opts.llm;
   }
 
-  async extract(input: { voiceDna: VoiceDNA; concept: string }): Promise<IMF> {
+  async extract(input: {
+    voiceDna: VoiceDNA;
+    concept: string;
+    userMethodology?: string | null;
+  }): Promise<IMF> {
     const concept = input.concept.trim();
     if (concept.length < 8) {
       throw new Error("IMFExtractor: concept too short to extract from (need at least 8 chars)");
     }
 
-    const system = buildIMFSystemPrompt(input.voiceDna);
+    const system = buildIMFSystemPrompt(input.voiceDna, input.userMethodology);
     const user = JSON.stringify({ concept }, null, 2);
 
     const raw = await this.llm.complete({ system, user });
