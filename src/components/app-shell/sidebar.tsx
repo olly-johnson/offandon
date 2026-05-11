@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LogOut, Settings } from "lucide-react";
 
 import { signout } from "@/app/(app)/dashboard/actions";
@@ -23,21 +24,17 @@ export function Sidebar({ email, displayName, isAdmin }: SidebarProps) {
       }}
     >
       <div
-        className="flex items-center gap-2.5 px-4"
+        className="flex items-center justify-center px-4"
         style={{ height: 56, borderBottom: "1px solid var(--oo-border)" }}
       >
-        <div
-          className="flex size-7 items-center justify-center rounded-lg text-xs font-bold text-white"
-          style={{ background: "linear-gradient(135deg, var(--oo-gold), var(--oo-gold-bright))" }}
-        >
-          O
-        </div>
-        <span className="text-sm font-bold" style={{ color: "var(--oo-gold)" }}>
-          Off&amp;On
-        </span>
-        <span className="text-sm font-bold" style={{ color: "var(--oo-text-primary)" }}>
-          OS
-        </span>
+        <Image
+          src="/logo.png"
+          alt="ABS Creative Studios"
+          width={160}
+          height={40}
+          priority
+          className="h-9 w-auto"
+        />
       </div>
 
       <NewChatButton />
