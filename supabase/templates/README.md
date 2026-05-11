@@ -21,7 +21,19 @@ Supabase uses Go template syntax. The variables vary by template type; common on
 
 ## Asset hosting
 
-The logo is referenced as `{{ .SiteURL }}/logo.png`. Make sure the Site URL in the Supabase dashboard points at the deployed site so `<img>` resolves correctly. For local-only testing the image will 404 silently; the email still renders fine because Outlook and Gmail display the alt text.
+The logo is base64-embedded directly in `invite.html`, so the email is self-contained and works without any deployed site. Trade-off: a logo update means regenerating the inlined base64. Easiest way:
+
+```bash
+python3 - <<'PY'
+import base64
+b64 = base64.b64encode(open("public/logo.png","rb").read()).decode()
+print(f"data:image/png;base64,{b64}")
+PY
+```
+
+Paste the output as the new `src` value.
+
+Final file is ~70KB. Gmail clips message bodies over 102KB, so leave headroom; if the design grows past ~85KB, switch to a publicly hosted image URL instead of base64.
 
 ## Files
 
