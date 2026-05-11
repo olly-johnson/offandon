@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LogOut, Settings } from "lucide-react";
 
 import { signout } from "@/app/(app)/dashboard/actions";
@@ -26,12 +27,14 @@ export function Sidebar({ email, displayName, isAdmin }: SidebarProps) {
         className="flex items-center gap-2.5 px-4"
         style={{ height: 56, borderBottom: "1px solid var(--oo-border)" }}
       >
-        <div
-          className="flex size-7 items-center justify-center rounded-lg text-xs font-bold text-white"
-          style={{ background: "linear-gradient(135deg, var(--oo-gold), var(--oo-gold-bright))" }}
-        >
-          O
-        </div>
+        <Image
+          src="/logo.png"
+          alt="ABS Creative Studios"
+          width={56}
+          height={56}
+          priority
+          className="size-7 shrink-0 rounded-full object-cover"
+        />
         <span className="text-sm font-bold" style={{ color: "var(--oo-gold)" }}>
           Off&amp;On
         </span>

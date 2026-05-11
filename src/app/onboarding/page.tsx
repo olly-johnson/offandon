@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import { createLogger } from "@/lib/shared/logger";
@@ -32,16 +33,15 @@ export default async function OnboardingPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
       <header className="mb-10 flex items-start gap-4">
-        <div
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--oo-gold), var(--oo-gold-bright))",
-            boxShadow: "var(--oo-shadow-md)",
-          }}
-        >
-          O
-        </div>
+        <Image
+          src="/logo.png"
+          alt="ABS Creative Studios"
+          width={80}
+          height={80}
+          priority
+          className="size-10 shrink-0 rounded-full object-cover"
+          style={{ boxShadow: "var(--oo-shadow-md)" }}
+        />
         <div>
           <h1
             className="text-3xl font-bold"
