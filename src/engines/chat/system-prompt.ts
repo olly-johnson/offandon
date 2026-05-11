@@ -15,6 +15,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { MemoryRow } from "@/engines/memory/persistence";
 import type { VoiceDNA } from "@/engines/voice/types";
 import { METHODOLOGY_CHAT_SLICE, METHODOLOGY_HOUSE } from "@/lib/shared/methodology";
 
@@ -58,7 +59,53 @@ export const HUMANIZATION_MANIFESTO: string = extractSection(
   MANIFESTO_HEADER,
 );
 
-export function buildChatSystemPrompt(voiceDna: VoiceDNA): string {
+/**
+ * Render the Haiku-extracted memories as a compact block the chat model
+ * can scan. Grouped by category so it can pull the right facts for the
+ * current turn (a script question needs ongoing_project, a voice question
+ * needs preference). Empty when the user has no memories yet, in which
+ * case we skip the whole block to keep the prompt clean.
+ */
+function renderMemoryBlock(memories: MemoryRow[]): string {
+  if (memories.length === 0) return "";
+
+  const order: MemoryRow["category"][] = [
+    "ongoing_project",
+    "creator_context",
+    "preference",
+    "recent_topic",
+  ];
+
+  const grouped = new Map<MemoryRow["category"], MemoryRow[]>();
+  for (const cat of order) grouped.set(cat, []);
+  for (const m of memories) {
+    grouped.get(m.category)?.push(m);
+  }
+
+  const lines: string[] = [];
+  for (const cat of order) {
+    const rows = grouped.get(cat) ?? [];
+    if (rows.length === 0) continue;
+    lines.push(`${cat}:`);
+    for (const r of rows) {
+      lines.push(`  - ${r.fact}`);
+    }
+  }
+
+  return [
+    "",
+    "----- BEGIN CREATOR MEMORY (incremental facts from prior chats) -----",
+    "Reference these when relevant. Do NOT cite them verbatim or list them back at the creator. Do NOT bring up an ongoing project unless they raise it first.",
+    "",
+    lines.join("\n"),
+    "----- END CREATOR MEMORY -----",
+  ].join("\n");
+}
+
+export function buildChatSystemPrompt(
+  voiceDna: VoiceDNA,
+  memories: MemoryRow[] = [],
+): string {
   const pillarLines = voiceDna.content_pillars
     .map(
       (p, i) =>
@@ -106,6 +153,7 @@ export function buildChatSystemPrompt(voiceDna: VoiceDNA): string {
     "",
     `prohibited_phrases (in addition to the Humanization Manifesto): ${voiceDna.prohibited_phrases.join(", ")}`,
     "----- END CREATOR'S VOICE DNA -----",
+    renderMemoryBlock(memories),
     "",
     "Reply rules:",
     "1. Default short. Two to six sentences unless the user asks for more. If they ask for a list, use plain dashes, not numbered lists with structural openers.",

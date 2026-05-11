@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -12,7 +13,12 @@ import {
 } from "@/engines/chat/persistence";
 import type { ChatToolDefinition } from "@/engines/chat/types";
 import { saveIdea } from "@/engines/content/ideas-persistence";
-import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
+import { listMemoriesForUser } from "@/engines/memory/persistence";
+import { runMemoryExtractor } from "@/engines/memory/run-extractor";
+import {
+  AnthropicLLMClient,
+  MEMORY_EXTRACTOR_MODEL,
+} from "@/engines/voice/anthropic-client";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 import { SlopError } from "@/lib/shared/anti-slop";
 import { createLogger } from "@/lib/shared/logger";
@@ -150,11 +156,14 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       conversationId,
     });
 
+    const memories = await listMemoriesForUser(supabase, user.id, 8);
+
     const engine = new ChatEngine({ llm: new AnthropicLLMClient() });
     const reply = await engine.reply({
       voiceDna: dna,
       history: [{ role: "user", content: message }],
       tools: [tool],
+      memories,
     });
 
     await appendMessage(supabase, {
@@ -168,6 +177,24 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       conversation_id: conversationId,
       user_id: user.id,
       tool_call_count: reply.tool_actions.length,
+    });
+
+    // Post-chat memory extraction runs AFTER the response is sent so it
+    // doesn't add latency to the user's first reply. Best-effort, swallows
+    // its own errors.
+    const assistantContent = reply.message.content;
+    after(async () => {
+      await runMemoryExtractor({
+        supabase,
+        llm: new AnthropicLLMClient({ model: MEMORY_EXTRACTOR_MODEL }),
+        voiceDna: dna,
+        userId: user.id,
+        conversationId,
+        recentTurns: [
+          { role: "user", content: message },
+          { role: "assistant", content: assistantContent },
+        ],
+      });
     });
   } catch (err) {
     log.error("startConversation reply failed", {
@@ -249,8 +276,15 @@ export async function sendMessage(
       conversationId,
     });
 
+    const memories = await listMemoriesForUser(supabase, user.id, 8);
+
     const engine = new ChatEngine({ llm: new AnthropicLLMClient() });
-    const reply = await engine.reply({ voiceDna: dna, history, tools: [tool] });
+    const reply = await engine.reply({
+      voiceDna: dna,
+      history,
+      tools: [tool],
+      memories,
+    });
 
     await appendMessage(supabase, {
       conversationId,
@@ -264,6 +298,23 @@ export async function sendMessage(
       user_id: user.id,
       history_length: history.length,
       tool_call_count: reply.tool_actions.length,
+    });
+
+    // Post-chat memory extraction. Runs in the background via after() so
+    // it doesn't block revalidatePath / the next render. Best-effort.
+    const assistantContent = reply.message.content;
+    after(async () => {
+      await runMemoryExtractor({
+        supabase,
+        llm: new AnthropicLLMClient({ model: MEMORY_EXTRACTOR_MODEL }),
+        voiceDna: dna,
+        userId: user.id,
+        conversationId,
+        recentTurns: [
+          { role: "user", content: message },
+          { role: "assistant", content: assistantContent },
+        ],
+      });
     });
   } catch (err) {
     log.error("sendMessage reply failed", {

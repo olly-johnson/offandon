@@ -115,7 +115,7 @@ export class ChatEngine implements IChatEngine {
       throw new Error("ChatEngine: last message must be from the user");
     }
 
-    const system = buildChatSystemPrompt(input.voiceDna);
+    const system = buildChatSystemPrompt(input.voiceDna, input.memories);
 
     const llmTools: ChatLLMTool[] | undefined = input.tools?.map((t) => ({
       name: t.name,
