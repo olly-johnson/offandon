@@ -35,9 +35,22 @@ function totalPct(s: HookScore): number {
   );
 }
 
-export function ScriptWizard({ onSaved }: { onSaved?: (id: string) => void }) {
+export function ScriptWizard({
+  onSaved,
+  seedConcept,
+}: {
+  onSaved?: (id: string) => void;
+  /**
+   * Optional initial concept text. Used when the wizard is opened from
+   * the Ideas Bank: a click pre-fills step 1 so the creator can review
+   * and edit before kicking off IMF extraction. Parent supplies a fresh
+   * `key` whenever this changes so the wizard remounts cleanly instead
+   * of trying to sync state mid-flow.
+   */
+  seedConcept?: string;
+}) {
   const [step, setStep] = useState(1);
-  const [concept, setConcept] = useState("");
+  const [concept, setConcept] = useState(seedConcept ?? "");
   const [imf, setImf] = useState<IMF>({ idea: "", message: "", feel: "" });
   const [imfLoading, setImfLoading] = useState(false);
   const [imfError, setImfError] = useState("");

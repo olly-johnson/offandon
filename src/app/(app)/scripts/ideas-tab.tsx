@@ -2,23 +2,29 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Wand2 } from "lucide-react";
 
 import type { IdeaRow } from "@/engines/content/ideas-persistence";
 
 interface IdeasTabProps {
   ideas: IdeaRow[];
+  /**
+   * Called when the user clicks an idea row. The parent uses this to seed
+   * the Script Wizard's step 1 and switch to the Create Script tab.
+   */
+  onPick?: (idea: IdeaRow) => void;
 }
 
 /**
  * Reads the user's Ideas Bank. Rows here are captured during chat via the
  * save_idea tool (source = 'chat') or, eventually, typed in manually.
  *
- * For v1 the row is informational. A follow-up will let the user push an
- * idea into the Wizard's step 1 concept field with one click; until then
- * we render the idea, its pillar (if tagged), and a deep link back to the
- * conversation that captured it.
+ * Click any row to drop the idea into the Script Wizard as the seed
+ * concept. The "from chat" deep-link stops propagation so it can still
+ * navigate to the originating conversation without first hijacking the
+ * pick.
  */
-export function IdeasTab({ ideas }: IdeasTabProps) {
+export function IdeasTab({ ideas, onPick }: IdeasTabProps) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -54,13 +60,16 @@ export function IdeasTab({ ideas }: IdeasTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-3">
+      <div className="flex items-center justify-between gap-3">
         <input
           className="oo-input max-w-xs"
           placeholder="Search ideas..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        <p className="text-xs" style={{ color: "var(--oo-text-dim)" }}>
+          Click any idea to seed a new script.
+        </p>
       </div>
 
       <div className="oo-card-static overflow-hidden">
@@ -71,12 +80,15 @@ export function IdeasTab({ ideas }: IdeasTabProps) {
               <th className="label-xs px-5 py-3.5 text-left">Pillar</th>
               <th className="label-xs px-5 py-3.5 text-left">Source</th>
               <th className="label-xs px-5 py-3.5 text-left">Saved</th>
+              <th className="label-xs px-5 py-3.5 text-left"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((i) => (
               <tr
                 key={i.id}
+                onClick={() => onPick?.(i)}
+                className="group cursor-pointer"
                 style={{ borderBottom: "1px solid var(--oo-border-subtle)" }}
               >
                 <td
@@ -101,7 +113,8 @@ export function IdeasTab({ ideas }: IdeasTabProps) {
                   {i.source === "chat" && i.conversation_id ? (
                     <Link
                       href={`/chat/${i.conversation_id}`}
-                      className="text-xs"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs hover:underline"
                       style={{ color: "var(--oo-gold)" }}
                     >
                       from chat
@@ -120,6 +133,14 @@ export function IdeasTab({ ideas }: IdeasTabProps) {
                   style={{ color: "var(--oo-text-secondary)" }}
                 >
                   {new Date(i.created_at).toLocaleDateString()}
+                </td>
+                <td className="px-5 py-3.5">
+                  <span
+                    className="flex items-center gap-1 text-xs opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ color: "var(--oo-gold)" }}
+                  >
+                    <Wand2 className="size-3.5" /> Use
+                  </span>
                 </td>
               </tr>
             ))}

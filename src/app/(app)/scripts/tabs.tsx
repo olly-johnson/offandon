@@ -22,6 +22,20 @@ export function ScriptsTabs({ libraryScripts, ideas }: ScriptsTabsProps) {
   const [tab, setTab] = useState<Tab>("create");
   const [highlightId, setHighlightId] = useState<string | null>(null);
 
+  // When an idea is picked from the Ideas Bank we seed the wizard's
+  // step 1 with the idea content. The id + content tuple lets us key
+  // the wizard so it remounts (resetting downstream state) every time
+  // a different idea is picked, instead of trying to sync state across
+  // a long-running wizard.
+  const [seededIdea, setSeededIdea] = useState<{ id: string; content: string } | null>(
+    null,
+  );
+
+  function handleIdeaPick(idea: IdeaRow) {
+    setSeededIdea({ id: idea.id, content: idea.content });
+    setTab("create");
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex" style={{ borderBottom: "1px solid var(--oo-border)" }}>
@@ -45,6 +59,8 @@ export function ScriptsTabs({ libraryScripts, ideas }: ScriptsTabsProps) {
 
       {tab === "create" ? (
         <ScriptWizard
+          key={seededIdea?.id ?? "fresh"}
+          seedConcept={seededIdea?.content}
           onSaved={(id) => {
             // Refresh server-rendered libraryScripts so the new row is
             // included, then jump to the Library tab and auto-open it.
@@ -57,7 +73,9 @@ export function ScriptsTabs({ libraryScripts, ideas }: ScriptsTabsProps) {
       {tab === "library" ? (
         <LibraryTab scripts={libraryScripts} highlightId={highlightId} />
       ) : null}
-      {tab === "ideas" ? <IdeasTab ideas={ideas} /> : null}
+      {tab === "ideas" ? (
+        <IdeasTab ideas={ideas} onPick={handleIdeaPick} />
+      ) : null}
     </div>
   );
 }
