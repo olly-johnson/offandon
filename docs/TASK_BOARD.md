@@ -68,7 +68,7 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
 | BO-013 | Programmatic admin invite endpoint (replaces dashboard invite) + admin-only sidebar entry | claude | Done | PR #27 |
-| BO-014 | Custom email templates (invite, reset, magic link) with branded copy | - | Todo | - |
+| BO-014 | Custom email templates (invite, reset, magic link) with branded copy | claude | Partial | feature/invite-email-template (invite done; reset + magic-link pending) |
 | BO-015 | Surface `error` query param on /signin (callback failures, expired links) | - | Todo | - |
 | BO-016 | unwrapSupabaseError helper for the empty-error-on-401 wart | - | Todo | - |
 | BO-026 | Stuck-batch sweeper (cron: mark batches stuck > 5 min as failed) | - | Todo | - |

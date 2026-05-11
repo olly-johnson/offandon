@@ -1,0 +1,104 @@
+<!--
+  Supabase "Invite user" email template.
+
+  Variables available (Go template syntax):
+    {{ .ConfirmationURL }}  - click-through URL with the code
+    {{ .Email }}            - recipient email
+    {{ .SiteURL }}          - project Site URL (set in Supabase dashboard)
+    {{ .Token }}            - 6-digit OTP
+    {{ .TokenHash }}
+    {{ .RedirectTo }}
+
+  Email HTML rules in play here:
+    - Table-based layout (Outlook renders divs unreliably).
+    - Inline styles only (Gmail strips most <style> blocks).
+    - Web-safe font stack with fallbacks.
+    - Light background by default; most clients force light mode anyway.
+    - Logo loaded from the live site so it stays in sync with the app.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>You're invited to Bot OS</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#F4F1EA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1A1A1A;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F4F1EA" style="background-color:#F4F1EA;">
+      <tr>
+        <td align="center" style="padding:40px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E1D7;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+            <tr>
+              <td align="center" style="padding:40px 32px 24px 32px;">
+                <img src="{{ .SiteURL }}/logo.png" alt="ABS Creative Studios" width="72" height="72" style="display:block;border-radius:50%;border:1px solid #E5E1D7;" />
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:0 32px 8px 32px;">
+                <h1 style="margin:0;font-size:24px;line-height:1.25;font-weight:600;letter-spacing:-0.01em;color:#1A1A1A;">
+                  You're invited to Bot OS
+                </h1>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:8px 32px 24px 32px;">
+                <p style="margin:0;font-size:15px;line-height:1.55;color:#4A4A4A;">
+                  Bot OS is the AI operating system for Instagram creators. You've been added as a beta user. Click the button below to set your password and start.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:8px 32px 32px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" bgcolor="#8B6914" style="border-radius:10px;background-color:#8B6914;">
+                      <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:10px;letter-spacing:0.01em;">
+                        Accept invite
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 24px 32px;">
+                <hr style="border:none;border-top:1px solid #E5E1D7;margin:0;" />
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 8px 32px;">
+                <p style="margin:0;font-size:13px;line-height:1.55;color:#6B6B6B;">
+                  The link is single-use and expires in 24 hours. If it doesn't work, paste this into your browser:
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 24px 32px;word-break:break-all;">
+                <p style="margin:0;font-size:12px;line-height:1.5;color:#8B6914;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
+                  {{ .ConfirmationURL }}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 32px 32px;">
+                <p style="margin:0;font-size:12px;line-height:1.55;color:#8C8C8C;">
+                  Didn't expect this email? You can safely ignore it. Your address won't be added to any list.
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+            <tr>
+              <td align="center" style="padding:24px 16px 0 16px;">
+                <p style="margin:0;font-size:11px;line-height:1.5;color:#8C8C8C;letter-spacing:0.04em;text-transform:uppercase;">
+                  ABS Creative Studios
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
