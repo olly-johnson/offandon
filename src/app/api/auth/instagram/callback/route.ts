@@ -11,6 +11,7 @@ import {
 import { InstagramClient } from "@/engines/instagram/client";
 import { runInstagramSync } from "@/engines/instagram/sync";
 import { createLogger } from "@/lib/shared/logger";
+import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
 const log = createLogger("api.auth.instagram.callback");
@@ -127,9 +128,16 @@ export async function GET(request: NextRequest): Promise<Response> {
     redirect(libraryWithError(extractMessage(err)));
   }
 
+  // Use the service-role client for the sync writes. The user JWT we
+  // verified above (getUser()) doesn't always propagate to PostgREST
+  // requests reliably from a route handler, which trips RLS even when
+  // the row's user_id matches the verified caller. We've already proved
+  // identity for this request, so dropping into service-role for the
+  // upserts is safe and matches the Inngest worker pattern.
+  const adminSupabase = createSupabaseAdminClient();
   const client = new InstagramClient();
   const syncResult = await runInstagramSync({
-    supabase,
+    supabase: adminSupabase,
     client,
     userId: user.id,
     accessToken: longToken.access_token,
