@@ -55,6 +55,7 @@ export const MEMORY_SYSTEM_PROMPT = [
   "5. Do NOT save secrets, credentials, contact info, or anything resembling PII.",
   "6. priority is 1..5. Reserve 5 for load-bearing business facts and current launches. 1..2 for recent_topic.",
   "7. If nothing meaningful happened this turn (greetings, small talk, the assistant doing all the talking), return an empty facts array. This is the right answer most of the time.",
+  "8. NO em-dashes (—), NO en-dashes used as substitute punctuation (–), NO emojis, NO buzzwords like delve, leverage, unlock, navigate, embark, harness, illuminate, foster, tapestry, journey, realm. These facts get embedded verbatim into future prompts; an em-dash leaking through here makes the chat assistant mirror it and then fail its own anti-slop validator. Use periods, commas, or colons. Plain prose.",
   "",
   "Output ONLY a JSON object with this exact shape, nothing else:",
   '  {"facts": [{"fact": "...", "category": "...", "priority": 1}]}',

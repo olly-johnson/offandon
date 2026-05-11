@@ -184,6 +184,40 @@ describe("parseExtractedFacts", () => {
     expect(parseExtractedFacts("")).toEqual([]);
     expect(parseExtractedFacts("[]")).toEqual([]);
   });
+
+  it("drops facts containing em-dashes so memory can't poison future prompts", () => {
+    const out = parseExtractedFacts(
+      JSON.stringify({
+        facts: [
+          {
+            fact: "Scope is unclear—positioning vs broader strategy.",
+            category: "ongoing_project",
+            priority: 3,
+          },
+          {
+            fact: "Currently coaching one SaaS client.",
+            category: "ongoing_project",
+            priority: 4,
+          },
+        ],
+      }),
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].fact).toBe("Currently coaching one SaaS client.");
+  });
+
+  it("drops facts containing forbidden buzzwords (e.g. delve)", () => {
+    const out = parseExtractedFacts(
+      JSON.stringify({
+        facts: [
+          { fact: "Wants to delve into operator frameworks.", category: "preference", priority: 2 },
+          { fact: "Loves running metaphors.", category: "preference", priority: 2 },
+        ],
+      }),
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].fact).toBe("Loves running metaphors.");
+  });
 });
 
 describe("MemoryEngine.extract", () => {
