@@ -1,4 +1,3 @@
-import { validateAntiSlop } from "@/lib/shared/anti-slop";
 import { createLogger } from "@/lib/shared/logger";
 import type { ILLMClient } from "@/engines/voice/voice";
 import type { VoiceDNA } from "@/engines/voice/types";
@@ -77,6 +76,26 @@ export class MemoryEngine {
 }
 
 /**
+ * Strip the patterns that, if persisted into memory, would leak into
+ * future system prompts and cause the chat assistant to mirror them
+ * (and then fail its own anti-slop validator).
+ *
+ *   em-dash (U+2014) -> period + space
+ *   emojis           -> dropped entirely
+ *
+ * Buzzwords are not stripped: you can't surgically remove "leverage"
+ * without mangling the sentence. The chat system prompt's own rules
+ * already keep them out of assistant output.
+ */
+export function sanitizeFactText(s: string): string {
+  return s
+    .replace(/—/g, ". ")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
  * Parse the model's JSON output into validated ExtractedFact[]. Tolerant of
  * lightly-malformed input (extra prose, surrounding whitespace) but strict
  * on the shape of each fact: category must be in the enum, priority must
@@ -115,24 +134,19 @@ export function parseExtractedFacts(raw: string): ExtractedFact[] {
     if (!candidate || typeof candidate !== "object") continue;
     const c = candidate as Record<string, unknown>;
 
-    const fact = typeof c.fact === "string" ? c.fact.trim() : "";
-    if (fact.length === 0 || fact.length > MEMORY_MAX_FACT_CHARS) continue;
+    const rawFact = typeof c.fact === "string" ? c.fact.trim() : "";
+    if (rawFact.length === 0 || rawFact.length > MEMORY_MAX_FACT_CHARS) continue;
 
-    // Saved facts get embedded into future system prompts. If we let an
-    // em-dash or a buzzword through here, the assistant sees the bad
-    // pattern in context and starts mirroring it; then its OWN output
-    // trips the anti-slop validator and the chat breaks. Drop dirty
-    // facts at the extraction boundary so memory can never poison the
-    // downstream prompt.
-    const slopCheck = validateAntiSlop(fact);
-    if (!slopCheck.ok) {
-      log.debug("memory: dropping fact that failed anti-slop", {
-        fact_preview: fact.slice(0, 80),
-        violation_count: slopCheck.violations.length,
-        first_type: slopCheck.violations[0]?.type,
-      });
-      continue;
-    }
+    // Sanitize before save instead of dropping. Saved facts get embedded
+    // into future system prompts; if an em-dash survives here the chat
+    // assistant mirrors it in its own output and trips the downstream
+    // anti-slop validator. Sanitizing keeps the useful content while
+    // neutering the patterns that would poison the next prompt.
+    // Buzzwords are NOT stripped (you can't surgically remove "leverage"
+    // without breaking the sentence); we trust the chat system prompt's
+    // own anti-slop rules to keep them out of assistant output.
+    const fact = sanitizeFactText(rawFact);
+    if (fact.length === 0) continue;
 
     const category =
       typeof c.category === "string" && CATEGORY_SET.has(c.category as MemoryCategory)

@@ -185,7 +185,7 @@ describe("parseExtractedFacts", () => {
     expect(parseExtractedFacts("[]")).toEqual([]);
   });
 
-  it("drops facts containing em-dashes so memory can't poison future prompts", () => {
+  it("rewrites em-dashes to periods instead of dropping the fact", () => {
     const out = parseExtractedFacts(
       JSON.stringify({
         facts: [
@@ -202,21 +202,40 @@ describe("parseExtractedFacts", () => {
         ],
       }),
     );
-    expect(out).toHaveLength(1);
-    expect(out[0].fact).toBe("Currently coaching one SaaS client.");
+    expect(out).toHaveLength(2);
+    expect(out[0].fact).toBe("Scope is unclear. positioning vs broader strategy.");
+    expect(out[1].fact).toBe("Currently coaching one SaaS client.");
   });
 
-  it("drops facts containing forbidden buzzwords (e.g. delve)", () => {
+  it("strips emojis from extracted facts", () => {
     const out = parseExtractedFacts(
       JSON.stringify({
         facts: [
-          { fact: "Wants to delve into operator frameworks.", category: "preference", priority: 2 },
-          { fact: "Loves running metaphors.", category: "preference", priority: 2 },
+          {
+            fact: "Loves shipping fast 🚀 and iterating.",
+            category: "preference",
+            priority: 2,
+          },
         ],
       }),
     );
     expect(out).toHaveLength(1);
-    expect(out[0].fact).toBe("Loves running metaphors.");
+    expect(out[0].fact).toBe("Loves shipping fast and iterating.");
+  });
+
+  it("keeps buzzword-containing facts (sanitiser does NOT touch words)", () => {
+    // Stripping a word like "leverage" would mangle the sentence.
+    // The chat system prompt's own rules keep these from leaking into
+    // assistant output; the memory layer doesn't need to.
+    const out = parseExtractedFacts(
+      JSON.stringify({
+        facts: [
+          { fact: "Wants to leverage operator frameworks.", category: "preference", priority: 2 },
+        ],
+      }),
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].fact).toBe("Wants to leverage operator frameworks.");
   });
 });
 
