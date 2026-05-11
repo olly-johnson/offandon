@@ -1,5 +1,8 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
+
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -9,10 +12,59 @@ import {
   getConnection,
 } from "@/engines/instagram/persistence";
 import { runInstagramSync } from "@/engines/instagram/sync";
+import {
+  buildAuthorizeUrl,
+  loadOAuthConfig,
+} from "@/engines/instagram/oauth";
+import { OAUTH_STATE_COOKIE } from "@/app/api/auth/instagram/callback/route";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
 const log = createLogger("library.actions");
+
+/**
+ * Primary connect path: kick off Instagram OAuth.
+ *
+ * Generates a random `state` token, sets it on a short-lived httpOnly
+ * cookie, then redirects the user to Instagram's authorize URL. When
+ * Instagram redirects back to /api/auth/instagram/callback, the route
+ * verifies the cookie matches the returned state to defend against
+ * CSRF and cross-site code relay.
+ *
+ * Falls back to a friendly error redirect if the server is missing
+ * IG_APP_ID / IG_APP_SECRET / IG_OAUTH_REDIRECT_URI env vars; we surface
+ * this on /library rather than crashing the action.
+ */
+export async function startInstagramOAuthAction(): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/signin");
+
+  let config;
+  try {
+    config = loadOAuthConfig();
+  } catch {
+    redirect(
+      `/library?ig_error=${encodeURIComponent(
+        "Server is not configured for Instagram OAuth. Contact support.",
+      )}`,
+    );
+  }
+
+  const state = randomBytes(32).toString("hex");
+  const cookieJar = await cookies();
+  cookieJar.set(OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 10, // 10 minutes; matches IG's auth code TTL.
+  });
+
+  redirect(buildAuthorizeUrl({ config, state }));
+}
 
 export type ConnectState = { error?: string; ok?: boolean };
 
