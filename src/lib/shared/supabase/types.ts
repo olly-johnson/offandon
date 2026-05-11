@@ -212,6 +212,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      admin_invites: {
+        Row: {
+          id: string;
+          invited_by: string;
+          email: string;
+          status: "sent" | "accepted" | "revoked" | "failed";
+          error: string | null;
+          created_at: string;
+          accepted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          invited_by: string;
+          email: string;
+          status?: "sent" | "accepted" | "revoked" | "failed";
+          error?: string | null;
+          created_at?: string;
+          accepted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          invited_by?: string;
+          email?: string;
+          status?: "sent" | "accepted" | "revoked" | "failed";
+          error?: string | null;
+          created_at?: string;
+          accepted_at?: string | null;
+        };
+        Relationships: [];
+      };
       instagram_connections: {
         Row: {
           user_id: string;

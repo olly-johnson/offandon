@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { isAdmin } from "@/engines/admin/auth";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
@@ -30,7 +31,11 @@ export default async function AppLayout({
   if (!profile) redirect("/onboarding");
 
   return (
-    <AppShell email={user.email ?? "you"} displayName={profile.display_name}>
+    <AppShell
+      email={user.email ?? "you"}
+      displayName={profile.display_name}
+      isAdmin={isAdmin(user)}
+    >
       {children}
     </AppShell>
   );

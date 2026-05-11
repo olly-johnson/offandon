@@ -7,9 +7,10 @@ import { NewChatButton, SidebarNav } from "./sidebar-nav";
 interface SidebarProps {
   email: string;
   displayName: string | null;
+  isAdmin: boolean;
 }
 
-export function Sidebar({ email, displayName }: SidebarProps) {
+export function Sidebar({ email, displayName, isAdmin }: SidebarProps) {
   const initials = (displayName ?? email).slice(0, 2).toUpperCase();
   const label = displayName ?? email.split("@")[0];
 
@@ -40,7 +41,7 @@ export function Sidebar({ email, displayName }: SidebarProps) {
       </div>
 
       <NewChatButton />
-      <SidebarNav />
+      <SidebarNav isAdmin={isAdmin} />
 
       <div style={{ borderTop: "1px solid var(--oo-border)" }} className="px-3 pb-3 pt-2">
         <div className="flex items-center gap-2.5">

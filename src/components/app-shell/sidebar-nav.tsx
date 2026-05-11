@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Plus,
   Search,
+  ShieldCheck,
   Sliders,
   Target,
   Zap,
@@ -24,6 +25,7 @@ interface NavItem {
   href: string;
   icon: LucideIcon;
   enabled: boolean;
+  adminOnly?: boolean;
 }
 
 const NAV: NavItem[] = [
@@ -39,15 +41,21 @@ const NAV: NavItem[] = [
   { label: "Methodology", href: "/methodology", icon: Sliders, enabled: true },
   { label: "Off&On Pocket", href: "/pocket", icon: Zap, enabled: false },
   { label: "Learn", href: "/learn", icon: BookOpen, enabled: false },
+  { label: "Admin", href: "/admin/invite", icon: ShieldCheck, enabled: true, adminOnly: true },
 ];
 
-export function SidebarNav() {
+interface SidebarNavProps {
+  isAdmin: boolean;
+}
+
+export function SidebarNav({ isAdmin }: SidebarNavProps) {
   const pathname = usePathname();
+  const items = NAV.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <nav className="flex-1 overflow-y-auto py-1.5">
       <p className="label-xs px-4 pb-2 pt-2">Navigation</p>
-      {NAV.map((item) => {
+      {items.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
         return (
