@@ -212,6 +212,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      client_assets: {
+        Row: {
+          id: string;
+          user_id: string;
+          asset_type: "story" | "viral_reference" | "past_script" | "template";
+          title: string;
+          body: string;
+          metadata: Json;
+          source_file: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          asset_type: "story" | "viral_reference" | "past_script" | "template";
+          title: string;
+          body: string;
+          metadata?: Json;
+          source_file?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          asset_type?: "story" | "viral_reference" | "past_script" | "template";
+          title?: string;
+          body?: string;
+          metadata?: Json;
+          source_file?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       admin_invites: {
         Row: {
           id: string;

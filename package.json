@@ -10,7 +10,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:engines": "vitest --project engines",
-    "test:app": "vitest --project app"
+    "test:app": "vitest --project app",
+    "ingest:extract": "tsx scripts/ingest-extract.ts",
+    "ingest:commit": "tsx scripts/ingest-commit.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
@@ -42,6 +44,7 @@
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.5"
   }
