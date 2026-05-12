@@ -243,12 +243,109 @@ describe("commitClientIngestion", () => {
     const call = state.clientAssetsUpserts[0];
     expect(call.options).toEqual({ onConflict: "user_id,source_file" });
     expect(call.rows).toHaveLength(2);
+    // The persistence layer rewrites source_file to <base>#<title-slug>
+    // so multi-entry files (story_bank.md) can carry multiple unique
+    // rows without colliding in the upsert batch. The LLM-provided
+    // anchor (here "#kicked-out") is replaced with the deterministic
+    // slug derived from the title.
     expect(call.rows[0]).toMatchObject({
       user_id: USER_ID,
       asset_type: "story",
       title: "Getting Kicked Out at 16",
-      source_file: "story_bank.md#kicked-out",
+      source_file: "story_bank.md#getting-kicked-out-at-16",
     });
+  });
+
+  it("composes unique source_file keys from title slug when multiple assets share a file", async () => {
+    const state: MockState = {
+      voiceDnaUpdates: [],
+      voiceDnaInserts: [],
+      profileUpserts: [],
+      clientAssetsUpserts: [],
+      memoryInserts: [],
+      methodologyUpserts: [],
+    };
+    const client = makeClient(state);
+
+    const data = fixtureData();
+    // Simulate the real-world Sonnet output where every story shares the
+    // same source_file path (story_bank.md) with no per-story anchor.
+    data.client_assets = [
+      {
+        asset_type: "story",
+        title: "Getting Kicked Out at 16",
+        body: "Hosted a party.",
+        metadata: {},
+        source_file: "story_bank.md",
+      },
+      {
+        asset_type: "story",
+        title: "Father's Death at Age 10",
+        body: "Father died.",
+        metadata: {},
+        source_file: "story_bank.md",
+      },
+      {
+        asset_type: "story",
+        title: "Six Waiter Jobs in Six Years",
+        body: "Six jobs.",
+        metadata: {},
+        source_file: "story_bank.md",
+      },
+    ];
+
+    await commitClientIngestion({
+      supabase: client,
+      userId: USER_ID,
+      data,
+    });
+
+    const rows = state.clientAssetsUpserts[0].rows;
+    expect(rows.map((r) => r.source_file)).toEqual([
+      "story_bank.md#getting-kicked-out-at-16",
+      "story_bank.md#father-s-death-at-age-10",
+      "story_bank.md#six-waiter-jobs-in-six-years",
+    ]);
+  });
+
+  it("drops within-batch duplicates that collide on the composed key", async () => {
+    const state: MockState = {
+      voiceDnaUpdates: [],
+      voiceDnaInserts: [],
+      profileUpserts: [],
+      clientAssetsUpserts: [],
+      memoryInserts: [],
+      methodologyUpserts: [],
+    };
+    const client = makeClient(state);
+
+    const data = fixtureData();
+    data.client_assets = [
+      {
+        asset_type: "story",
+        title: "Same Title",
+        body: "Body A",
+        metadata: {},
+        source_file: "story_bank.md",
+      },
+      {
+        asset_type: "story",
+        title: "Same Title",
+        body: "Body B (duplicate slug)",
+        metadata: {},
+        source_file: "story_bank.md",
+      },
+    ];
+
+    await commitClientIngestion({
+      supabase: client,
+      userId: USER_ID,
+      data,
+    });
+
+    // First-write-wins on duplicate slugs.
+    expect(state.clientAssetsUpserts[0].rows).toHaveLength(1);
+    expect(state.clientAssetsUpserts[0].rows[0].body).toBe("Body A");
   });
 
   it("inserts user_memories one row per fact", async () => {

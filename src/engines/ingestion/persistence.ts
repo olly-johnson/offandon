@@ -125,43 +125,84 @@ async function upsertClientAssets(
   userId: string,
   assets: ExtractedClientAsset[],
 ): Promise<void> {
-  // Partition by whether the row has a source_file. Rows with a path can
-  // ride the (user_id, source_file) unique index for idempotent re-ingest.
-  // Rows without one go through a plain insert and will dupe on re-run.
-  const withSource = assets.filter((a) => a.source_file);
-  const withoutSource = assets.filter((a) => !a.source_file);
-
-  if (withSource.length > 0) {
-    const rows = withSource.map((a) => ({
+  // Derive a deterministic source_file from the LLM-emitted path + title
+  // slug. Without this step, multiple assets from the same file (e.g.
+  // every story in story_bank.md) collide on (user_id, source_file)
+  // inside a single upsert batch and Postgres rejects with "ON CONFLICT
+  // DO UPDATE command cannot affect row a second time".
+  //
+  // The composed key is stable across re-ingests (same title -> same
+  // slug), so idempotency holds.
+  const rowsWithSource: Array<Record<string, unknown>> = [];
+  const rowsWithoutSource: Array<Record<string, unknown>> = [];
+  for (const a of assets) {
+    const sourceKey = composeSourceKey(a);
+    const base = {
       user_id: userId,
       asset_type: a.asset_type,
       title: a.title,
       body: a.body,
       metadata: a.metadata as Json,
-      source_file: a.source_file as string,
-    }));
+    };
+    if (sourceKey) {
+      rowsWithSource.push({ ...base, source_file: sourceKey });
+    } else {
+      rowsWithoutSource.push({ ...base, source_file: null });
+    }
+  }
+
+  // Defence in depth: if the LLM produced two assets with the same title
+  // AND the same source path, the composed key still collides. Drop
+  // duplicates within the batch (keep first) before the DB sees them.
+  const seen = new Set<string>();
+  const deduped = rowsWithSource.filter((row) => {
+    const key = row.source_file as string;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  if (deduped.length > 0) {
     const { error } = await supabase
       .from("client_assets")
-      .upsert(rows, { onConflict: "user_id,source_file" });
+      .upsert(deduped, { onConflict: "user_id,source_file" });
     if (error) {
       throw new Error(`ingestion: client_assets upsert failed: ${error.message}`);
     }
   }
 
-  if (withoutSource.length > 0) {
-    const rows = withoutSource.map((a) => ({
-      user_id: userId,
-      asset_type: a.asset_type,
-      title: a.title,
-      body: a.body,
-      metadata: a.metadata as Json,
-      source_file: null,
-    }));
-    const { error } = await supabase.from("client_assets").insert(rows);
+  if (rowsWithoutSource.length > 0) {
+    const { error } = await supabase.from("client_assets").insert(rowsWithoutSource);
     if (error) {
       throw new Error(`ingestion: client_assets insert (no-source) failed: ${error.message}`);
     }
   }
+}
+
+/**
+ * Compose a stable `(user_id, source_file)` key from the LLM-emitted
+ * source_file + the asset's title. Strips any anchor the model already
+ * added so the slug source-of-truth is the title, not the prompt.
+ *
+ * Returns null when the asset has no source_file at all (those go to a
+ * plain insert path and accept duplicates on re-run).
+ */
+function composeSourceKey(asset: ExtractedClientAsset): string | null {
+  if (!asset.source_file) return null;
+  const basePath = asset.source_file.split("#")[0].trim();
+  if (basePath === "") return null;
+  const slug = slugify(asset.title);
+  return slug === "" ? basePath : `${basePath}#${slug}`;
+}
+
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "") // strip diacritics
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
 }
 
 async function insertUserMemories(
