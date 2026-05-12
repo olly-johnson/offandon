@@ -1,6 +1,16 @@
 export { ScriptGenerator } from "./script-generator";
 export type { ScriptGeneratorOptions } from "./script-generator";
 export { buildScriptsSystemPrompt, HUMANIZATION_MANIFESTO } from "./system-prompt";
+export {
+  DEFAULT_ASSET_CAPS,
+  hasAnyAssets,
+  loadScriptAssetsContext,
+} from "./client-assets-persistence";
+export type {
+  ClientAssetCaps,
+  ClientAssetRow,
+  ScriptAssetsContext,
+} from "./client-assets-persistence";
 export { IMFExtractor } from "./imf-extractor";
 export type { IMFExtractorOptions } from "./imf-extractor";
 export { HookGenerator, hookTotalScore } from "./hook-generator";

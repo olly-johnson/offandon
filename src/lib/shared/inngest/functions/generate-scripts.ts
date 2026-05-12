@@ -85,12 +85,20 @@ export const generateScripts = inngest.createFunction(
         return getUserMethodology(supabase, user_id);
       });
 
+      const clientAssets = await step.run("load-client-assets", async () => {
+        const { loadScriptAssetsContext } = await import(
+          "@/engines/content/client-assets-persistence"
+        );
+        return loadScriptAssetsContext(supabase, user_id);
+      });
+
       const batch = await step.run("generate", async () => {
         const generator = new ScriptGenerator({ llm: new AnthropicLLMClient() });
         const result = await generator.generate({
           voiceDna: dna,
           count,
           userMethodology,
+          clientAssets,
         });
         log.info("generation ok", {
           batch_id,

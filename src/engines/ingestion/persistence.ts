@@ -120,6 +120,8 @@ async function supersedeAndInsertVoiceDna(
   }
 }
 
+type ClientAssetInsertRow = Database["public"]["Tables"]["client_assets"]["Insert"];
+
 async function upsertClientAssets(
   supabase: IngestionSupabaseClient,
   userId: string,
@@ -133,11 +135,11 @@ async function upsertClientAssets(
   //
   // The composed key is stable across re-ingests (same title -> same
   // slug), so idempotency holds.
-  const rowsWithSource: Array<Record<string, unknown>> = [];
-  const rowsWithoutSource: Array<Record<string, unknown>> = [];
+  const rowsWithSource: ClientAssetInsertRow[] = [];
+  const rowsWithoutSource: ClientAssetInsertRow[] = [];
   for (const a of assets) {
     const sourceKey = composeSourceKey(a);
-    const base = {
+    const base: Omit<ClientAssetInsertRow, "source_file"> = {
       user_id: userId,
       asset_type: a.asset_type,
       title: a.title,
@@ -155,7 +157,7 @@ async function upsertClientAssets(
   // AND the same source path, the composed key still collides. Drop
   // duplicates within the batch (keep first) before the DB sees them.
   const seen = new Set<string>();
-  const deduped = rowsWithSource.filter((row) => {
+  const deduped: ClientAssetInsertRow[] = rowsWithSource.filter((row) => {
     const key = row.source_file as string;
     if (seen.has(key)) return false;
     seen.add(key);
