@@ -75,7 +75,7 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-027 | "Cancel batch" button on /scripts to manually clear stuck rows | - | Todo | - |
 | BO-028 | Document the "auto-expose new tables = OFF" Supabase setting in CLAUDE.md so future tables remember to grant service_role | - | Todo | - |
 | BO-040 | Auth refresh-token race: detect `refresh_token_already_used` / `refresh_token_not_found` in middleware, clear dead Supabase auth cookies on the response, downgrade noisy log to debug. | claude | Done | PR #12 |
-| BO-042 | Operator-driven client ingestion: read `clients/<slug>/` files, LLM-extract into `voice_dna` + `client_assets` + `user_memories` + `user_methodology`. Two CLI commands (extract → review → commit) + em-dash sanitizer + ScriptGenerator wired to load client_assets at runtime. Bypass wizard when voice_dna already populated. | claude | In Progress | feature/client-ingestion |
+| BO-042 | Operator-driven client ingestion: read `clients/<slug>/` files, LLM-extract into `voice_dna` + `client_assets` + `user_memories` + `user_methodology`. Two CLI commands (extract → review → commit) + em-dash sanitizer + ScriptGenerator wired to load client_assets at runtime. Bypass wizard when voice_dna already populated. | claude | Done | PR #31 |
 
 ## Conventions
 
