@@ -2,12 +2,19 @@
   Supabase "Invite user" email template.
 
   Variables available (Go template syntax):
-    {{ .ConfirmationURL }}  - click-through URL with the code
+    {{ .ConfirmationURL }}  - DO NOT USE for invite. The default ConfirmationURL
+                              redirects to the Site URL root after verifying,
+                              so the session token never reaches our app and
+                              the user lands on /signin. Use the explicit
+                              token_hash form below.
     {{ .Email }}            - recipient email
     {{ .SiteURL }}          - project Site URL (set in Supabase dashboard)
     {{ .Token }}            - 6-digit OTP
-    {{ .TokenHash }}
+    {{ .TokenHash }}        - opaque hash consumed by /auth/confirm via verifyOtp
     {{ .RedirectTo }}
+
+  Click-through URL: {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite
+  See src/app/auth/confirm/route.ts for the matching server handler.
 
   Email HTML rules in play here:
     - Table-based layout (Outlook renders divs unreliably).
@@ -49,7 +56,7 @@
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td align="center" bgcolor="#8B6914" style="border-radius:10px;background-color:#8B6914;">
-                      <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:10px;letter-spacing:0.01em;">
+                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite" target="_blank" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:10px;letter-spacing:0.01em;">
                         Accept invite
                       </a>
                     </td>
@@ -72,7 +79,7 @@
             <tr>
               <td style="padding:0 32px 24px 32px;word-break:break-all;">
                 <p style="margin:0;font-size:12px;line-height:1.5;color:#8B6914;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
-                  {{ .ConfirmationURL }}
+                  {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite
                 </p>
               </td>
             </tr>
