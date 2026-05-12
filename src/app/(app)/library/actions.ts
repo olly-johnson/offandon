@@ -186,3 +186,169 @@ export async function disconnectInstagramAction(): Promise<DisconnectState> {
 
 // Re-export so the UI can do an instanceof check without pulling from engine.
 export { InstagramTokenError };
+
+// ---------------------------------------------------------------------------
+// BO-043: Instagram video analysis
+// ---------------------------------------------------------------------------
+
+import { inngest, INNGEST_EVENTS } from "@/lib/shared/inngest/client";
+import {
+  enforceAnalysisRateLimit,
+  getAnalysisForMedia,
+  ResearchRateLimitError,
+} from "@/engines/research";
+import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
+
+export type AnalyzeMediaState = { error?: string; queued?: boolean };
+
+/**
+ * Enqueue an Inngest analyze-media job for one video. Cheap, sync:
+ * does an ownership + rate-limit check, then emits the event. The
+ * heavy lifting (download, transcribe, LLM) lives in the function.
+ *
+ * Rate-limit check here is a soft pre-flight; the Inngest function
+ * re-runs it inside the actual step to defend against races. Both
+ * use the service-role client because the limit table has no
+ * authenticated grants.
+ */
+export async function requestMediaAnalysis(
+  mediaId: string,
+): Promise<AnalyzeMediaState> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/signin");
+
+  if (!mediaId) return { error: "Missing media id." };
+
+  if (process.env.RESEARCH_ANALYSIS_DISABLED === "1") {
+    return { error: "Video analysis is temporarily disabled." };
+  }
+
+  // Ownership check via the user JWT (RLS keeps this honest).
+  const { data: media, error: mediaErr } = await supabase
+    .from("instagram_media")
+    .select("id, media_type")
+    .eq("id", mediaId)
+    .maybeSingle();
+  if (mediaErr) {
+    log.error("requestMediaAnalysis media lookup failed", {
+      user_id: user.id,
+      media_id: mediaId,
+      message: mediaErr.message,
+    });
+    return { error: "Could not look up that video." };
+  }
+  if (!media) return { error: "Video not found." };
+  if (media.media_type !== "VIDEO" && media.media_type !== "REELS") {
+    return { error: "Only videos and reels can be analyzed." };
+  }
+
+  // Rate-limit pre-flight via service-role.
+  const adminClient = createSupabaseAdminClient();
+  try {
+    await enforceAnalysisRateLimit({
+      supabase: adminClient,
+      userId: user.id,
+    });
+  } catch (err) {
+    if (err instanceof ResearchRateLimitError) {
+      return {
+        error: `Monthly analysis limit reached (${err.used}/${err.limit}). Try again later in the month.`,
+      };
+    }
+    return {
+      error: `Could not check rate limit: ${err instanceof Error ? err.message : "unknown"}`,
+    };
+  }
+
+  await inngest.send({
+    name: INNGEST_EVENTS.MediaAnalyzeRequested,
+    data: { user_id: user.id, media_id: mediaId },
+  });
+
+  log.info("media analysis enqueued", { user_id: user.id, media_id: mediaId });
+  revalidatePath("/library");
+  return { queued: true };
+}
+
+/**
+ * Promote an analyzed video to a client_assets[past_script] row so the
+ * script generator references it on future runs (BO-042 wiring). Called
+ * after the user clicks "Save as reference" on the analysis panel.
+ *
+ * Idempotent on (user_id, source_file) via the existing client_assets
+ * unique index. source_file format: "instagram:<media_id>".
+ */
+export type SaveReferenceState = { error?: string; saved?: boolean };
+
+export async function saveAnalysisAsReference(
+  mediaId: string,
+): Promise<SaveReferenceState> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/signin");
+
+  if (!mediaId) return { error: "Missing media id." };
+
+  // Pull the analysis (RLS-scoped) so the user can only reference their own.
+  const analysis = await getAnalysisForMedia(supabase, mediaId);
+  if (!analysis) {
+    return { error: "No analysis to save. Run Analyze first." };
+  }
+
+  const { data: media } = await supabase
+    .from("instagram_media")
+    .select("permalink, posted_at, reach, plays")
+    .eq("id", mediaId)
+    .maybeSingle();
+
+  const title = analysis.hook?.slice(0, 80) ?? "Past reference";
+  const bodyLines = [
+    analysis.transcript,
+    "",
+    analysis.what_worked ? `What worked: ${analysis.what_worked}` : null,
+    analysis.what_to_repeat ? `Repeat: ${analysis.what_to_repeat}` : null,
+  ].filter((s): s is string => !!s);
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("client_assets").upsert(
+    {
+      user_id: user.id,
+      asset_type: "past_script" as const,
+      title,
+      body: bodyLines.join("\n"),
+      metadata: {
+        source: "instagram",
+        media_id: mediaId,
+        permalink: media?.permalink ?? null,
+        posted_at: media?.posted_at ?? null,
+        reach: media?.reach ?? null,
+        plays: media?.plays ?? null,
+        hook: analysis.hook,
+        structure: analysis.structure,
+        pillar_match: analysis.pillar_match,
+        performance_label: analysis.performance_label,
+      },
+      source_file: `instagram:${mediaId}`,
+    },
+    { onConflict: "user_id,source_file" },
+  );
+  if (error) {
+    log.error("saveAnalysisAsReference upsert failed", {
+      user_id: user.id,
+      media_id: mediaId,
+      message: error.message,
+    });
+    return { error: "Could not save as reference. Try again." };
+  }
+  log.info("analysis saved as past_script reference", {
+    user_id: user.id,
+    media_id: mediaId,
+  });
+  revalidatePath("/library");
+  return { saved: true };
+}

@@ -76,6 +76,7 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-028 | Document the "auto-expose new tables = OFF" Supabase setting in CLAUDE.md so future tables remember to grant service_role | - | Todo | - |
 | BO-040 | Auth refresh-token race: detect `refresh_token_already_used` / `refresh_token_not_found` in middleware, clear dead Supabase auth cookies on the response, downgrade noisy log to debug. | claude | Done | PR #12 |
 | BO-042 | Operator-driven client ingestion: read `clients/<slug>/` files, LLM-extract into `voice_dna` + `client_assets` + `user_memories` + `user_methodology`. Two CLI commands (extract → review → commit) + em-dash sanitizer + ScriptGenerator wired to load client_assets at runtime. Bypass wizard when voice_dna already populated. | claude | Done | PR #31 |
+| BO-043 | Instagram video analysis: Deepgram transcribe + Sonnet structural analysis for each video in the user's library. Inline button on `/library`, results saved to `instagram_media_analysis`, "Save as reference" promotes a winner to `client_assets[past_script]` (consumed by ScriptGenerator). Per-user rolling-30d rate limit. | claude | In Progress | feature/instagram-video-analysis |
 
 ## Conventions
 
