@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { Topbar } from "@/components/app-shell/topbar";
+import { isAdmin } from "@/engines/admin/auth";
 import { listMemoriesForUser } from "@/engines/memory/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
@@ -26,6 +27,11 @@ export default async function MemoryPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
+  // Memory is an operator-only inspection surface; clients shouldn't see
+  // what the bot has extracted about them. Sidebar nav already hides the
+  // link for non-admins; this is defense-in-depth for anyone who types
+  // the URL directly.
+  if (!isAdmin(user)) redirect("/dashboard");
 
   const memories = await listMemoriesForUser(supabase, user.id, 100);
 
