@@ -1,4 +1,9 @@
 export { IngestionExtractor, parseExtractedClientData } from "./extractor";
+export {
+  sanitizeExtractedClientData,
+  sanitizeString,
+  sanitizeValue,
+} from "./sanitize";
 export { commitClientIngestion } from "./persistence";
 export type { IngestionSupabaseClient } from "./persistence";
 export {

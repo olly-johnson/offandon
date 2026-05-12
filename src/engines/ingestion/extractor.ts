@@ -1,6 +1,7 @@
 import { createLogger, timed } from "@/lib/shared/logger";
 import type { ILLMClient } from "@/engines/voice/voice";
 
+import { sanitizeExtractedClientData } from "./sanitize";
 import {
   buildIngestionUserPrompt,
   INGESTION_SYSTEM_PROMPT,
@@ -66,7 +67,7 @@ export class IngestionExtractor {
       },
     );
 
-    return parseExtractedClientData(raw);
+    return sanitizeExtractedClientData(parseExtractedClientData(raw));
   }
 }
 
