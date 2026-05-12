@@ -88,6 +88,7 @@ export default async function LibraryPage({
             <ConnectEmptyState allowPasteToken={allowPasteToken} />
           ) : (
             <LibraryGrid
+              userId={user.id}
               connection={{
                 ig_username: connection.ig_username,
                 followers_count: connection.followers_count,

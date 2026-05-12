@@ -26,8 +26,11 @@ import {
   saveAnalysisAsReference,
   type RefreshState,
 } from "./actions";
+import { useAnalysisRealtime } from "./use-analysis-realtime";
 
 interface LibraryGridProps {
+  /** Current user. Passed in so the realtime channel can filter to this user's rows. */
+  userId: string;
   connection: {
     ig_username: string | null;
     followers_count: number | null;
@@ -43,11 +46,17 @@ interface LibraryGridProps {
 }
 
 export function LibraryGrid({
+  userId,
   connection,
   media,
   analyses,
   referencedMediaIds,
 }: LibraryGridProps) {
+  // Refresh the page when any media_analysis row for this user lands.
+  // Lets the per-tile spinner clear on its own as soon as the Inngest
+  // function writes its result, no manual reload needed.
+  useAnalysisRealtime(userId);
+
   const referencedSet = new Set(referencedMediaIds);
   const [pendingRefresh, startRefresh] = useTransition();
   const [pendingDisconnect, startDisconnect] = useTransition();
