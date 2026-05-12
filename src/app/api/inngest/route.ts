@@ -1,6 +1,7 @@
 import { serve } from "inngest/next";
 
 import { inngest } from "@/lib/shared/inngest/client";
+import { analyzeMedia } from "@/lib/shared/inngest/functions/analyze-media";
 import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts";
 import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
 
@@ -14,5 +15,5 @@ import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
  */
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [generateScripts, syncInstagram],
+  functions: [generateScripts, syncInstagram, analyzeMedia],
 });

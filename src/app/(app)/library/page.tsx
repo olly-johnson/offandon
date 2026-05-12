@@ -5,7 +5,9 @@ import {
   getConnection,
   listMediaForUser,
 } from "@/engines/instagram/persistence";
+import { getAnalysesForMediaIds } from "@/engines/research";
 import { createLogger } from "@/lib/shared/logger";
+import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
 import { ConnectForm } from "./connect-form";
@@ -35,6 +37,20 @@ export default async function LibraryPage({
   const media = connection
     ? await listMediaForUser(supabase, user.id, 30)
     : [];
+
+  // Load analyses for the visible media so each tile renders its analysis
+  // panel inline. Also check which media have been "saved as reference"
+  // (i.e. have a client_assets row sourced from this video). Both reads
+  // are tiny; one parallel batch.
+  const mediaIds = media.map((m) => m.id);
+  const [analyses, referencedSet] = await Promise.all([
+    mediaIds.length > 0
+      ? getAnalysesForMediaIds(supabase, mediaIds)
+      : Promise.resolve(new Map()),
+    mediaIds.length > 0
+      ? loadReferencedMediaIds(user.id, mediaIds)
+      : Promise.resolve(new Set<string>()),
+  ]);
 
   // Server-side env gate: the paste-a-token fallback exists for local
   // testing, not for clients. Off in production unless explicitly opted
@@ -80,6 +96,8 @@ export default async function LibraryPage({
                 last_sync_error: connection.last_sync_error,
               }}
               media={media}
+              analyses={Object.fromEntries(analyses)}
+              referencedMediaIds={Array.from(referencedSet)}
             />
           )}
         </div>
@@ -115,6 +133,43 @@ function ConnectEmptyState({ allowPasteToken }: { allowPasteToken: boolean }) {
       <ConnectForm allowPasteToken={allowPasteToken} />
     </div>
   );
+}
+
+/**
+ * Returns the set of media_ids that are already referenced by a
+ * client_assets row sourced from Instagram. Used by the grid to render
+ * the "Save as reference" button as "Saved" for already-saved videos.
+ *
+ * Reads through the admin client because client_assets has no
+ * authenticated UPDATE/DELETE/INSERT policy (writes are service-role).
+ * The SELECT path on client_assets IS open to authenticated, but using
+ * the admin client here keeps the read path symmetric with the write
+ * paths in actions.ts.
+ */
+async function loadReferencedMediaIds(
+  userId: string,
+  mediaIds: string[],
+): Promise<Set<string>> {
+  const admin = createSupabaseAdminClient();
+  const sourceFiles = mediaIds.map((id) => `instagram:${id}`);
+  const { data, error } = await admin
+    .from("client_assets")
+    .select("source_file")
+    .eq("user_id", userId)
+    .eq("asset_type", "past_script")
+    .in("source_file", sourceFiles);
+  if (error) {
+    log.warn("loadReferencedMediaIds failed", { user_id: userId, message: error.message });
+    return new Set();
+  }
+  const out = new Set<string>();
+  for (const row of data ?? []) {
+    const sf = row.source_file as string | null;
+    if (sf && sf.startsWith("instagram:")) {
+      out.add(sf.slice("instagram:".length));
+    }
+  }
+  return out;
 }
 
 function FlashBanner({

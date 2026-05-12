@@ -22,6 +22,7 @@ export const inngest = new Inngest({
  */
 export const INNGEST_EVENTS = {
   ScriptsBatchRequested: "scripts/batch.requested",
+  MediaAnalyzeRequested: "research/media.analyze.requested",
 } as const;
 
 /**
@@ -32,4 +33,16 @@ export const INNGEST_EVENTS = {
 export interface ScriptsBatchRequestedData {
   batch_id: string;
   user_id: string;
+}
+
+/**
+ * Payload shape for research/media.analyze.requested (BO-043). The
+ * function looks up the media row + voice_dna + library stats by
+ * (user_id, media_id) so we don't need to pre-resolve them at emit
+ * time. force=true bypasses the cached-analysis short-circuit.
+ */
+export interface MediaAnalyzeRequestedData {
+  user_id: string;
+  media_id: string;
+  force?: boolean;
 }

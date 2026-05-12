@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useTransition, useState } from "react";
 import {
+  Bookmark,
+  BookmarkCheck,
   ExternalLink,
   Eye,
   Heart,
@@ -10,14 +12,18 @@ import {
   MessageCircle,
   Play,
   RefreshCw,
-  Bookmark,
+  Sparkles,
+  Star,
 } from "lucide-react";
 
 import type { MediaRow } from "@/engines/instagram/persistence";
+import type { MediaAnalysis } from "@/engines/research";
 
 import {
   disconnectInstagramAction,
   refreshInstagramAction,
+  requestMediaAnalysis,
+  saveAnalysisAsReference,
   type RefreshState,
 } from "./actions";
 
@@ -30,9 +36,19 @@ interface LibraryGridProps {
     last_sync_error: string | null;
   };
   media: MediaRow[];
+  /** media_id -> analysis row. Absent keys mean "not analyzed yet". */
+  analyses: Record<string, MediaAnalysis>;
+  /** media_ids already saved as a client_assets reference. */
+  referencedMediaIds: string[];
 }
 
-export function LibraryGrid({ connection, media }: LibraryGridProps) {
+export function LibraryGrid({
+  connection,
+  media,
+  analyses,
+  referencedMediaIds,
+}: LibraryGridProps) {
+  const referencedSet = new Set(referencedMediaIds);
   const [pendingRefresh, startRefresh] = useTransition();
   const [pendingDisconnect, startDisconnect] = useTransition();
   const [refreshState, setRefreshState] = useState<RefreshState | null>(null);
@@ -142,7 +158,12 @@ export function LibraryGrid({ connection, media }: LibraryGridProps) {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {media.map((m) => (
-            <MediaCard key={m.id} media={m} />
+            <MediaCard
+              key={m.id}
+              media={m}
+              analysis={analyses[m.id] ?? null}
+              isReferenced={referencedSet.has(m.id)}
+            />
           ))}
         </div>
       )}
@@ -150,7 +171,15 @@ export function LibraryGrid({ connection, media }: LibraryGridProps) {
   );
 }
 
-function MediaCard({ media }: { media: MediaRow }) {
+function MediaCard({
+  media,
+  analysis,
+  isReferenced,
+}: {
+  media: MediaRow;
+  analysis: MediaAnalysis | null;
+  isReferenced: boolean;
+}) {
   const thumb = media.thumbnail_url ?? media.media_url;
   const isVideo = media.media_type === "VIDEO" || media.media_type === "REELS";
 
@@ -190,6 +219,20 @@ function MediaCard({ media }: { media: MediaRow }) {
           >
             <Play className="size-3" />
             {media.media_type === "REELS" ? "Reel" : "Video"}
+          </span>
+        ) : null}
+        {isReferenced ? (
+          <span
+            className="absolute left-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+            style={{
+              background: "var(--oo-gold-dim)",
+              color: "var(--oo-gold)",
+              border: "1px solid var(--oo-border-gold)",
+            }}
+            title="Saved as a reference for script generation"
+          >
+            <Star className="size-3" />
+            Reference
           </span>
         ) : null}
       </div>
@@ -237,8 +280,180 @@ function MediaCard({ media }: { media: MediaRow }) {
             </a>
           ) : null}
         </div>
+
+        {isVideo ? (
+          <AnalysisSection
+            mediaId={media.id}
+            analysis={analysis}
+            isReferenced={isReferenced}
+          />
+        ) : null}
       </div>
     </article>
+  );
+}
+
+function AnalysisSection({
+  mediaId,
+  analysis,
+  isReferenced,
+}: {
+  mediaId: string;
+  analysis: MediaAnalysis | null;
+  isReferenced: boolean;
+}) {
+  const [pendingAnalyze, startAnalyze] = useTransition();
+  const [pendingSave, startSave] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [optimisticallyQueued, setOptimisticallyQueued] = useState(false);
+  const [optimisticallyReferenced, setOptimisticallyReferenced] =
+    useState(isReferenced);
+
+  function handleAnalyze() {
+    setError(null);
+    setOptimisticallyQueued(true);
+    startAnalyze(async () => {
+      const result = await requestMediaAnalysis(mediaId);
+      if (result.error) {
+        setError(result.error);
+        setOptimisticallyQueued(false);
+      }
+      // Successful queue: keep optimistic flag; the next page render
+      // (after revalidatePath) will replace it with the real analysis.
+    });
+  }
+
+  function handleSaveAsReference() {
+    setError(null);
+    setOptimisticallyReferenced(true);
+    startSave(async () => {
+      const result = await saveAnalysisAsReference(mediaId);
+      if (result.error) {
+        setError(result.error);
+        setOptimisticallyReferenced(isReferenced);
+      }
+    });
+  }
+
+  if (!analysis) {
+    return (
+      <div className="mt-2 border-t pt-2" style={{ borderColor: "var(--oo-border)" }}>
+        <button
+          type="button"
+          onClick={handleAnalyze}
+          disabled={pendingAnalyze || optimisticallyQueued}
+          className="oo-btn-ghost flex w-full items-center justify-center gap-2 px-3 py-1.5 text-[11px] disabled:opacity-50"
+        >
+          {pendingAnalyze || optimisticallyQueued ? (
+            <>
+              <Loader2 className="oo-spin size-3" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Sparkles className="size-3" />
+              Analyze
+            </>
+          )}
+        </button>
+        {error ? (
+          <p className="mt-1 text-[10px]" role="alert" style={{ color: "var(--oo-bof)" }}>
+            {error}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  const showSaved = optimisticallyReferenced;
+  return (
+    <div className="mt-2 border-t pt-2" style={{ borderColor: "var(--oo-border)" }}>
+      <div className="flex flex-col gap-1.5">
+        {analysis.performance_label ? (
+          <PerformanceBadge label={analysis.performance_label} />
+        ) : null}
+        {analysis.hook ? (
+          <p
+            className="line-clamp-2 text-[11px] font-semibold leading-snug"
+            style={{ color: "var(--oo-text-primary)" }}
+            title={analysis.hook}
+          >
+            Hook: {analysis.hook}
+          </p>
+        ) : null}
+        {analysis.structure ? (
+          <p className="text-[10px]" style={{ color: "var(--oo-text-secondary)" }}>
+            {analysis.structure}
+          </p>
+        ) : null}
+        {analysis.pillar_match ? (
+          <p className="text-[10px]" style={{ color: "var(--oo-text-dim)" }}>
+            Pillar: {analysis.pillar_match}
+          </p>
+        ) : null}
+        {analysis.what_to_repeat ? (
+          <p
+            className="mt-1 line-clamp-2 text-[10px] italic"
+            style={{ color: "var(--oo-text-secondary)" }}
+            title={analysis.what_to_repeat}
+          >
+            Repeat: {analysis.what_to_repeat}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          onClick={handleSaveAsReference}
+          disabled={pendingSave || showSaved}
+          className="oo-btn-ghost mt-1 flex w-full items-center justify-center gap-1.5 px-2 py-1 text-[10px] disabled:opacity-60"
+        >
+          {showSaved ? (
+            <>
+              <BookmarkCheck className="size-3" />
+              Saved as reference
+            </>
+          ) : pendingSave ? (
+            <>
+              <Loader2 className="oo-spin size-3" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Bookmark className="size-3" />
+              Save as reference
+            </>
+          )}
+        </button>
+        {error ? (
+          <p className="text-[10px]" role="alert" style={{ color: "var(--oo-bof)" }}>
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function PerformanceBadge({
+  label,
+}: {
+  label: MediaAnalysis["performance_label"];
+}) {
+  if (!label) return null;
+  const map: Record<NonNullable<MediaAnalysis["performance_label"]>, { text: string; bg: string; fg: string }> = {
+    top: { text: "Top performer", bg: "rgba(22,163,74,0.12)", fg: "var(--oo-tof)" },
+    above_median: { text: "Above median", bg: "rgba(22,163,74,0.06)", fg: "var(--oo-tof)" },
+    median: { text: "Median", bg: "var(--oo-bg-elevated)", fg: "var(--oo-text-secondary)" },
+    below_median: { text: "Below median", bg: "rgba(192,57,43,0.06)", fg: "var(--oo-bof)" },
+    bottom: { text: "Bottom", bg: "rgba(192,57,43,0.12)", fg: "var(--oo-bof)" },
+  };
+  const s = map[label];
+  return (
+    <span
+      className="inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+      style={{ background: s.bg, color: s.fg }}
+    >
+      {s.text}
+    </span>
   );
 }
 

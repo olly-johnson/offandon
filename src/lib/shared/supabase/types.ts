@@ -374,6 +374,72 @@ export type Database = {
         };
         Relationships: [];
       };
+      instagram_media_analysis: {
+        Row: {
+          media_id: string;
+          user_id: string;
+          transcript: string;
+          hook: string | null;
+          structure: string | null;
+          pillar_match: string | null;
+          performance_label: string | null;
+          what_worked: string | null;
+          what_to_repeat: string | null;
+          llm_model: string;
+          transcript_model: string;
+          analyzed_at: string;
+        };
+        Insert: {
+          media_id: string;
+          user_id: string;
+          transcript: string;
+          hook?: string | null;
+          structure?: string | null;
+          pillar_match?: string | null;
+          performance_label?: string | null;
+          what_worked?: string | null;
+          what_to_repeat?: string | null;
+          llm_model: string;
+          transcript_model: string;
+          analyzed_at?: string;
+        };
+        Update: {
+          media_id?: string;
+          user_id?: string;
+          transcript?: string;
+          hook?: string | null;
+          structure?: string | null;
+          pillar_match?: string | null;
+          performance_label?: string | null;
+          what_worked?: string | null;
+          what_to_repeat?: string | null;
+          llm_model?: string;
+          transcript_model?: string;
+          analyzed_at?: string;
+        };
+        Relationships: [];
+      };
+      research_analysis_runs: {
+        Row: {
+          id: string;
+          user_id: string;
+          media_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          media_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          media_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       user_methodology: {
         Row: {
           user_id: string;
