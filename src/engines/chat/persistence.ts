@@ -150,3 +150,32 @@ export async function appendMessage(
 export function toEngineHistory(rows: MessageRow[]): ChatMessage[] {
   return rows.map((r) => ({ role: r.role, content: r.content }));
 }
+
+/**
+ * Delete a conversation owned by the caller. Messages cascade via the
+ * conversation_id foreign key. RLS limits the row set to the caller's
+ * own conversations, so passing an id that belongs to someone else is a
+ * silent no-op (zero rows affected) rather than an error — which matches
+ * how Supabase reports cross-tenant deletes via PostgREST.
+ *
+ * Returns the number of rows actually deleted (0 or 1). Callers can use
+ * the 0-case to distinguish "not yours / does not exist" from "deleted".
+ */
+export async function deleteConversation(
+  supabase: ChatSupabaseClient,
+  conversationId: string,
+): Promise<number> {
+  const { error, count } = await supabase
+    .from("conversations")
+    .delete({ count: "exact" })
+    .eq("id", conversationId);
+  if (error) {
+    log.error("conversation delete failed", {
+      conversation_id: conversationId,
+      code: error.code,
+      message: error.message,
+    });
+    throw new Error(`deleteConversation: ${error.message}`);
+  }
+  return count ?? 0;
+}

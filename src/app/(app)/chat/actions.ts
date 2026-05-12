@@ -8,6 +8,7 @@ import { ChatEngine } from "@/engines/chat/chat-engine";
 import {
   appendMessage,
   createConversation,
+  deleteConversation as deleteConversationRow,
   getConversationWithMessages,
   toEngineHistory,
 } from "@/engines/chat/persistence";
@@ -349,4 +350,57 @@ export async function sendMessage(
 
   revalidatePath(`/chat/${conversationId}`);
   return {};
+}
+
+/**
+ * Delete a conversation owned by the caller. RLS restricts the row set
+ * to the user's own conversations; messages cascade via the FK. Revalidates
+ * /chat so the rail re-fetches without the deleted row, then redirects to
+ * /chat if the user was viewing the deleted thread.
+ *
+ * Called directly from a client component button (not as a form action),
+ * so the signature is plain (id) -> Promise<SendState>. The return shape
+ * still matches SendState so future callers can read {error?} for inline
+ * feedback if needed.
+ */
+export async function deleteConversation(
+  conversationId: string,
+): Promise<SendState> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    log.warn("deleteConversation without user");
+    redirect("/signin");
+  }
+
+  if (!conversationId) {
+    return { error: "Missing conversation id." };
+  }
+
+  try {
+    const count = await deleteConversationRow(supabase, conversationId);
+    if (count === 0) {
+      log.warn("deleteConversation no-op (id not owned or already gone)", {
+        conversation_id: conversationId,
+        user_id: user.id,
+      });
+      return { error: "Could not delete this conversation." };
+    }
+    log.info("conversation deleted", {
+      conversation_id: conversationId,
+      user_id: user.id,
+    });
+  } catch (err) {
+    log.error("deleteConversation failed", {
+      conversation_id: conversationId,
+      user_id: user.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { error: "Could not delete. Try again." };
+  }
+
+  revalidatePath("/chat");
+  redirect("/chat");
 }

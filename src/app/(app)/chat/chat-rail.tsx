@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 
+import { DeleteConversationButton } from "./delete-conversation-button";
+
 interface ConversationLink {
   id: string;
   title: string | null;
@@ -54,17 +56,24 @@ export function ChatRail({ conversations }: ChatRailProps) {
             {conversations.map((c) => {
               const active = pathname === `/chat/${c.id}`;
               return (
-                <Link
+                <div
                   key={c.id}
-                  href={`/chat/${c.id}`}
-                  className="mb-0.5 block w-full truncate rounded-lg px-3 py-2 text-left text-xs"
+                  className="group mb-0.5 flex items-center gap-1 rounded-lg pr-1.5"
                   style={{
-                    color: active ? "var(--oo-gold)" : "var(--oo-text-dim)",
                     background: active ? "var(--oo-gold-dim)" : "transparent",
                   }}
                 >
-                  <span className="truncate">{c.title ?? "Untitled"}</span>
-                </Link>
+                  <Link
+                    href={`/chat/${c.id}`}
+                    className="block min-w-0 flex-1 truncate px-3 py-2 text-left text-xs"
+                    style={{
+                      color: active ? "var(--oo-gold)" : "var(--oo-text-dim)",
+                    }}
+                  >
+                    <span className="truncate">{c.title ?? "Untitled"}</span>
+                  </Link>
+                  <DeleteConversationButton conversationId={c.id} title={c.title} />
+                </div>
               );
             })}
           </>

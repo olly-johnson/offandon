@@ -28,14 +28,23 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
-  const [snapshot, dna, igConnection, igMedia] = await Promise.all([
+  const [snapshot, dna, igConnection, igMedia, profileRow] = await Promise.all([
     loadDashboard(user.id),
     getCurrentVoiceDNA(supabase, user.id),
     getConnection(supabase, user.id),
     listMediaForUser(supabase, user.id, 50),
+    supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then((r) => r.data),
   ]);
   const suggestions = buildSuggestions(snapshot);
-  const firstName = user.email?.split("@")[0] ?? "there";
+  // Greeting prefers the first word of display_name (so "Alex Ben Shaw" -> "Alex"),
+  // falls back to the email handle, then a generic "there". Ingestion (BO-042)
+  // populates display_name; the wizard sets it too.
+  const firstName = firstWordOf(profileRow?.display_name) ?? user.email?.split("@")[0] ?? "there";
 
   // Weekly reach = sum of `reach` across media posted in the last 7 days.
   // Nulls are skipped; if nothing posted this week we render "-" so the
@@ -298,6 +307,14 @@ function sumWeeklyReach(
     any = true;
   }
   return any ? sum : null;
+}
+
+function firstWordOf(s: string | null | undefined): string | null {
+  if (!s) return null;
+  const trimmed = s.trim();
+  if (trimmed === "") return null;
+  const first = trimmed.split(/\s+/)[0];
+  return first.length > 0 ? first : null;
 }
 
 function timeOfDayGreeting(): string {
