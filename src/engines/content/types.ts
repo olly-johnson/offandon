@@ -47,6 +47,13 @@ export interface GenerateScriptsInput {
   count: number;
   /** Optional per-user methodology overlay (BO-036). */
   userMethodology?: string | null;
+  /**
+   * Optional operator-curated reference material (BO-042). When present,
+   * the system prompt embeds stories, viral references, templates, and
+   * past scripts the creator has approved. Empty arrays / null skip the
+   * block entirely so non-ingested users see no change.
+   */
+  clientAssets?: import("./client-assets-persistence").ScriptAssetsContext | null;
 }
 
 export interface IScriptGenerator {

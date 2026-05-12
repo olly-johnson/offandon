@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { createLogger } from "@/lib/shared/logger";
+import { hasVoiceDna } from "@/lib/shared/onboarding";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
 const log = createLogger("auth.set-password");
@@ -52,5 +53,18 @@ export async function setPassword(
   }
 
   log.info("password set", { user_id: user.id });
-  redirect("/onboarding");
+  // BO-042: operator-ingested users already have voice_dna populated, so
+  // the wizard has nothing to collect. Send them straight to /dashboard.
+  // The hasVoiceDna call uses the same Supabase server client (with the
+  // freshly-updated session cookies).
+  let skipWizard = false;
+  try {
+    skipWizard = await hasVoiceDna(supabase, user.id);
+  } catch (err) {
+    log.warn("hasVoiceDna check failed; falling back to /onboarding", {
+      user_id: user.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+  redirect(skipWizard ? "/dashboard" : "/onboarding");
 }

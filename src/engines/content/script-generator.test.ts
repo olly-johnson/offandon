@@ -97,6 +97,76 @@ describe("scripts system prompt", () => {
     expect(prompt).toContain("Pre-submission gate");
     expect(prompt).toContain("180");
   });
+
+  it("skips the client-assets block when no assets provided", () => {
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA);
+    expect(prompt).not.toContain("BEGIN CREATOR'S OWN MATERIAL");
+  });
+
+  it("skips the client-assets block when all asset arrays are empty", () => {
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA, null, {
+      stories: [],
+      viral_references: [],
+      templates: [],
+      past_scripts: [],
+    });
+    expect(prompt).not.toContain("BEGIN CREATOR'S OWN MATERIAL");
+  });
+
+  it("embeds stories with title + category + funnel metadata when provided", () => {
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA, null, {
+      stories: [
+        {
+          asset_type: "story",
+          title: "Rock bottom in Mexico",
+          body: "I CAN'T KEEP LIVING LIKE THIS.",
+          metadata: { category: "rock_bottom", funnel_fit: "top" },
+        },
+      ],
+      viral_references: [],
+      templates: [],
+      past_scripts: [],
+    });
+    expect(prompt).toContain("BEGIN CREATOR'S OWN MATERIAL");
+    expect(prompt).toContain("Rock bottom in Mexico");
+    expect(prompt).toContain("rock_bottom");
+    expect(prompt).toContain("top");
+    expect(prompt).toContain("I CAN'T KEEP LIVING LIKE THIS.");
+  });
+
+  it("embeds all four asset_types with separate sections", () => {
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA, null, {
+      stories: [{ asset_type: "story", title: "S1", body: "story body", metadata: {} }],
+      viral_references: [
+        {
+          asset_type: "viral_reference",
+          title: "V1",
+          body: "viral body",
+          metadata: { creator: "@tomnoske" },
+        },
+      ],
+      templates: [{ asset_type: "template", title: "T1", body: "tpl body", metadata: {} }],
+      past_scripts: [{ asset_type: "past_script", title: "P1", body: "past body", metadata: {} }],
+    });
+    expect(prompt).toContain("[stories");
+    expect(prompt).toContain("[viral_references");
+    expect(prompt).toContain("[templates");
+    expect(prompt).toContain("[past_scripts");
+    expect(prompt).toContain("@tomnoske");
+  });
+
+  it("truncates a long asset body to keep the prompt budget in check", () => {
+    const long = "x".repeat(2000);
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA, null, {
+      stories: [{ asset_type: "story", title: "Long", body: long, metadata: {} }],
+      viral_references: [],
+      templates: [],
+      past_scripts: [],
+    });
+    // 700-char cap + trailing "..." indicator.
+    expect(prompt).toContain("...");
+    expect(prompt).not.toContain(long);
+  });
 });
 
 describe("ScriptGenerator.generate", () => {

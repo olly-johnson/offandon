@@ -48,4 +48,10 @@ next-env.d.ts
 # remove this line if you want to track the source files in the repo.
 /examples/
 
+# per-client source folders consumed by scripts/ingest:* (BO-042).
+# contain confidential brand briefs, story banks, transcripts, viral references.
+# the distilled per-user data lives in supabase tables (voice_dna, client_assets,
+# user_memories, user_methodology) and is reachable via the app's RLS policies.
+/clients/
+
 certificates

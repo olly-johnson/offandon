@@ -21,6 +21,11 @@ import {
   renderUserMethodologyBlock,
 } from "@/lib/shared/methodology";
 
+import {
+  hasAnyAssets,
+  type ScriptAssetsContext,
+} from "./client-assets-persistence";
+
 const MANIFESTO_HEADER = "## ✍️ The Humanization Manifesto";
 
 function findRepoFile(filename: string): string {
@@ -61,9 +66,82 @@ export const HUMANIZATION_MANIFESTO: string = extractSection(
   MANIFESTO_HEADER,
 );
 
+/**
+ * Single asset body cap (chars). Keeps a long story or methodology
+ * dump from monopolising prompt budget. Chosen so a typical 500-char
+ * story renders in full and a 2000-char essay clips to a paragraph.
+ */
+const ASSET_BODY_RENDER_CAP = 700;
+
+function truncateForPrompt(s: string): string {
+  if (s.length <= ASSET_BODY_RENDER_CAP) return s;
+  return `${s.slice(0, ASSET_BODY_RENDER_CAP).trimEnd()}...`;
+}
+
+function renderClientAssetsBlock(ctx: ScriptAssetsContext | null | undefined): string {
+  if (!hasAnyAssets(ctx)) return "";
+
+  const c = ctx!;
+  const lines: string[] = [];
+
+  lines.push("");
+  lines.push("----- BEGIN CREATOR'S OWN MATERIAL -----");
+  lines.push(
+    "Operator-curated reference material the creator has approved. Draw from it to ground each script in real moments, real language, and proven hook structures. Reference by title when adapting a story or pattern. Do not invent stories or quotes that are not represented here or in the voice samples.",
+  );
+
+  if (c.stories.length > 0) {
+    lines.push("");
+    lines.push("[stories — verbatim creator material; quote or paraphrase only what fits]");
+    c.stories.forEach((s, i) => {
+      const meta = (s.metadata?.category ?? "") as string;
+      const funnel = (s.metadata?.funnel_fit ?? "") as string;
+      const tag =
+        meta || funnel
+          ? ` (${[meta, funnel].filter((x) => x).join(", ")})`
+          : "";
+      lines.push(`  ${i + 1}. "${s.title}"${tag}`);
+      lines.push(`     ${truncateForPrompt(s.body)}`);
+    });
+  }
+
+  if (c.viral_references.length > 0) {
+    lines.push("");
+    lines.push("[viral_references — external structures that work for this audience]");
+    c.viral_references.forEach((v, i) => {
+      const creator = (v.metadata?.creator ?? "") as string;
+      const tag = creator ? ` (by ${creator})` : "";
+      lines.push(`  ${i + 1}. "${v.title}"${tag}`);
+      lines.push(`     ${truncateForPrompt(v.body)}`);
+    });
+  }
+
+  if (c.templates.length > 0) {
+    lines.push("");
+    lines.push("[templates — hook / structure patterns the creator likes]");
+    c.templates.forEach((t, i) => {
+      lines.push(`  ${i + 1}. "${t.title}"`);
+      lines.push(`     ${truncateForPrompt(t.body)}`);
+    });
+  }
+
+  if (c.past_scripts.length > 0) {
+    lines.push("");
+    lines.push("[past_scripts — creator's own published pieces; voice anchors]");
+    c.past_scripts.forEach((p, i) => {
+      lines.push(`  ${i + 1}. "${p.title}"`);
+      lines.push(`     ${truncateForPrompt(p.body)}`);
+    });
+  }
+
+  lines.push("----- END CREATOR'S OWN MATERIAL -----");
+  return lines.join("\n");
+}
+
 export function buildScriptsSystemPrompt(
   voiceDna: VoiceDNA,
   userMethodology?: string | null,
+  clientAssets?: ScriptAssetsContext | null,
 ): string {
   const pillarLines = voiceDna.content_pillars
     .map(
@@ -113,6 +191,7 @@ export function buildScriptsSystemPrompt(
     "",
     `prohibited_phrases (in addition to the Humanization Manifesto): ${voiceDna.prohibited_phrases.join(", ")}`,
     "----- END CREATOR'S VOICE DNA -----",
+    renderClientAssetsBlock(clientAssets),
     "",
     "Rules for each script:",
     "1. hook: 1 to 2 sentences, ideally under 30 words. Stops the scroll. Specific, not generic.",
