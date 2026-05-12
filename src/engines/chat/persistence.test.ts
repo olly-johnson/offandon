@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   appendMessage,
   createConversation,
+  deleteConversation,
   type ChatSupabaseClient,
 } from "./persistence";
 
@@ -126,5 +127,42 @@ describe("appendMessage", () => {
       }),
     ).rejects.toThrow(/boom/);
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteConversation", () => {
+  it("calls delete on conversations filtered by id and returns the count", async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null, count: 1 });
+    const del = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ delete: del });
+    const supabase = { from } as unknown as ChatSupabaseClient;
+
+    const count = await deleteConversation(supabase, "conv-1");
+
+    expect(count).toBe(1);
+    expect(from).toHaveBeenCalledWith("conversations");
+    expect(del).toHaveBeenCalledWith({ count: "exact" });
+    expect(eq).toHaveBeenCalledWith("id", "conv-1");
+  });
+
+  it("returns 0 when no row matched (cross-tenant id or already deleted)", async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null, count: 0 });
+    const del = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ delete: del });
+    const supabase = { from } as unknown as ChatSupabaseClient;
+
+    const count = await deleteConversation(supabase, "some-other-conv");
+    expect(count).toBe(0);
+  });
+
+  it("throws when supabase returns an error", async () => {
+    const eq = vi
+      .fn()
+      .mockResolvedValue({ error: { code: "42501", message: "denied" }, count: null });
+    const del = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ delete: del });
+    const supabase = { from } as unknown as ChatSupabaseClient;
+
+    await expect(deleteConversation(supabase, "conv-1")).rejects.toThrow(/denied/);
   });
 });

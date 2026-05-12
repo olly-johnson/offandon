@@ -4,6 +4,7 @@ import { LogOut, Settings } from "lucide-react";
 import { signout } from "@/app/(app)/dashboard/actions";
 
 import { NewChatButton, SidebarNav } from "./sidebar-nav";
+import { ThemeToggle } from "./theme-toggle";
 
 interface SidebarProps {
   email: string;
@@ -73,17 +74,18 @@ export function Sidebar({ email, displayName, isAdmin }: SidebarProps) {
             type="button"
             disabled
             aria-label="Settings"
-            className="rounded-lg p-1.5 disabled:opacity-50"
-            style={{ color: "var(--oo-text-dim)" }}
+            title="Settings (coming soon)"
+            className="oo-icon-btn"
           >
             <Settings className="size-3.5" />
           </button>
+          <ThemeToggle />
           <form action={signout}>
             <button
               type="submit"
               aria-label="Sign out"
-              className="rounded-lg p-1.5"
-              style={{ color: "var(--oo-text-dim)" }}
+              title="Sign out"
+              className="oo-icon-btn"
             >
               <LogOut className="size-3.5" />
             </button>

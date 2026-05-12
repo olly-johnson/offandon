@@ -43,7 +43,7 @@ export default async function SigninPage() {
           <SigninForm />
         </div>
         <p className="text-center text-xs text-muted-foreground">
-          Bot OS is invite-only. If you don&apos;t have an invite, ask Olly.
+          Bot OS is invite-only. If you don&apos;t have an invite, ask Alex.
         </p>
       </div>
     </main>
