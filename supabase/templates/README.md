@@ -13,11 +13,21 @@ These templates are the source of truth for the branded copy. The Supabase CLI i
 
 Supabase uses Go template syntax. The variables vary by template type; common ones:
 
-- `{{ .ConfirmationURL }}`: click-through link (set automatically per send)
+- `{{ .ConfirmationURL }}`: click-through link (set automatically per send) — see warning below
 - `{{ .Email }}`: recipient address
 - `{{ .SiteURL }}`: your project's Site URL (set in Auth, URL Configuration)
 - `{{ .Token }}` / `{{ .TokenHash }}`: OTP code / hash
 - `{{ .RedirectTo }}`: post-confirmation redirect
+
+## Why we DON'T use `{{ .ConfirmationURL }}`
+
+The default `ConfirmationURL` points at Supabase's `/auth/v1/verify` endpoint with `redirect_to=<Site URL root>`. After verification, Supabase 302s the browser to the site root with no auth cookies. Our root has no auth handler, so the user lands on `/signin` while Supabase has already marked them as registered. Token consumed, session never lands.
+
+Use the explicit `token_hash` form instead, which hits our `/auth/confirm` route directly:
+
+    {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=<invite|recovery|magiclink|email>
+
+`/auth/confirm` calls `supabase.auth.verifyOtp({ token_hash, type })` server-side, which lands the session in response cookies, then redirects to `/onboarding/set-password` (or `?next=` if specified). See `src/app/auth/confirm/route.ts`.
 
 ## Asset hosting
 
