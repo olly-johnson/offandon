@@ -7,12 +7,18 @@ import type { ClientSourceFile } from "./types";
 export const INGESTION_MODEL = "claude-sonnet-4-6";
 
 /**
- * Generous cap. The extract for a typical client (Alex's data shape)
- * lands around 8-15k output tokens once you count every story bank
- * entry, ICP axis, voice sample, and asset. 32k gives headroom for the
- * outlier clients with deep story banks without truncating mid-JSON.
+ * Cap chosen to keep the Anthropic SDK in non-streaming mode.
+ *
+ * The SDK refuses non-streaming calls where `max_tokens > 21,333` (see
+ * `calculateNonstreamingTimeout` in @anthropic-ai/sdk: any maxTokens
+ * whose expected wall-clock exceeds 10 minutes throws). 16K gives 3-4x
+ * headroom over the real extract size for the heaviest client folders
+ * (Alex's: ~8-12k output tokens) while keeping the wire request simple.
+ *
+ * If a future client's extract truncates here, switch the underlying
+ * call to `messages.stream()` rather than raising this further.
  */
-export const INGESTION_MAX_TOKENS = 32_000;
+export const INGESTION_MAX_TOKENS = 16_000;
 
 /** Hard ceiling per source file body before we summarise. Files larger than
  * this get truncated head + tail with a centre marker so the LLM sees the
