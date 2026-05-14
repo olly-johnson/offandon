@@ -248,6 +248,72 @@ export type Database = {
         };
         Relationships: [];
       };
+      api_usage: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          surface:
+            | "chat"
+            | "voice_dna"
+            | "memory_extract"
+            | "script"
+            | "imf"
+            | "hooks"
+            | "single_script"
+            | "media_analysis"
+            | "other";
+          model: string;
+          input_tokens: number;
+          output_tokens: number;
+          cache_creation_tokens: number;
+          cache_read_tokens: number;
+          stop_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          surface:
+            | "chat"
+            | "voice_dna"
+            | "memory_extract"
+            | "script"
+            | "imf"
+            | "hooks"
+            | "single_script"
+            | "media_analysis"
+            | "other";
+          model: string;
+          input_tokens?: number;
+          output_tokens?: number;
+          cache_creation_tokens?: number;
+          cache_read_tokens?: number;
+          stop_reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          surface?:
+            | "chat"
+            | "voice_dna"
+            | "memory_extract"
+            | "script"
+            | "imf"
+            | "hooks"
+            | "single_script"
+            | "media_analysis"
+            | "other";
+          model?: string;
+          input_tokens?: number;
+          output_tokens?: number;
+          cache_creation_tokens?: number;
+          cache_read_tokens?: number;
+          stop_reason?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       admin_invites: {
         Row: {
           id: string;

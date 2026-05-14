@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
 import { ChatEngine } from "@/engines/chat/chat-engine";
 import {
   appendMessage,
@@ -163,7 +164,11 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       getUserMethodology(supabase, user.id),
     ]);
 
-    const engine = new ChatEngine({ llm: new AnthropicLLMClient() });
+    const engine = new ChatEngine({
+      llm: new AnthropicLLMClient({
+        onUsage: buildUsageRecorder({ userId: user.id, surface: "chat" }),
+      }),
+    });
     const reply = await engine.reply({
       voiceDna: dna,
       history: [{ role: "user", content: message }],
@@ -192,7 +197,10 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
     after(async () => {
       await runMemoryExtractor({
         supabase,
-        llm: new AnthropicLLMClient({ model: MEMORY_EXTRACTOR_MODEL }),
+        llm: new AnthropicLLMClient({
+          model: MEMORY_EXTRACTOR_MODEL,
+          onUsage: buildUsageRecorder({ userId: user.id, surface: "memory_extract" }),
+        }),
         voiceDna: dna,
         userId: user.id,
         conversationId,
@@ -287,7 +295,11 @@ export async function sendMessage(
       getUserMethodology(supabase, user.id),
     ]);
 
-    const engine = new ChatEngine({ llm: new AnthropicLLMClient() });
+    const engine = new ChatEngine({
+      llm: new AnthropicLLMClient({
+        onUsage: buildUsageRecorder({ userId: user.id, surface: "chat" }),
+      }),
+    });
     const reply = await engine.reply({
       voiceDna: dna,
       history,
@@ -316,7 +328,10 @@ export async function sendMessage(
     after(async () => {
       await runMemoryExtractor({
         supabase,
-        llm: new AnthropicLLMClient({ model: MEMORY_EXTRACTOR_MODEL }),
+        llm: new AnthropicLLMClient({
+          model: MEMORY_EXTRACTOR_MODEL,
+          onUsage: buildUsageRecorder({ userId: user.id, surface: "memory_extract" }),
+        }),
         voiceDna: dna,
         userId: user.id,
         conversationId,

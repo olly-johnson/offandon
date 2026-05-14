@@ -1,3 +1,4 @@
+import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
 import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 import type { VoiceDNA } from "@/engines/voice/types";
@@ -154,7 +155,12 @@ export const analyzeMedia = inngest.createFunction(
     });
 
     const analysis = await step.run("analyze", async () => {
-      const analyzer = new MediaAnalyzer({ llm: new AnthropicLLMClient() });
+      const analyzer = new MediaAnalyzer({
+        llm: new AnthropicLLMClient({
+          model: RESEARCH_ANALYSIS_MODEL,
+          onUsage: buildUsageRecorder({ userId: user_id, surface: "media_analysis" }),
+        }),
+      });
       return analyzer.analyze({
         voiceDna: dna,
         libraryStats,

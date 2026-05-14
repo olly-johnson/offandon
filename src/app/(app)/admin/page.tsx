@@ -8,6 +8,7 @@ import {
   computeClientHealth,
   type ClientHealth,
 } from "@/engines/admin/stats";
+import { listApiUsageSince, summariseUsage } from "@/engines/admin/usage";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
@@ -75,10 +76,19 @@ export default async function AdminOverviewPage() {
   }
 
   const adminClient = createSupabaseAdminClient();
-  const [stats, clients] = await Promise.all([
+  const since30d = new Date(Date.now() - 30 * 86_400_000);
+  const [stats, clients, usageRows] = await Promise.all([
     computeAdminStats(adminClient),
     computeClientHealth(adminClient),
+    listApiUsageSince(adminClient, { since: since30d }).catch((err) => {
+      log.warn("listApiUsageSince failed", {
+        message: err instanceof Error ? err.message : String(err),
+      });
+      return [];
+    }),
   ]);
+  const usage = summariseUsage(usageRows);
+  const usageByUser = new Map(usage.by_user.map((u) => [u.user_id, u]));
 
   log.info("admin overview viewed", {
     user_id: user?.id,
@@ -172,6 +182,7 @@ export default async function AdminOverviewPage() {
                         "Scripts",
                         "Chats",
                         "Messages",
+                        "Spend (30d)",
                         "Last sign-in",
                       ].map((h) => (
                         <th
@@ -251,6 +262,12 @@ export default async function AdminOverviewPage() {
                           {c.messages}
                         </td>
                         <td
+                          className="px-5 py-4 font-mono"
+                          style={{ color: "var(--oo-gold)" }}
+                        >
+                          {formatUsd(usageByUser.get(c.id)?.cost_usd ?? 0)}
+                        </td>
+                        <td
                           className="px-5 py-4 text-xs"
                           style={{ color: "var(--oo-text-secondary)" }}
                         >
@@ -264,12 +281,161 @@ export default async function AdminOverviewPage() {
             )}
           </div>
 
-          <p className="text-xs" style={{ color: "var(--oo-text-dim)" }}>
-            Token spend and engagement are not tracked yet. Wire an `api_usage` table to the
-            Anthropic SDK response logs to surface them here.
-          </p>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="oo-card-static overflow-hidden">
+              <div
+                className="px-6 py-4"
+                style={{ borderBottom: "1px solid var(--oo-border)" }}
+              >
+                <h3
+                  className="text-sm font-bold"
+                  style={{ color: "var(--oo-text-primary)" }}
+                >
+                  API spend (30d)
+                </h3>
+                <p
+                  className="mt-0.5 text-xs"
+                  style={{ color: "var(--oo-text-dim)" }}
+                >
+                  {formatUsd(usage.total_cost_usd)} across{" "}
+                  {usage.row_count.toLocaleString()} calls.{" "}
+                  {usage.total_input_tokens.toLocaleString()} input /{" "}
+                  {usage.total_output_tokens.toLocaleString()} output tokens.
+                </p>
+              </div>
+              {usage.by_surface.length === 0 ? (
+                <p
+                  className="py-8 text-center text-sm"
+                  style={{ color: "var(--oo-text-dim)" }}
+                >
+                  No API calls logged yet.
+                </p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead style={{ borderBottom: "1px solid var(--oo-border)" }}>
+                    <tr>
+                      {["Surface", "Calls", "In tokens", "Out tokens", "Cost"].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            className="label-xs px-5 py-3 text-left"
+                          >
+                            {h}
+                          </th>
+                        ),
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usage.by_surface.map((s) => (
+                      <tr
+                        key={s.surface}
+                        style={{ borderBottom: "1px solid var(--oo-border-subtle)" }}
+                      >
+                        <td
+                          className="px-5 py-3 text-xs font-semibold"
+                          style={{ color: "var(--oo-text-primary)" }}
+                        >
+                          {s.surface}
+                        </td>
+                        <td
+                          className="px-5 py-3 font-mono text-xs"
+                          style={{ color: "var(--oo-text-secondary)" }}
+                        >
+                          {s.row_count.toLocaleString()}
+                        </td>
+                        <td
+                          className="px-5 py-3 font-mono text-xs"
+                          style={{ color: "var(--oo-text-secondary)" }}
+                        >
+                          {s.input_tokens.toLocaleString()}
+                        </td>
+                        <td
+                          className="px-5 py-3 font-mono text-xs"
+                          style={{ color: "var(--oo-text-secondary)" }}
+                        >
+                          {s.output_tokens.toLocaleString()}
+                        </td>
+                        <td
+                          className="px-5 py-3 font-mono text-xs"
+                          style={{ color: "var(--oo-gold)" }}
+                        >
+                          {formatUsd(s.cost_usd)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="oo-card-static p-6">
+              <h3
+                className="text-sm font-bold"
+                style={{ color: "var(--oo-text-primary)" }}
+              >
+                Totals (30d)
+              </h3>
+              <p
+                className="mt-0.5 text-xs"
+                style={{ color: "var(--oo-text-dim)" }}
+              >
+                Cost computed from raw tokens. Cache reads count at 10% of input.
+              </p>
+              <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                <dt style={{ color: "var(--oo-text-dim)" }}>Total cost</dt>
+                <dd
+                  className="text-right font-mono font-semibold"
+                  style={{ color: "var(--oo-gold)" }}
+                >
+                  {formatUsd(usage.total_cost_usd)}
+                </dd>
+                <dt style={{ color: "var(--oo-text-dim)" }}>API calls</dt>
+                <dd
+                  className="text-right font-mono"
+                  style={{ color: "var(--oo-text-primary)" }}
+                >
+                  {usage.row_count.toLocaleString()}
+                </dd>
+                <dt style={{ color: "var(--oo-text-dim)" }}>Input tokens</dt>
+                <dd
+                  className="text-right font-mono"
+                  style={{ color: "var(--oo-text-primary)" }}
+                >
+                  {usage.total_input_tokens.toLocaleString()}
+                </dd>
+                <dt style={{ color: "var(--oo-text-dim)" }}>Output tokens</dt>
+                <dd
+                  className="text-right font-mono"
+                  style={{ color: "var(--oo-text-primary)" }}
+                >
+                  {usage.total_output_tokens.toLocaleString()}
+                </dd>
+                <dt style={{ color: "var(--oo-text-dim)" }}>Cache writes</dt>
+                <dd
+                  className="text-right font-mono"
+                  style={{ color: "var(--oo-text-secondary)" }}
+                >
+                  {usage.total_cache_creation_tokens.toLocaleString()}
+                </dd>
+                <dt style={{ color: "var(--oo-text-dim)" }}>Cache reads</dt>
+                <dd
+                  className="text-right font-mono"
+                  style={{ color: "var(--oo-text-secondary)" }}
+                >
+                  {usage.total_cache_read_tokens.toLocaleString()}
+                </dd>
+              </dl>
+            </div>
+          </div>
         </div>
       </div>
     </>
   );
+}
+
+function formatUsd(n: number): string {
+  if (n === 0) return "$0.00";
+  if (n < 0.01) return "<$0.01";
+  return `$${n.toFixed(2)}`;
 }

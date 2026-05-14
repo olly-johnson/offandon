@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
 import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
 import { saveVoiceDNA } from "@/engines/voice/persistence";
 import { VoiceEngine } from "@/engines/voice/voice";
@@ -124,7 +125,11 @@ export async function submitOnboarding(
       log,
       "voice.generate",
       async () => {
-        const engine = new VoiceEngine({ llm: new AnthropicLLMClient() });
+        const engine = new VoiceEngine({
+          llm: new AnthropicLLMClient({
+            onUsage: buildUsageRecorder({ userId: user.id, surface: "voice_dna" }),
+          }),
+        });
         return engine.generateDNA(parsed.data);
       },
       { user_id: user.id, niche: parsed.data.niche },
