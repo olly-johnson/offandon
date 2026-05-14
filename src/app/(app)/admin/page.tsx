@@ -191,12 +191,26 @@ export default async function AdminOverviewPage() {
                       >
                         <td className="px-5 py-4">
                           <div className="flex flex-col">
-                            <span
-                              className="text-sm font-semibold"
-                              style={{ color: "var(--oo-text-primary)" }}
-                            >
-                              {c.name}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="text-sm font-semibold"
+                                style={{ color: "var(--oo-text-primary)" }}
+                              >
+                                {c.name}
+                              </span>
+                              {c.is_admin ? (
+                                <span
+                                  className="rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+                                  style={{
+                                    background: "var(--oo-gold-dim)",
+                                    color: "var(--oo-gold)",
+                                    border: "1px solid var(--oo-border-gold)",
+                                  }}
+                                >
+                                  Admin
+                                </span>
+                              ) : null}
+                            </div>
                             {c.email && c.email !== c.name ? (
                               <span
                                 className="text-xs"

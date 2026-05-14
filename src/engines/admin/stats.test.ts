@@ -41,7 +41,12 @@ function makeStubClient(dispatch: {
   scripts?: Array<{ user_id: string }>;
   conversations?: Array<{ user_id: string }>;
   messages?: Array<{ user_id: string; role: string }>;
-  users?: Array<{ id: string; email: string | null; last_sign_in_at: string | null }>;
+  users?: Array<{
+    id: string;
+    email: string | null;
+    last_sign_in_at: string | null;
+    app_metadata?: Record<string, unknown> | null;
+  }>;
   totals?: { scripts?: number; conversations?: number; messages?: number; clients?: number };
 }): AdminSupabaseClient {
   const tables: Record<string, unknown[]> = {
@@ -124,6 +129,35 @@ describe("computeClientHealth (data layer)", () => {
     expect(sam.chats).toBe(0);
     expect(sam.messages).toBe(0);
     expect(sam.health).toBe("red");
+    expect(alex.is_admin).toBe(false);
+    expect(sam.is_admin).toBe(false);
+  });
+
+  it("flags is_admin from auth.users.app_metadata", async () => {
+    const client = makeStubClient({
+      profiles: [
+        { id: "u-admin", display_name: "Admin", created_at: "2026-04-01T00:00:00Z" },
+        { id: "u-plain", display_name: "Plain", created_at: "2026-04-01T00:00:00Z" },
+      ],
+      users: [
+        {
+          id: "u-admin",
+          email: "boss@x.com",
+          last_sign_in_at: "2026-05-13T00:00:00Z",
+          app_metadata: { is_admin: true },
+        },
+        {
+          id: "u-plain",
+          email: "user@x.com",
+          last_sign_in_at: "2026-05-13T00:00:00Z",
+          app_metadata: { is_admin: false },
+        },
+      ],
+    });
+
+    const rows = await computeClientHealth(client, { now });
+    expect(rows.find((r) => r.id === "u-admin")?.is_admin).toBe(true);
+    expect(rows.find((r) => r.id === "u-plain")?.is_admin).toBe(false);
   });
 
   it("sorts rows by health (red first) then by last_sign_in_at desc", async () => {

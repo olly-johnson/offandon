@@ -26,6 +26,7 @@ export interface ClientHealthRow {
   messages: number;
   last_sign_in_at: string | null;
   health: ClientHealth;
+  is_admin: boolean;
 }
 
 export interface AdminStats {
@@ -94,16 +95,25 @@ export async function computeClientHealth(
   const chatsByUser = tallyByUser<{ user_id: string }>(conversationsRes.data);
   const messagesByUser = tallyByUser<{ user_id: string }>(messagesRes.data);
 
-  const usersById = new Map<string, { email: string | null; last_sign_in_at: string | null }>();
+  const usersById = new Map<
+    string,
+    { email: string | null; last_sign_in_at: string | null; is_admin: boolean }
+  >();
   for (const u of usersRes.data?.users ?? []) {
+    const meta = (u as { app_metadata?: Record<string, unknown> | null }).app_metadata;
     usersById.set(u.id, {
       email: u.email ?? null,
       last_sign_in_at: u.last_sign_in_at ?? null,
+      is_admin: meta?.is_admin === true,
     });
   }
 
   const rows: ClientHealthRow[] = (profilesRes.data ?? []).map((p) => {
-    const auth = usersById.get(p.id) ?? { email: null, last_sign_in_at: null };
+    const auth = usersById.get(p.id) ?? {
+      email: null,
+      last_sign_in_at: null,
+      is_admin: false,
+    };
     return {
       id: p.id,
       name: pickName(p.display_name, auth.email),
@@ -113,6 +123,7 @@ export async function computeClientHealth(
       messages: messagesByUser.get(p.id) ?? 0,
       last_sign_in_at: auth.last_sign_in_at,
       health: deriveHealth(auth.last_sign_in_at, now),
+      is_admin: auth.is_admin,
     };
   });
 
