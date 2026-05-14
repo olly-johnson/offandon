@@ -67,7 +67,7 @@ export function Sidebar({ email, displayName, isAdmin }: SidebarProps) {
               {label}
             </p>
             <p className="text-xs" style={{ color: "var(--oo-text-dim)" }}>
-              Client
+              {isAdmin ? "Admin" : "Client"}
             </p>
           </div>
           <button
