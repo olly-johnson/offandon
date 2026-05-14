@@ -93,6 +93,18 @@ export const generateScripts = inngest.createFunction(
         return loadScriptAssetsContext(supabase, user_id);
       });
 
+      const methodologyContext = await step.run("load-methodology", async () => {
+        const { loadMethodologySlice, listRulesForSlicePrompt } = await import(
+          "@/engines/master-bot/persistence"
+        );
+        const [house, scripts, operatorRules] = await Promise.all([
+          loadMethodologySlice(supabase, "house"),
+          loadMethodologySlice(supabase, "scripts"),
+          listRulesForSlicePrompt(supabase, "scripts"),
+        ]);
+        return { house, scripts, operatorRules };
+      });
+
       const batch = await step.run("generate", async () => {
         const generator = new ScriptGenerator({
           llm: new AnthropicLLMClient({
@@ -104,6 +116,7 @@ export const generateScripts = inngest.createFunction(
           count,
           userMethodology,
           clientAssets,
+          methodologyContext,
         });
         log.info("generation ok", {
           batch_id,

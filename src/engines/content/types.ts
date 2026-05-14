@@ -41,6 +41,18 @@ export interface GeneratedBatch {
   };
 }
 
+/**
+ * Methodology / operator-rules context, threaded into every content
+ * engine generator (BO-048). The caller fetches once from the DB-or-file
+ * loader and passes through. When omitted the engine falls back to the
+ * file defaults at module-load time.
+ */
+export interface ContentMethodologyContext {
+  house?: string;
+  scripts?: string;
+  operatorRules?: string[];
+}
+
 export interface GenerateScriptsInput {
   voiceDna: VoiceDNA;
   /** Number of scripts to ask for. Validated 1..30 in DB; sane MVP default is 7. */
@@ -54,6 +66,8 @@ export interface GenerateScriptsInput {
    * block entirely so non-ingested users see no change.
    */
   clientAssets?: import("./client-assets-persistence").ScriptAssetsContext | null;
+  /** House methodology overrides (BO-048). */
+  methodologyContext?: ContentMethodologyContext;
 }
 
 export interface IScriptGenerator {
@@ -129,6 +143,8 @@ export interface GenerateHooksInput {
   count?: number;
   /** Optional per-user methodology overlay (BO-036). */
   userMethodology?: string | null;
+  /** House methodology overrides (BO-048). */
+  methodologyContext?: ContentMethodologyContext;
 }
 
 export interface GeneratedSingleScript {
@@ -152,6 +168,8 @@ export interface GenerateSingleScriptInput {
   refinement?: string;
   /** Optional per-user methodology overlay (BO-036). */
   userMethodology?: string | null;
+  /** House methodology overrides (BO-048). */
+  methodologyContext?: ContentMethodologyContext;
 }
 
 export interface IIMFExtractor {
@@ -163,6 +181,7 @@ export interface IIMFExtractor {
     voiceDna: VoiceDNA;
     concept: string;
     userMethodology?: string | null;
+    methodologyContext?: ContentMethodologyContext;
   }): Promise<IMF>;
 }
 

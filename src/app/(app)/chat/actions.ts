@@ -7,6 +7,11 @@ import { revalidatePath } from "next/cache";
 import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
 import { ChatEngine } from "@/engines/chat/chat-engine";
 import {
+  listRulesForSlicePrompt,
+  loadMethodologySlice,
+} from "@/engines/master-bot/persistence";
+import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
+import {
   appendMessage,
   createConversation,
   deleteConversation as deleteConversationRow,
@@ -159,10 +164,15 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       conversationId,
     });
 
-    const [memories, userMethodology] = await Promise.all([
-      listMemoriesForUser(supabase, user.id, 8),
-      getUserMethodology(supabase, user.id),
-    ]);
+    const admin = createSupabaseAdminClient();
+    const [memories, userMethodology, methodologyHouse, methodologyChat, operatorRules] =
+      await Promise.all([
+        listMemoriesForUser(supabase, user.id, 8),
+        getUserMethodology(supabase, user.id),
+        loadMethodologySlice(admin, "house"),
+        loadMethodologySlice(admin, "chat"),
+        listRulesForSlicePrompt(admin, "chat"),
+      ]);
 
     const engine = new ChatEngine({
       llm: new AnthropicLLMClient({
@@ -175,6 +185,8 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       tools: [tool],
       memories,
       userMethodology,
+      methodology: { house: methodologyHouse, chat: methodologyChat },
+      operatorRules,
     });
 
     await appendMessage(supabase, {
@@ -290,10 +302,15 @@ export async function sendMessage(
       conversationId,
     });
 
-    const [memories, userMethodology] = await Promise.all([
-      listMemoriesForUser(supabase, user.id, 8),
-      getUserMethodology(supabase, user.id),
-    ]);
+    const admin = createSupabaseAdminClient();
+    const [memories, userMethodology, methodologyHouse, methodologyChat, operatorRules] =
+      await Promise.all([
+        listMemoriesForUser(supabase, user.id, 8),
+        getUserMethodology(supabase, user.id),
+        loadMethodologySlice(admin, "house"),
+        loadMethodologySlice(admin, "chat"),
+        listRulesForSlicePrompt(admin, "chat"),
+      ]);
 
     const engine = new ChatEngine({
       llm: new AnthropicLLMClient({
@@ -306,6 +323,8 @@ export async function sendMessage(
       tools: [tool],
       memories,
       userMethodology,
+      methodology: { house: methodologyHouse, chat: methodologyChat },
+      operatorRules,
     });
 
     await appendMessage(supabase, {

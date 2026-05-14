@@ -14,7 +14,12 @@ import {
 import { saveSingleScript } from "@/engines/content/persistence";
 import { getUserMethodology } from "@/engines/methodology/persistence";
 import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
+import {
+  listRulesForSlicePrompt,
+  loadMethodologySlice,
+} from "@/engines/master-bot/persistence";
 import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
+import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 import { SlopError } from "@/lib/shared/anti-slop";
 import { createLogger, timed } from "@/lib/shared/logger";
@@ -46,7 +51,19 @@ export async function extractIMFAction(
   const dna = await getCurrentVoiceDNA(supabase, user.id);
   if (!dna) return { error: "You need to complete onboarding first." };
 
-  const userMethodology = await getUserMethodology(supabase, user.id);
+  const admin = createSupabaseAdminClient();
+  const [userMethodology, methodologyHouse, scriptsSlice, operatorRules] =
+    await Promise.all([
+      getUserMethodology(supabase, user.id),
+      loadMethodologySlice(admin, "house"),
+      loadMethodologySlice(admin, "scripts"),
+      listRulesForSlicePrompt(admin, "scripts"),
+    ]);
+  const methodologyContext = {
+    house: methodologyHouse,
+    scripts: scriptsSlice,
+    operatorRules,
+  };
 
   try {
     const imf = await timed(
@@ -58,7 +75,12 @@ export async function extractIMFAction(
             onUsage: buildUsageRecorder({ userId: user.id, surface: "imf" }),
           }),
         });
-        return extractor.extract({ voiceDna: dna, concept, userMethodology });
+        return extractor.extract({
+          voiceDna: dna,
+          concept,
+          userMethodology,
+          methodologyContext,
+        });
       },
       { user_id: user.id, concept_chars: concept.length },
     );
@@ -101,7 +123,19 @@ export async function generateHooksAction(input: {
   const dna = await getCurrentVoiceDNA(supabase, user.id);
   if (!dna) return { error: "You need to complete onboarding first." };
 
-  const userMethodology = await getUserMethodology(supabase, user.id);
+  const admin = createSupabaseAdminClient();
+  const [userMethodology, methodologyHouse, scriptsSlice, operatorRules] =
+    await Promise.all([
+      getUserMethodology(supabase, user.id),
+      loadMethodologySlice(admin, "house"),
+      loadMethodologySlice(admin, "scripts"),
+      listRulesForSlicePrompt(admin, "scripts"),
+    ]);
+  const methodologyContext = {
+    house: methodologyHouse,
+    scripts: scriptsSlice,
+    operatorRules,
+  };
 
   try {
     const batch = await timed(
@@ -119,6 +153,7 @@ export async function generateHooksAction(input: {
           imf: input.imf,
           count: input.count ?? 6,
           userMethodology,
+          methodologyContext,
         });
       },
       { user_id: user.id, count: input.count ?? 6 },
@@ -167,7 +202,19 @@ export async function generateSingleScriptAction(input: {
   const dna = await getCurrentVoiceDNA(supabase, user.id);
   if (!dna) return { error: "You need to complete onboarding first." };
 
-  const userMethodology = await getUserMethodology(supabase, user.id);
+  const admin = createSupabaseAdminClient();
+  const [userMethodology, methodologyHouse, scriptsSlice, operatorRules] =
+    await Promise.all([
+      getUserMethodology(supabase, user.id),
+      loadMethodologySlice(admin, "house"),
+      loadMethodologySlice(admin, "scripts"),
+      listRulesForSlicePrompt(admin, "scripts"),
+    ]);
+  const methodologyContext = {
+    house: methodologyHouse,
+    scripts: scriptsSlice,
+    operatorRules,
+  };
 
   try {
     const script = await timed(
@@ -186,6 +233,7 @@ export async function generateSingleScriptAction(input: {
           hook: input.hook,
           refinement: input.refinement,
           userMethodology,
+          methodologyContext,
         });
       },
       { user_id: user.id, hook_chars: input.hook.length, has_refinement: !!input.refinement },

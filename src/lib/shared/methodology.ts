@@ -38,9 +38,56 @@ function load(name: string): string {
   return readFileSync(findRepoFile(`docs/methodology/${name}`), "utf-8");
 }
 
-export const METHODOLOGY_HOUSE: string = load("01-house.md");
-export const METHODOLOGY_CHAT_SLICE: string = load("02-chat.md");
-export const METHODOLOGY_SCRIPTS_SLICE: string = load("03-scripts.md");
+/**
+ * File-backed defaults. These are the seed values for `public.house_methodology`;
+ * once an admin edits a slice via the Master Bot, the DB row overrides
+ * the file. The `loadMethodologySlice()` helper below handles the swap.
+ *
+ * Kept as named exports so existing imports keep compiling while the
+ * engine prompt builders migrate to the async loader.
+ */
+export const METHODOLOGY_HOUSE_FILE: string = load("01-house.md");
+export const METHODOLOGY_CHAT_FILE: string = load("02-chat.md");
+export const METHODOLOGY_SCRIPTS_FILE: string = load("03-scripts.md");
+export const METHODOLOGY_ANALYST_FILE: string = load("04-analyst.md");
+
+/** @deprecated Use loadMethodologySlice("house") (async, DB-backed). */
+export const METHODOLOGY_HOUSE = METHODOLOGY_HOUSE_FILE;
+/** @deprecated Use loadMethodologySlice("chat"). */
+export const METHODOLOGY_CHAT_SLICE = METHODOLOGY_CHAT_FILE;
+/** @deprecated Use loadMethodologySlice("scripts"). */
+export const METHODOLOGY_SCRIPTS_SLICE = METHODOLOGY_SCRIPTS_FILE;
+
+export type MethodologySlice = "house" | "chat" | "scripts" | "analyst";
+
+const FILE_DEFAULTS: Record<MethodologySlice, string> = {
+  house: METHODOLOGY_HOUSE_FILE,
+  chat: METHODOLOGY_CHAT_FILE,
+  scripts: METHODOLOGY_SCRIPTS_FILE,
+  analyst: METHODOLOGY_ANALYST_FILE,
+};
+
+export function getMethodologyFileDefault(slice: MethodologySlice): string {
+  return FILE_DEFAULTS[slice];
+}
+
+/**
+ * Render the list of admin-authored short rules (Layer 1) as a system-prompt
+ * block. Empty when there are no rules so the builder can concatenate
+ * unconditionally without dangling whitespace.
+ */
+export function renderAdminRulesBlock(rules: string[]): string {
+  if (rules.length === 0) return "";
+  const lines = rules.map((r, i) => `${i + 1}. ${r}`);
+  return [
+    "",
+    "----- BEGIN OPERATOR RULES (admin-authored, treat as ABSOLUTE) -----",
+    "These are short imperative rules added by an operator. They override the methodology above when they conflict.",
+    "",
+    lines.join("\n"),
+    "----- END OPERATOR RULES -----",
+  ].join("\n");
+}
 
 /**
  * Render the per-user methodology overlay (BO-036) as a system-prompt

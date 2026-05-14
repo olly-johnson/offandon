@@ -20,6 +20,7 @@ import type { VoiceDNA } from "@/engines/voice/types";
 import {
   METHODOLOGY_CHAT_SLICE,
   METHODOLOGY_HOUSE,
+  renderAdminRulesBlock,
   renderUserMethodologyBlock,
 } from "@/lib/shared/methodology";
 
@@ -140,7 +141,11 @@ export function buildChatSystemPrompt(
   voiceDna: VoiceDNA,
   memories: MemoryRow[] = [],
   userMethodology?: string | null,
+  methodology?: { house: string; chat: string },
+  operatorRules: string[] = [],
 ): string {
+  const house = methodology?.house ?? METHODOLOGY_HOUSE;
+  const chat = methodology?.chat ?? METHODOLOGY_CHAT_SLICE;
   const pillarLines = voiceDna.content_pillars
     .map(
       (p, i) =>
@@ -166,13 +171,14 @@ export function buildChatSystemPrompt(
     HUMANIZATION_MANIFESTO,
     "----- END HUMANIZATION MANIFESTO -----",
     "",
-    "----- BEGIN HOUSE METHODOLOGY (verbatim from docs/methodology/01-house.md) -----",
-    METHODOLOGY_HOUSE,
+    "----- BEGIN HOUSE METHODOLOGY -----",
+    house,
     "----- END HOUSE METHODOLOGY -----",
     "",
-    "----- BEGIN CHAT METHODOLOGY SLICE (verbatim from docs/methodology/02-chat.md) -----",
-    METHODOLOGY_CHAT_SLICE,
+    "----- BEGIN CHAT METHODOLOGY SLICE -----",
+    chat,
     "----- END CHAT METHODOLOGY SLICE -----",
+    renderAdminRulesBlock(operatorRules),
     renderUserMethodologyBlock(userMethodology),
     "",
     "----- BEGIN CREATOR'S VOICE DNA -----",

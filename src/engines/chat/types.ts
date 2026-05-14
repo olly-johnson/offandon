@@ -53,6 +53,21 @@ export interface ChatReplyInput {
    * wrote in /methodology. Stacks on top of the house methodology + slices.
    */
   userMethodology?: string | null;
+  /**
+   * House methodology slices (BO-048). DB-backed with file fallback. The
+   * caller fetches these once per request and passes them in so the engine
+   * stays sync-friendly. When omitted, the prompt builder falls back to
+   * the seeded file contents.
+   */
+  methodology?: {
+    house: string;
+    chat: string;
+  };
+  /**
+   * Active admin-authored rules (BO-048) for the chat surface, in display
+   * order. Already filtered down to house + chat slice rules.
+   */
+  operatorRules?: string[];
 }
 
 export interface ChatToolAction {
