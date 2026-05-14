@@ -13,6 +13,7 @@ import {
 } from "@/engines/content";
 import { saveSingleScript } from "@/engines/content/persistence";
 import { getUserMethodology } from "@/engines/methodology/persistence";
+import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
 import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
 import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
 import { SlopError } from "@/lib/shared/anti-slop";
@@ -52,7 +53,11 @@ export async function extractIMFAction(
       log,
       "imf.extract",
       async () => {
-        const extractor = new IMFExtractor({ llm: new AnthropicLLMClient() });
+        const extractor = new IMFExtractor({
+          llm: new AnthropicLLMClient({
+            onUsage: buildUsageRecorder({ userId: user.id, surface: "imf" }),
+          }),
+        });
         return extractor.extract({ voiceDna: dna, concept, userMethodology });
       },
       { user_id: user.id, concept_chars: concept.length },
@@ -103,7 +108,11 @@ export async function generateHooksAction(input: {
       log,
       "hooks.generate",
       async () => {
-        const generator = new HookGenerator({ llm: new AnthropicLLMClient() });
+        const generator = new HookGenerator({
+          llm: new AnthropicLLMClient({
+            onUsage: buildUsageRecorder({ userId: user.id, surface: "hooks" }),
+          }),
+        });
         return generator.generateHooks({
           voiceDna: dna,
           concept: input.concept,
@@ -165,7 +174,11 @@ export async function generateSingleScriptAction(input: {
       log,
       "single-script.generate",
       async () => {
-        const generator = new SingleScriptGenerator({ llm: new AnthropicLLMClient() });
+        const generator = new SingleScriptGenerator({
+          llm: new AnthropicLLMClient({
+            onUsage: buildUsageRecorder({ userId: user.id, surface: "single_script" }),
+          }),
+        });
         return generator.generateOne({
           voiceDna: dna,
           concept: input.concept,

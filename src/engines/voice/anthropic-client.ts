@@ -32,6 +32,19 @@ export const MEMORY_EXTRACTOR_MODEL = "claude-haiku-4-5-20251001";
  */
 export const VOICE_DNA_MAX_TOKENS = 2048;
 
+/**
+ * Token usage emitted by the client after every successful round trip.
+ * Caller decides what to do with it (record to api_usage, log, ignore).
+ */
+export interface UsageRecord {
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
+  stop_reason: string | null;
+}
+
 export interface AnthropicLLMClientOptions {
   /** Override the SDK client (used by tests). */
   client?: Anthropic;
@@ -41,6 +54,12 @@ export interface AnthropicLLMClientOptions {
   model?: string;
   /** Override max_tokens (defaults to VOICE_DNA_MAX_TOKENS). */
   maxTokens?: number;
+  /**
+   * Optional usage sink. Fired once per successful response with the
+   * raw token counts the SDK returned. Errors are swallowed so a
+   * misbehaving recorder cannot break the user-visible flow.
+   */
+  onUsage?: (entry: UsageRecord) => void | Promise<void>;
 }
 
 /**
@@ -55,6 +74,7 @@ export class AnthropicLLMClient implements ILLMClient, IChatLLMClient {
   private readonly client: Anthropic;
   private readonly model: string;
   private readonly maxTokens: number;
+  private readonly onUsage?: (entry: UsageRecord) => void | Promise<void>;
 
   constructor(opts: AnthropicLLMClientOptions = {}) {
     if (opts.client) {
@@ -70,6 +90,23 @@ export class AnthropicLLMClient implements ILLMClient, IChatLLMClient {
     }
     this.model = opts.model ?? VOICE_DNA_MODEL;
     this.maxTokens = opts.maxTokens ?? VOICE_DNA_MAX_TOKENS;
+    this.onUsage = opts.onUsage;
+  }
+
+  /**
+   * Fire-and-forget usage callback. Swallowed errors so the user-visible
+   * flow never fails because of telemetry. Awaited deliberately so test
+   * mocks can synchronise; in production the recorder is non-blocking.
+   */
+  private async reportUsage(entry: UsageRecord): Promise<void> {
+    if (!this.onUsage) return;
+    try {
+      await this.onUsage(entry);
+    } catch (err) {
+      log.warn("onUsage callback threw", {
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   async complete(args: { system: string; user: string }): Promise<string> {
@@ -97,6 +134,15 @@ export class AnthropicLLMClient implements ILLMClient, IChatLLMClient {
           cache_read_tokens: response.usage.cache_read_input_tokens ?? 0,
           output_tokens: response.usage.output_tokens,
           stop_reason: response.stop_reason,
+        });
+
+        await this.reportUsage({
+          model: this.model,
+          input_tokens: response.usage.input_tokens,
+          output_tokens: response.usage.output_tokens,
+          cache_creation_tokens: response.usage.cache_creation_input_tokens ?? 0,
+          cache_read_tokens: response.usage.cache_read_input_tokens ?? 0,
+          stop_reason: response.stop_reason ?? null,
         });
 
         const first = response.content[0];
@@ -168,6 +214,15 @@ export class AnthropicLLMClient implements ILLMClient, IChatLLMClient {
           stop_reason: response.stop_reason,
           turn_count: args.messages.length,
           tools_offered: args.tools?.length ?? 0,
+        });
+
+        await this.reportUsage({
+          model: this.model,
+          input_tokens: response.usage.input_tokens,
+          output_tokens: response.usage.output_tokens,
+          cache_creation_tokens: response.usage.cache_creation_input_tokens ?? 0,
+          cache_read_tokens: response.usage.cache_read_input_tokens ?? 0,
+          stop_reason: response.stop_reason ?? null,
         });
 
         let text = "";

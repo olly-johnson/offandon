@@ -119,4 +119,38 @@ describe("AnthropicLLMClient", () => {
     expect(fake.calls[0].model).toBe("claude-haiku-4-5-20251001");
     expect(fake.calls[0].max_tokens).toBe(512);
   });
+
+  it("invokes the onUsage callback after a successful complete() call", async () => {
+    const fake = new FakeAnthropic();
+    const onUsage = vi.fn();
+    const client = new AnthropicLLMClient({
+      client: fake as unknown as Anthropic,
+      onUsage,
+    });
+
+    await client.complete({ system: "s", user: "u" });
+
+    expect(onUsage).toHaveBeenCalledTimes(1);
+    expect(onUsage).toHaveBeenCalledWith({
+      model: VOICE_DNA_MODEL,
+      input_tokens: 100,
+      output_tokens: 30,
+      cache_creation_tokens: 50,
+      cache_read_tokens: 0,
+      stop_reason: "end_turn",
+    });
+  });
+
+  it("swallows errors thrown from onUsage so the call still succeeds", async () => {
+    const fake = new FakeAnthropic();
+    const onUsage = vi.fn().mockRejectedValue(new Error("recorder down"));
+    const client = new AnthropicLLMClient({
+      client: fake as unknown as Anthropic,
+      onUsage,
+    });
+
+    const out = await client.complete({ system: "s", user: "u" });
+    expect(out).toBe("{}");
+    expect(onUsage).toHaveBeenCalledTimes(1);
+  });
 });

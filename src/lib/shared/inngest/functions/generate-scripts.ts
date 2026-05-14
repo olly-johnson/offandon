@@ -1,3 +1,4 @@
+import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
 import { ScriptGenerator } from "@/engines/content/script-generator";
 import {
   saveGeneratedScripts,
@@ -93,7 +94,11 @@ export const generateScripts = inngest.createFunction(
       });
 
       const batch = await step.run("generate", async () => {
-        const generator = new ScriptGenerator({ llm: new AnthropicLLMClient() });
+        const generator = new ScriptGenerator({
+          llm: new AnthropicLLMClient({
+            onUsage: buildUsageRecorder({ userId: user_id, surface: "script" }),
+          }),
+        });
         const result = await generator.generate({
           voiceDna: dna,
           count,
