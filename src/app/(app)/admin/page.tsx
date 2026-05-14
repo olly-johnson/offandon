@@ -76,11 +76,10 @@ export default async function AdminOverviewPage() {
   }
 
   const adminClient = createSupabaseAdminClient();
-  const since30d = new Date(Date.now() - 30 * 86_400_000);
   const [stats, clients, usageRows] = await Promise.all([
     computeAdminStats(adminClient),
     computeClientHealth(adminClient),
-    listApiUsageSince(adminClient, { since: since30d }).catch((err) => {
+    listApiUsageSince(adminClient).catch((err) => {
       log.warn("listApiUsageSince failed", {
         message: err instanceof Error ? err.message : String(err),
       });
