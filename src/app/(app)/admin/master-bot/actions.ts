@@ -23,6 +23,7 @@ import { buildMasterBotSystemPrompt } from "@/engines/master-bot/system-prompt";
 import { buildMasterBotTools } from "@/engines/master-bot/tools";
 import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
 import { createLogger } from "@/lib/shared/logger";
+import { stripChatMarkdown } from "@/lib/shared/markdown-strip";
 import type { MethodologySlice } from "@/lib/shared/methodology";
 import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
@@ -155,10 +156,11 @@ export async function sendMasterBotMessage(
       tools,
     });
 
+    const cleaned = stripChatMarkdown(reply.text);
     await appendMasterBotMessage(admin, {
       authorId: null,
       role: "assistant",
-      content: reply.text,
+      content: cleaned.length > 0 ? cleaned : reply.text,
     });
 
     log.info("master-bot reply", {
