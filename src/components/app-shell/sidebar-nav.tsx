@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   BarChart2,
   BookOpen,
-  Brain,
   Calendar,
   FileText,
   LayoutDashboard,
@@ -37,11 +36,10 @@ const NAV: NavItem[] = [
   { label: "Calendar", href: "/calendar", icon: Calendar, enabled: false },
   { label: "Performance", href: "/performance", icon: BarChart2, enabled: false },
   { label: "Chat", href: "/chat", icon: MessageSquare, enabled: true },
-  { label: "Memory", href: "/memory", icon: Brain, enabled: true, adminOnly: true },
   { label: "Methodology", href: "/methodology", icon: Sliders, enabled: true, adminOnly: true },
   { label: "Off&On Pocket", href: "/pocket", icon: Zap, enabled: false },
   { label: "Learn", href: "/learn", icon: BookOpen, enabled: false },
-  { label: "Admin", href: "/admin/invite", icon: ShieldCheck, enabled: true, adminOnly: true },
+  { label: "Admin", href: "/admin", icon: ShieldCheck, enabled: true, adminOnly: true },
 ];
 
 interface SidebarNavProps {
