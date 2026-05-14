@@ -77,7 +77,9 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-040 | Auth refresh-token race: detect `refresh_token_already_used` / `refresh_token_not_found` in middleware, clear dead Supabase auth cookies on the response, downgrade noisy log to debug. | claude | Done | PR #12 |
 | BO-042 | Operator-driven client ingestion: read `clients/<slug>/` files, LLM-extract into `voice_dna` + `client_assets` + `user_memories` + `user_methodology`. Two CLI commands (extract → review → commit) + em-dash sanitizer + ScriptGenerator wired to load client_assets at runtime. Bypass wizard when voice_dna already populated. | claude | Done | PR #31 |
 | BO-043 | Instagram video analysis: Deepgram transcribe + Sonnet structural analysis for each video in the user's library. Inline button on `/library`, results saved to `instagram_media_analysis`, "Save as reference" promotes a winner to `client_assets[past_script]` (consumed by ScriptGenerator). Per-user rolling-30d rate limit. | claude | In Progress | feature/instagram-video-analysis |
-| BO-044 | Chat output: strip markdown bold (`**`), ATX headings, and `---` separators from LLM replies before display + tighten chat system prompt to forbid them. Renderer uses a `<pre>` block so markers leaked through raw. | claude | In Progress | fix/strip-markdown-from-chat-responses |
+| BO-044 | Chat output: strip markdown bold (`**`), ATX headings, and `---` separators from LLM replies before display + tighten chat system prompt to forbid them. Renderer uses a `<pre>` block so markers leaked through raw. | claude | Done | PR #37 |
+| BO-045 | Chat input: auto-grow message textarea to its content (caps at `max-h-48` then scrolls), resets to one row after submit. Wrapped in shared `AutoGrowTextarea`. | claude | Done | PR #38 |
+| BO-046 | Admin overview page (`/admin`): metric cards (clients/scripts/chats/messages) + per-client health table (last sign-in, scripts, chats, messages). Service-role queries in `src/engines/admin/stats.ts`. Token spend deferred until API usage logging exists. | claude | In Progress | feature/admin-client-health |
 
 ## Conventions
 

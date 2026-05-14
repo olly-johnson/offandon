@@ -41,7 +41,7 @@ const NAV: NavItem[] = [
   { label: "Methodology", href: "/methodology", icon: Sliders, enabled: true, adminOnly: true },
   { label: "Off&On Pocket", href: "/pocket", icon: Zap, enabled: false },
   { label: "Learn", href: "/learn", icon: BookOpen, enabled: false },
-  { label: "Admin", href: "/admin/invite", icon: ShieldCheck, enabled: true, adminOnly: true },
+  { label: "Admin", href: "/admin", icon: ShieldCheck, enabled: true, adminOnly: true },
 ];
 
 interface SidebarNavProps {
