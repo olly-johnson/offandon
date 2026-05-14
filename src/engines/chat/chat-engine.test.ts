@@ -176,6 +176,28 @@ describe("ChatEngine.reply", () => {
     await expect(engine.reply({ voiceDna: DNA, history: HISTORY })).rejects.toThrow(/empty/i);
   });
 
+  it("strips markdown bold, headings, and --- separators before returning the reply", async () => {
+    const llm = new MockChatLLM(
+      textOnly(
+        "## Quick take\n**Lead** with the moment.\n\n---\n\nThen __ship__ it.",
+      ),
+    );
+    const engine = new ChatEngine({ llm, now: FROZEN_NOW });
+
+    const reply = await engine.reply({ voiceDna: DNA, history: HISTORY });
+
+    expect(reply.message.content).toBe(
+      "Quick take\nLead with the moment.\n\nThen ship it.",
+    );
+  });
+
+  it("instructs the model not to emit markdown formatting", () => {
+    const prompt = buildChatSystemPrompt(DNA);
+    expect(prompt).toMatch(/no markdown formatting/i);
+    expect(prompt).toContain("**");
+    expect(prompt).toContain("---");
+  });
+
   it("throws SlopError when the assistant reply contains an em-dash", async () => {
     const llm = new MockChatLLM(textOnly("Strategic—and direct."));
     const engine = new ChatEngine({ llm, now: FROZEN_NOW });
