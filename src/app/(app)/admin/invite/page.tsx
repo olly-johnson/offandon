@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+
 import { isAdmin } from "@/engines/admin/auth";
 import { listRecentInvites } from "@/engines/admin/persistence";
 import { createLogger } from "@/lib/shared/logger";
@@ -55,6 +58,14 @@ export default async function AdminInvitePage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
+      <Link
+        href="/admin"
+        className="mb-6 inline-flex items-center gap-1.5 text-xs font-medium"
+        style={{ color: "var(--oo-text-dim)" }}
+      >
+        <ArrowLeft className="size-3.5" />
+        Back to admin
+      </Link>
       <h1 className="text-2xl font-semibold tracking-tight">Invite a creator</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Sends a Supabase invite email. They click through, set a password, and land in onboarding.
