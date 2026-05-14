@@ -10,6 +10,7 @@ import {
 import { Loader2, Send } from "lucide-react";
 
 import { startConversation } from "./actions";
+import { AutoGrowTextarea } from "./auto-grow-textarea";
 import {
   MessageBubble,
   TypingIndicator,
@@ -155,14 +156,14 @@ export function ChatHome({ prompts }: ChatHomeProps) {
                 boxShadow: "var(--oo-card-shadow)",
               }}
             >
-              <textarea
+              <AutoGrowTextarea
                 name="message"
                 rows={1}
                 required
                 disabled={sending}
                 placeholder="Ask anything..."
                 onKeyDown={handleKeyDown}
-                className="max-h-32 flex-1 resize-none bg-transparent text-sm outline-none disabled:opacity-60"
+                className="max-h-48 flex-1 resize-none bg-transparent text-sm leading-relaxed outline-none disabled:opacity-60"
                 style={{ color: "var(--oo-text-primary)" }}
               />
               <button
