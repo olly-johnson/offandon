@@ -6,6 +6,7 @@ import type { VoiceDNA } from "@/engines/voice/types";
 import {
   METHODOLOGY_HOUSE,
   METHODOLOGY_SCRIPTS_SLICE,
+  renderAdminRulesBlock,
   renderUserMethodologyBlock,
 } from "@/lib/shared/methodology";
 
@@ -61,7 +62,11 @@ export function buildSingleScriptSystemPrompt(
   hook: string,
   imf?: IMF,
   userMethodology?: string | null,
+  methodology?: { house: string; scripts: string },
+  operatorRules: string[] = [],
 ): string {
+  const house = methodology?.house ?? METHODOLOGY_HOUSE;
+  const scripts = methodology?.scripts ?? METHODOLOGY_SCRIPTS_SLICE;
   const pillarLines = voiceDna.content_pillars
     .map((p, i) => `  ${i + 1}. ${p.name}: ${p.description}`)
     .join("\n");
@@ -96,12 +101,13 @@ export function buildSingleScriptSystemPrompt(
     "----- END HUMANIZATION MANIFESTO -----",
     "",
     "----- BEGIN HOUSE METHODOLOGY -----",
-    METHODOLOGY_HOUSE,
+    house,
     "----- END HOUSE METHODOLOGY -----",
     "",
     "----- BEGIN SCRIPTS METHODOLOGY SLICE -----",
-    METHODOLOGY_SCRIPTS_SLICE,
+    scripts,
     "----- END SCRIPTS METHODOLOGY SLICE -----",
+    renderAdminRulesBlock(operatorRules),
     renderUserMethodologyBlock(userMethodology),
     "",
     "----- BEGIN CREATOR'S VOICE DNA -----",

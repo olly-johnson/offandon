@@ -48,11 +48,16 @@ export class SingleScriptGenerator implements ISingleScriptGenerator {
       throw new Error("SingleScriptGenerator: VoiceDNA has no content_pillars");
     }
 
+    const ctx = input.methodologyContext;
     const system = buildSingleScriptSystemPrompt(
       input.voiceDna,
       input.hook,
       input.imf,
       input.userMethodology,
+      ctx && ctx.house !== undefined && ctx.scripts !== undefined
+        ? { house: ctx.house, scripts: ctx.scripts }
+        : undefined,
+      ctx?.operatorRules ?? [],
     );
     const user = JSON.stringify(
       {

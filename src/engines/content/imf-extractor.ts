@@ -23,13 +23,20 @@ export class IMFExtractor implements IIMFExtractor {
     voiceDna: VoiceDNA;
     concept: string;
     userMethodology?: string | null;
+    methodologyContext?: import("./types").ContentMethodologyContext;
   }): Promise<IMF> {
     const concept = input.concept.trim();
     if (concept.length < 8) {
       throw new Error("IMFExtractor: concept too short to extract from (need at least 8 chars)");
     }
 
-    const system = buildIMFSystemPrompt(input.voiceDna, input.userMethodology);
+    const ctx = input.methodologyContext;
+    const system = buildIMFSystemPrompt(
+      input.voiceDna,
+      input.userMethodology,
+      ctx?.house !== undefined ? { house: ctx.house } : undefined,
+      ctx?.operatorRules ?? [],
+    );
     const user = JSON.stringify({ concept }, null, 2);
 
     const raw = await this.llm.complete({ system, user });

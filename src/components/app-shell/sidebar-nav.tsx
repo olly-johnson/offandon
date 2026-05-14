@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart2,
   BookOpen,
+  Bot,
   Calendar,
   FileText,
   LayoutDashboard,
@@ -40,6 +41,7 @@ const NAV: NavItem[] = [
   { label: "Off&On Pocket", href: "/pocket", icon: Zap, enabled: false },
   { label: "Learn", href: "/learn", icon: BookOpen, enabled: false },
   { label: "Admin", href: "/admin", icon: ShieldCheck, enabled: true, adminOnly: true },
+  { label: "Master Bot", href: "/admin/master-bot", icon: Bot, enabled: true, adminOnly: true },
 ];
 
 interface SidebarNavProps {

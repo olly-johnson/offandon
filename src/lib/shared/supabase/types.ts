@@ -17,9 +17,149 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+export type MethodologySlice = "house" | "chat" | "scripts" | "analyst";
+
 export type Database = {
   public: {
     Tables: {
+      methodology_rules: {
+        Row: {
+          id: string;
+          slice: MethodologySlice;
+          rule: string;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          slice: MethodologySlice;
+          rule: string;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          slice?: MethodologySlice;
+          rule?: string;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      house_methodology: {
+        Row: {
+          slice: MethodologySlice;
+          content: string;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          slice: MethodologySlice;
+          content: string;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          slice?: MethodologySlice;
+          content?: string;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      house_methodology_versions: {
+        Row: {
+          id: string;
+          slice: MethodologySlice;
+          content: string;
+          summary: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          slice: MethodologySlice;
+          content: string;
+          summary: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          slice?: MethodologySlice;
+          content?: string;
+          summary?: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      house_methodology_proposals: {
+        Row: {
+          id: string;
+          slice: MethodologySlice;
+          new_content: string;
+          summary: string;
+          status: "pending" | "applied" | "discarded";
+          proposed_by: string | null;
+          decided_by: string | null;
+          decided_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          slice: MethodologySlice;
+          new_content: string;
+          summary: string;
+          status?: "pending" | "applied" | "discarded";
+          proposed_by?: string | null;
+          decided_by?: string | null;
+          decided_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          slice?: MethodologySlice;
+          new_content?: string;
+          summary?: string;
+          status?: "pending" | "applied" | "discarded";
+          proposed_by?: string | null;
+          decided_by?: string | null;
+          decided_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      master_bot_messages: {
+        Row: {
+          id: string;
+          author_id: string | null;
+          role: "user" | "assistant" | "system";
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id?: string | null;
+          role: "user" | "assistant" | "system";
+          content: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          author_id?: string | null;
+          role?: "user" | "assistant" | "system";
+          content?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;

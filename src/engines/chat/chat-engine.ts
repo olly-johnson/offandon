@@ -120,6 +120,8 @@ export class ChatEngine implements IChatEngine {
       input.voiceDna,
       input.memories,
       input.userMethodology,
+      input.methodology,
+      input.operatorRules,
     );
 
     const llmTools: ChatLLMTool[] | undefined = input.tools?.map((t) => ({

@@ -47,10 +47,15 @@ export class ScriptGenerator implements IScriptGenerator {
       throw new Error("ScriptGenerator: VoiceDNA has no content_pillars");
     }
 
+    const ctx = input.methodologyContext;
     const system = buildScriptsSystemPrompt(
       input.voiceDna,
       input.userMethodology,
       input.clientAssets,
+      ctx && ctx.house !== undefined && ctx.scripts !== undefined
+        ? { house: ctx.house, scripts: ctx.scripts }
+        : undefined,
+      ctx?.operatorRules ?? [],
     );
     const user = JSON.stringify({ count: input.count }, null, 2);
 
