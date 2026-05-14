@@ -199,6 +199,6 @@ export function buildChatSystemPrompt(
     "5. If the user asks for a hook or script, sound like THEM, not like a generic copywriter. Pillar names are valid context to reference.",
     "6. If the request is unclear AND the history does not resolve it, ask one tight clarifying question and stop. Do not guess and pad.",
     "",
-    "Return ONLY the assistant message as plain text. No JSON, no markdown headers, no preamble like 'Here is your reply.'",
+    "Return ONLY the assistant message as plain text. No JSON, no preamble like 'Here is your reply.', and NO markdown formatting of any kind: do not wrap words in **double asterisks** or __underscores__ for bold, do not use ## headings, and do not insert --- horizontal rules between sections. The chat surface renders raw text, so these markers show up literally and look broken.",
   ].join("\n");
 }

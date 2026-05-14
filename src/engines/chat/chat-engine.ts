@@ -1,5 +1,6 @@
 import { SlopError, validateAntiSlop } from "@/lib/shared/anti-slop";
 import { createLogger } from "@/lib/shared/logger";
+import { stripChatMarkdown } from "@/lib/shared/markdown-strip";
 
 import { buildChatSystemPrompt } from "./system-prompt";
 import type {
@@ -145,7 +146,7 @@ export class ChatEngine implements IChatEngine {
       });
 
       if (response.tool_uses.length === 0) {
-        const content = response.text.trim();
+        const content = stripChatMarkdown(response.text);
         if (content.length === 0) {
           throw new Error("ChatEngine: LLM returned an empty assistant message");
         }
