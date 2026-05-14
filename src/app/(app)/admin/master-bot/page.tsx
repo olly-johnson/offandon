@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 import { Topbar } from "@/components/app-shell/topbar";
 import { isAdmin } from "@/engines/admin/auth";
@@ -70,6 +71,14 @@ export default async function MasterBotPage() {
           className="hidden w-96 shrink-0 flex-col overflow-y-auto p-5 md:flex"
           style={{ borderLeft: "1px solid var(--oo-border)", background: "var(--oo-bg-raised)" }}
         >
+          <Link
+            href="/admin"
+            className="gold-btn-outline mb-5 flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold"
+          >
+            <ArrowLeft className="size-3.5" />
+            Back to admin
+          </Link>
+
           {proposals.length > 0 ? (
             <div className="mb-5">
               <h3
@@ -127,9 +136,6 @@ export default async function MasterBotPage() {
             </div>
           ) : null}
 
-          <div className="mt-6 text-[11px]" style={{ color: "var(--oo-text-dim)" }}>
-            <Link href="/admin">Back to admin</Link>
-          </div>
         </aside>
       </div>
     </>

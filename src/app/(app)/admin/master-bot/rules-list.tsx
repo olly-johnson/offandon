@@ -82,10 +82,9 @@ export function RulesList({ rules }: Props) {
                         onClick={() => onDelete(r.id)}
                         disabled={pending}
                         aria-label="Delete rule"
-                        className="shrink-0 opacity-50 transition hover:opacity-100"
-                        style={{ color: "var(--oo-text-dim)" }}
+                        className="oo-rule-delete"
                       >
-                        <Trash2 className="size-3" />
+                        <Trash2 className="size-3.5" />
                       </button>
                     </li>
                   ))}
