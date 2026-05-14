@@ -16,6 +16,15 @@ const log = createLogger("admin.invite.actions");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Feature flag. While false, the /admin/invite UI renders a "disabled"
+ * notice instead of the form, and this action refuses every request as
+ * a defence in depth (in case anyone POSTs the form directly).
+ *
+ * Flip to true to re-enable invites. No other changes needed.
+ */
+const INVITES_ENABLED = false;
+
 export type InviteState = { error?: string; sent?: string };
 
 /**
@@ -38,6 +47,10 @@ export async function inviteUserAction(
   form: FormData,
 ): Promise<InviteState> {
   void _prev;
+  if (!INVITES_ENABLED) {
+    log.warn("invite attempted while feature disabled");
+    return { error: "Invites are temporarily disabled." };
+  }
   const email = (form.get("email") ?? "").toString().trim().toLowerCase();
   if (!EMAIL_RE.test(email)) {
     return { error: "Enter a valid email address." };

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Ban } from "lucide-react";
 
 import { isAdmin } from "@/engines/admin/auth";
 import { listRecentInvites } from "@/engines/admin/persistence";
@@ -7,7 +7,11 @@ import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
-import { InviteForm } from "./invite-form";
+/**
+ * Temporarily disabled. Flip INVITES_ENABLED in ./actions.ts to re-enable
+ * and swap the disabled card back to `<InviteForm />`.
+ */
+const INVITES_ENABLED = false;
 
 const log = createLogger("page.admin.invite");
 
@@ -71,9 +75,32 @@ export default async function AdminInvitePage() {
         Sends a Supabase invite email. They click through, set a password, and land in onboarding.
       </p>
 
-      <section className="mt-8 rounded-lg border border-border bg-card p-6">
-        <InviteForm />
-      </section>
+      {INVITES_ENABLED ? null : (
+        <section
+          className="mt-8 flex items-start gap-3 rounded-lg p-5"
+          style={{
+            background: "var(--oo-bg-raised)",
+            border: "1px dashed var(--oo-border)",
+            color: "var(--oo-text-dim)",
+          }}
+          role="status"
+          aria-label="Invite feature disabled"
+        >
+          <Ban className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p
+              className="text-sm font-semibold"
+              style={{ color: "var(--oo-text-primary)" }}
+            >
+              Invites are disabled
+            </p>
+            <p className="mt-1 text-xs leading-relaxed">
+              New creator invites are paused. The recent-invites log below is
+              read-only.
+            </p>
+          </div>
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="text-sm font-medium">Recent invites</h2>
