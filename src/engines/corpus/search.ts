@@ -61,7 +61,12 @@ export async function searchClientCorpus(
   const fetchLimit = sources ? Math.min(50, limit * 2) : limit;
 
   const startedAt = Date.now();
-  const [embedding] = await deps.embeddings.embed([effectiveQuery]);
+  // input_type=query steers Voyage toward the retrieval-query distribution,
+  // which materially improves recall against chunks embedded with
+  // input_type=document at ingest. See embeddings.ts header for context.
+  const [embedding] = await deps.embeddings.embed([effectiveQuery], {
+    inputType: "query",
+  });
 
   const { data, error } = await deps.supabase.rpc("match_client_chunks", {
     query_embedding: embedding as unknown as string,

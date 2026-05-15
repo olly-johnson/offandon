@@ -72,16 +72,17 @@ comment on column public.client_documents.captured_at is 'When the artifact itse
 -- ---------------------------------------------------------------------------
 -- client_document_chunks
 -- ---------------------------------------------------------------------------
--- Dimension 1536 matches OpenAI text-embedding-3-small. Pinned in code via
--- EMBEDDING_DIMENSIONS so a future model change requires an explicit
--- migration rather than silently writing wrong-dimension vectors.
+-- Dimension 1024 matches Voyage voyage-3 (Anthropic's recommended embeddings
+-- provider). Pinned in code via EMBEDDING_DIMENSIONS so a future model
+-- change requires an explicit migration rather than silently writing
+-- wrong-dimension vectors.
 create table public.client_document_chunks (
     id             uuid primary key default gen_random_uuid(),
     document_id    uuid not null references public.client_documents (id) on delete cascade,
     user_id        uuid not null references auth.users (id) on delete cascade,
     chunk_index    integer not null,
     chunk_text     text not null,
-    embedding      vector(1536) not null,
+    embedding      vector(1024) not null,
     metadata       jsonb not null default '{}'::jsonb,
     created_at     timestamptz not null default now(),
     constraint client_document_chunks_text_not_blank check (length(btrim(chunk_text)) > 0),
@@ -152,7 +153,7 @@ grant all    on public.client_document_chunks to service_role;
 -- the wrong user_id. The user_id arg is the FILTER, RLS is the FENCE.
 -- ---------------------------------------------------------------------------
 create or replace function public.match_client_chunks(
-  query_embedding vector(1536),
+  query_embedding vector(1024),
   match_user_id   uuid,
   match_count     integer default 6
 )
@@ -187,8 +188,8 @@ as $$
   limit greatest(1, least(coalesce(match_count, 6), 50));
 $$;
 
-grant execute on function public.match_client_chunks(vector(1536), uuid, integer) to authenticated;
-grant execute on function public.match_client_chunks(vector(1536), uuid, integer) to service_role;
+grant execute on function public.match_client_chunks(vector(1024), uuid, integer) to authenticated;
+grant execute on function public.match_client_chunks(vector(1024), uuid, integer) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- Extend delete_user_data to wipe the corpus.

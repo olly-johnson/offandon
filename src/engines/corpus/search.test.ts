@@ -16,13 +16,15 @@ interface MockRpcCalls {
   args: Record<string, unknown>;
 }
 
-function makeEmbedder(vector?: number[]): IEmbeddingsClient & { calls: string[][] } {
-  const calls: string[][] = [];
+function makeEmbedder(vector?: number[]): IEmbeddingsClient & {
+  calls: Array<{ texts: string[]; inputType?: string }>;
+} {
+  const calls: Array<{ texts: string[]; inputType?: string }> = [];
   const fixed = vector ?? Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.1);
   return {
     calls,
-    async embed(texts: string[]) {
-      calls.push([...texts]);
+    async embed(texts: string[], opts?: { inputType?: "document" | "query" }) {
+      calls.push({ texts: [...texts], inputType: opts?.inputType });
       return texts.map(() => fixed);
     },
   };
@@ -78,6 +80,16 @@ describe("searchClientCorpus", () => {
     expect(embeddings.calls).toHaveLength(0);
   });
 
+  it("passes inputType=query when embedding the search string", async () => {
+    const { client } = makeSupabase([]);
+    const embeddings = makeEmbedder();
+    await searchClientCorpus(
+      { supabase: client, embeddings },
+      { user_id: USER_ID, query: "hello" },
+    );
+    expect(embeddings.calls[0].inputType).toBe("query");
+  });
+
   it("throws when user_id is missing", async () => {
     const { client } = makeSupabase([]);
     const embeddings = makeEmbedder();
@@ -99,7 +111,7 @@ describe("searchClientCorpus", () => {
       { supabase: client, embeddings },
       { user_id: USER_ID, query: "when did she quit consulting?" },
     );
-    expect(embeddings.calls).toEqual([["when did she quit consulting?"]]);
+    expect(embeddings.calls[0].texts).toEqual(["when did she quit consulting?"]);
     expect(calls).toHaveLength(1);
     expect(calls[0].name).toBe("match_client_chunks");
     expect(calls[0].args.match_user_id).toBe(USER_ID);
@@ -176,7 +188,7 @@ describe("searchClientCorpus", () => {
       { supabase: client, embeddings },
       { user_id: USER_ID, query: huge },
     );
-    expect(embeddings.calls[0][0].length).toBe(2000);
+    expect(embeddings.calls[0].texts[0].length).toBe(2000);
   });
 
   it("surfaces RPC errors with a clear message", async () => {

@@ -1,13 +1,19 @@
 /**
  * Embeddings client + chunker (BO-049).
  *
- * Provider: OpenAI text-embedding-3-small (1536-d). Chosen because it's
- * fast, cheap ($0.02 / M tokens), and decoupled from the Anthropic chat
- * stack — sharing rate limits with the chat model would let a bursty chat
- * session starve corpus retrieval.
+ * Provider: Voyage AI `voyage-3` (1024-d). Voyage is Anthropic's
+ * officially-recommended embeddings partner, so we stay inside one vendor
+ * relationship for chat + retrieval. Decoupled from the Anthropic chat
+ * stack at the network level — embeddings don't share rate limits or
+ * outages with the chat model.
+ *
+ * Voyage exposes an `input_type` distinction ("document" at ingest,
+ * "query" at search) which materially improves retrieval — the same model
+ * is steered toward two different embedding distributions. Callers pass
+ * the type explicitly; we don't try to infer it.
  *
  * The interface is `IEmbeddingsClient` so tests stub it out without
- * touching the network. Production code constructs `OpenAIEmbeddingsClient`
+ * touching the network. Production code constructs `VoyageEmbeddingsClient`
  * once and passes it down to ingestion + retrieval call sites.
  *
  * The chunker is intentionally simple: split on paragraph breaks first,
@@ -20,72 +26,91 @@ import { createLogger } from "./logger";
 
 const log = createLogger("embeddings");
 
-export const EMBEDDING_MODEL = "text-embedding-3-small";
+export const EMBEDDING_MODEL = "voyage-3";
 
 /**
- * Pinned at the schema level (vector(1536) in migration 20260515000000).
+ * Pinned at the schema level (vector(1024) in migration 20260515000000).
  * Changing this requires a migration — guarded at the type level by the
  * `embedding.length` check before insert.
  */
-export const EMBEDDING_DIMENSIONS = 1536;
+export const EMBEDDING_DIMENSIONS = 1024;
 
 /** Chunk sizing heuristics. Chars, not tokens; assumes ~4 chars/token. */
 export const DEFAULT_CHUNK_TARGET_CHARS = 3200;
 export const DEFAULT_CHUNK_OVERLAP_CHARS = 400;
 export const MIN_CHUNK_CHARS = 200;
 
+/**
+ * Voyage's "input_type" parameter. Use "document" when embedding text that
+ * will be stored and searched against; "query" when embedding the search
+ * string itself. Omit (undefined) for symmetric / mixed use.
+ */
+export type EmbeddingInputType = "document" | "query";
+
+export interface EmbedOptions {
+  inputType?: EmbeddingInputType;
+}
+
 export interface IEmbeddingsClient {
   /**
    * Embed one or more texts. Returns vectors in the same order as input.
    * Throws on dimension mismatch or empty input.
    */
-  embed(texts: string[]): Promise<number[][]>;
+  embed(texts: string[], opts?: EmbedOptions): Promise<number[][]>;
 }
 
-export interface OpenAIEmbeddingsClientOptions {
+export interface VoyageEmbeddingsClientOptions {
   apiKey: string;
   model?: string;
   fetchImpl?: typeof fetch;
 }
 
-interface OpenAIEmbeddingResponse {
+interface VoyageEmbeddingResponse {
   data: Array<{ embedding: number[]; index: number }>;
   model: string;
-  usage?: { prompt_tokens?: number; total_tokens?: number };
+  usage?: { total_tokens?: number };
 }
 
-export class OpenAIEmbeddingsClient implements IEmbeddingsClient {
+export class VoyageEmbeddingsClient implements IEmbeddingsClient {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly fetchImpl: typeof fetch;
 
-  constructor(opts: OpenAIEmbeddingsClientOptions) {
+  constructor(opts: VoyageEmbeddingsClientOptions) {
     if (!opts.apiKey) {
-      throw new Error("OpenAIEmbeddingsClient: apiKey is required");
+      throw new Error("VoyageEmbeddingsClient: apiKey is required");
     }
     this.apiKey = opts.apiKey;
     this.model = opts.model ?? EMBEDDING_MODEL;
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }
 
-  async embed(texts: string[]): Promise<number[][]> {
+  async embed(texts: string[], opts: EmbedOptions = {}): Promise<number[][]> {
     if (!Array.isArray(texts) || texts.length === 0) {
-      throw new Error("OpenAIEmbeddingsClient.embed: texts must be non-empty");
+      throw new Error("VoyageEmbeddingsClient.embed: texts must be non-empty");
     }
     for (const t of texts) {
       if (typeof t !== "string" || t.length === 0) {
-        throw new Error("OpenAIEmbeddingsClient.embed: every input must be a non-empty string");
+        throw new Error("VoyageEmbeddingsClient.embed: every input must be a non-empty string");
       }
     }
 
+    const body: Record<string, unknown> = {
+      input: texts,
+      model: this.model,
+    };
+    if (opts.inputType) {
+      body.input_type = opts.inputType;
+    }
+
     const startedAt = Date.now();
-    const res = await this.fetchImpl("https://api.openai.com/v1/embeddings", {
+    const res = await this.fetchImpl("https://api.voyageai.com/v1/embeddings", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ input: texts, model: this.model }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -94,13 +119,13 @@ export class OpenAIEmbeddingsClient implements IEmbeddingsClient {
         status: res.status,
         body_preview: errBody.slice(0, 200),
       });
-      throw new Error(`OpenAI embeddings ${res.status}: ${errBody.slice(0, 200)}`);
+      throw new Error(`Voyage embeddings ${res.status}: ${errBody.slice(0, 200)}`);
     }
 
-    const json = (await res.json()) as OpenAIEmbeddingResponse;
+    const json = (await res.json()) as VoyageEmbeddingResponse;
     if (!Array.isArray(json.data) || json.data.length !== texts.length) {
       throw new Error(
-        `OpenAI embeddings: expected ${texts.length} vectors, got ${json.data?.length ?? 0}`,
+        `Voyage embeddings: expected ${texts.length} vectors, got ${json.data?.length ?? 0}`,
       );
     }
 
@@ -111,7 +136,7 @@ export class OpenAIEmbeddingsClient implements IEmbeddingsClient {
     const vectors = sorted.map((row, i) => {
       if (!Array.isArray(row.embedding) || row.embedding.length !== EMBEDDING_DIMENSIONS) {
         throw new Error(
-          `OpenAI embeddings: row ${i} has dimension ${row.embedding?.length}, expected ${EMBEDDING_DIMENSIONS}`,
+          `Voyage embeddings: row ${i} has dimension ${row.embedding?.length}, expected ${EMBEDDING_DIMENSIONS}`,
         );
       }
       return row.embedding;
@@ -120,6 +145,7 @@ export class OpenAIEmbeddingsClient implements IEmbeddingsClient {
     log.info("embeddings done", {
       count: texts.length,
       model: json.model,
+      input_type: opts.inputType,
       total_tokens: json.usage?.total_tokens,
       duration_ms: Date.now() - startedAt,
     });

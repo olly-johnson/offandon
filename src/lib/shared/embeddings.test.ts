@@ -5,7 +5,7 @@ import {
   DEFAULT_CHUNK_OVERLAP_CHARS,
   DEFAULT_CHUNK_TARGET_CHARS,
   EMBEDDING_DIMENSIONS,
-  OpenAIEmbeddingsClient,
+  VoyageEmbeddingsClient,
 } from "./embeddings";
 
 describe("chunkText", () => {
@@ -24,7 +24,6 @@ describe("chunkText", () => {
   });
 
   it("splits a long paragraph-heavy text and indexes monotonically", () => {
-    // ~12K chars, four roughly-equal paragraphs.
     const para = "Sentence. ".repeat(300);
     const text = [para, para, para, para].join("\n\n");
     const chunks = chunkText(text);
@@ -42,9 +41,6 @@ describe("chunkText", () => {
     expect(chunks.length).toBeGreaterThan(2);
     for (let i = 0; i < chunks.length - 1; i++) {
       const tail = chunks[i].text.slice(-80);
-      // Tail won't be byte-identical because chunk boundaries snap to
-      // sentence ends, but a substantive substring of the tail should
-      // appear in the next chunk's first ~400 chars.
       const probe = tail.slice(-30).trim();
       if (probe.length >= 10) {
         expect(chunks[i + 1].text.slice(0, 600)).toContain(probe.slice(0, 10));
@@ -66,19 +62,18 @@ describe("chunkText", () => {
     const tail = "B".repeat(1500);
     const text = `${head}\n\n${tail}`;
     const chunks = chunkText(text, { targetChars: 2000, overlapChars: 200, minChars: 100 });
-    // First chunk should end at the paragraph break, not mid-A.
     expect(chunks[0].text.endsWith("A")).toBe(true);
     expect(chunks[0].text).not.toContain("B");
   });
 });
 
-describe("OpenAIEmbeddingsClient", () => {
+describe("VoyageEmbeddingsClient", () => {
   it("throws if apiKey is missing", () => {
-    expect(() => new OpenAIEmbeddingsClient({ apiKey: "" })).toThrow();
+    expect(() => new VoyageEmbeddingsClient({ apiKey: "" })).toThrow();
   });
 
   it("throws if input array is empty", async () => {
-    const client = new OpenAIEmbeddingsClient({
+    const client = new VoyageEmbeddingsClient({
       apiKey: "test",
       fetchImpl: async () => new Response("{}", { status: 200 }),
     });
@@ -86,15 +81,15 @@ describe("OpenAIEmbeddingsClient", () => {
   });
 
   it("throws if any input string is empty", async () => {
-    const client = new OpenAIEmbeddingsClient({
+    const client = new VoyageEmbeddingsClient({
       apiKey: "test",
       fetchImpl: async () => new Response("{}", { status: 200 }),
     });
     await expect(client.embed(["ok", ""])).rejects.toThrow(/non-empty string/);
   });
 
-  it("posts to the embeddings endpoint with correct payload + headers", async () => {
-    let captured: { url: string; body: unknown; auth: string } | null = null;
+  it("posts to the Voyage endpoint with correct payload + headers", async () => {
+    let captured: { url: string; body: Record<string, unknown>; auth: string } | null = null;
     const fetchImpl: typeof fetch = async (input, init) => {
       const body = init?.body ? JSON.parse(String(init.body)) : null;
       const headers = init?.headers as Record<string, string>;
@@ -105,23 +100,59 @@ describe("OpenAIEmbeddingsClient", () => {
       };
       return new Response(
         JSON.stringify({
-          model: "text-embedding-3-small",
+          model: "voyage-3",
           data: [{ embedding: Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.1), index: 0 }],
           usage: { total_tokens: 7 },
         }),
         { status: 200 },
       );
     };
-    const client = new OpenAIEmbeddingsClient({ apiKey: "sk-test", fetchImpl });
+    const client = new VoyageEmbeddingsClient({ apiKey: "vk-test", fetchImpl });
     const vectors = await client.embed(["hello"]);
 
     expect(captured).not.toBeNull();
-    expect(captured!.url).toBe("https://api.openai.com/v1/embeddings");
-    expect(captured!.auth).toBe("Bearer sk-test");
-    expect((captured!.body as { model: string }).model).toBe("text-embedding-3-small");
-    expect((captured!.body as { input: string[] }).input).toEqual(["hello"]);
+    expect(captured!.url).toBe("https://api.voyageai.com/v1/embeddings");
+    expect(captured!.auth).toBe("Bearer vk-test");
+    expect(captured!.body.model).toBe("voyage-3");
+    expect(captured!.body.input).toEqual(["hello"]);
+    // input_type omitted when caller doesn't pass it.
+    expect(captured!.body.input_type).toBeUndefined();
     expect(vectors).toHaveLength(1);
     expect(vectors[0]).toHaveLength(EMBEDDING_DIMENSIONS);
+  });
+
+  it("passes input_type=document when requested", async () => {
+    let capturedBody: Record<string, unknown> | null = null;
+    const fetchImpl: typeof fetch = async (_, init) => {
+      capturedBody = init?.body ? JSON.parse(String(init.body)) : null;
+      return new Response(
+        JSON.stringify({
+          model: "voyage-3",
+          data: [{ embedding: Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0), index: 0 }],
+        }),
+        { status: 200 },
+      );
+    };
+    const client = new VoyageEmbeddingsClient({ apiKey: "k", fetchImpl });
+    await client.embed(["x"], { inputType: "document" });
+    expect(capturedBody!.input_type).toBe("document");
+  });
+
+  it("passes input_type=query when requested", async () => {
+    let capturedBody: Record<string, unknown> | null = null;
+    const fetchImpl: typeof fetch = async (_, init) => {
+      capturedBody = init?.body ? JSON.parse(String(init.body)) : null;
+      return new Response(
+        JSON.stringify({
+          model: "voyage-3",
+          data: [{ embedding: Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0), index: 0 }],
+        }),
+        { status: 200 },
+      );
+    };
+    const client = new VoyageEmbeddingsClient({ apiKey: "k", fetchImpl });
+    await client.embed(["x"], { inputType: "query" });
+    expect(capturedBody!.input_type).toBe("query");
   });
 
   it("re-orders responses by .index so they line up with input order", async () => {
@@ -130,8 +161,7 @@ describe("OpenAIEmbeddingsClient", () => {
     const fetchImpl: typeof fetch = async () =>
       new Response(
         JSON.stringify({
-          model: "text-embedding-3-small",
-          // Deliberately out-of-order.
+          model: "voyage-3",
           data: [
             { embedding: v1, index: 1 },
             { embedding: v0, index: 0 },
@@ -139,7 +169,7 @@ describe("OpenAIEmbeddingsClient", () => {
         }),
         { status: 200 },
       );
-    const client = new OpenAIEmbeddingsClient({ apiKey: "test", fetchImpl });
+    const client = new VoyageEmbeddingsClient({ apiKey: "test", fetchImpl });
     const vectors = await client.embed(["a", "b"]);
     expect(vectors[0][0]).toBe(0.0);
     expect(vectors[1][0]).toBe(0.5);
@@ -150,18 +180,18 @@ describe("OpenAIEmbeddingsClient", () => {
       new Response(
         JSON.stringify({
           data: [{ embedding: [0.1, 0.2, 0.3], index: 0 }],
-          model: "text-embedding-3-small",
+          model: "voyage-3",
         }),
         { status: 200 },
       );
-    const client = new OpenAIEmbeddingsClient({ apiKey: "test", fetchImpl });
+    const client = new VoyageEmbeddingsClient({ apiKey: "test", fetchImpl });
     await expect(client.embed(["x"])).rejects.toThrow(/dimension/);
   });
 
   it("throws when the API returns a non-2xx", async () => {
     const fetchImpl: typeof fetch = async () =>
       new Response("rate limited", { status: 429 });
-    const client = new OpenAIEmbeddingsClient({ apiKey: "test", fetchImpl });
+    const client = new VoyageEmbeddingsClient({ apiKey: "test", fetchImpl });
     await expect(client.embed(["x"])).rejects.toThrow(/429/);
   });
 
@@ -175,18 +205,18 @@ describe("OpenAIEmbeddingsClient", () => {
               index: 0,
             },
           ],
-          model: "text-embedding-3-small",
+          model: "voyage-3",
         }),
         { status: 200 },
       );
-    const client = new OpenAIEmbeddingsClient({ apiKey: "test", fetchImpl });
+    const client = new VoyageEmbeddingsClient({ apiKey: "test", fetchImpl });
     await expect(client.embed(["a", "b"])).rejects.toThrow(/expected 2/);
   });
 });
 
 describe("constants", () => {
-  it("matches the migration's vector(1536) dimension", () => {
-    expect(EMBEDDING_DIMENSIONS).toBe(1536);
+  it("matches the migration's vector(1024) dimension", () => {
+    expect(EMBEDDING_DIMENSIONS).toBe(1024);
   });
   it("has sane chunk defaults", () => {
     expect(DEFAULT_CHUNK_TARGET_CHARS).toBeGreaterThan(DEFAULT_CHUNK_OVERLAP_CHARS);
