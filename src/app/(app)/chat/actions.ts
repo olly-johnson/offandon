@@ -18,8 +18,10 @@ import {
   getConversationWithMessages,
   toEngineHistory,
 } from "@/engines/chat/persistence";
+import { buildSearchCorpusTool } from "@/engines/chat/search-corpus-tool";
 import type { ChatToolDefinition } from "@/engines/chat/types";
 import { saveIdea } from "@/engines/content/ideas-persistence";
+import { VoyageEmbeddingsClient } from "@/lib/shared/embeddings";
 import { listMemoriesForUser } from "@/engines/memory/persistence";
 import { runMemoryExtractor } from "@/engines/memory/run-extractor";
 import { getUserMethodology } from "@/engines/methodology/persistence";
@@ -110,6 +112,29 @@ function buildSaveIdeaTool(args: {
 }
 
 /**
+ * Construct the corpus search tool if VOYAGE_API_KEY is configured.
+ * Returns null in dev environments without embeddings: the chat tool
+ * just isn't registered then, which matches pre-BO-049 behaviour.
+ */
+function tryBuildSearchCorpusTool(args: {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  userId: string;
+}): ChatToolDefinition | null {
+  const apiKey = process.env.VOYAGE_API_KEY;
+  if (!apiKey) {
+    log.warn("VOYAGE_API_KEY unset, skipping search_client_corpus tool", {
+      user_id: args.userId,
+    });
+    return null;
+  }
+  return buildSearchCorpusTool({
+    supabase: args.supabase,
+    embeddings: new VoyageEmbeddingsClient({ apiKey }),
+    userId: args.userId,
+  });
+}
+
+/**
  * Start a brand-new conversation from the /chat list page. Title is derived
  * from the first user message; we redirect to /chat/[id] which renders the
  * thread.
@@ -158,11 +183,10 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       content: message,
     });
 
-    const tool = buildSaveIdeaTool({
-      supabase,
-      userId: user.id,
-      conversationId,
-    });
+    const tools = [
+      buildSaveIdeaTool({ supabase, userId: user.id, conversationId }),
+      tryBuildSearchCorpusTool({ supabase, userId: user.id }),
+    ].filter((t): t is ChatToolDefinition => t !== null);
 
     const admin = createSupabaseAdminClient();
     const [memories, userMethodology, methodologyHouse, methodologyChat, operatorRules] =
@@ -182,7 +206,7 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
     const reply = await engine.reply({
       voiceDna: dna,
       history: [{ role: "user", content: message }],
-      tools: [tool],
+      tools,
       memories,
       userMethodology,
       methodology: { house: methodologyHouse, chat: methodologyChat },
@@ -200,6 +224,7 @@ export async function startConversation(_prev: SendState, form: FormData): Promi
       conversation_id: conversationId,
       user_id: user.id,
       tool_call_count: reply.tool_actions.length,
+      corpus_tool_enabled: tools.some((t) => t.name === "search_client_corpus"),
     });
 
     // Post-chat memory extraction runs AFTER the response is sent so it
@@ -296,11 +321,10 @@ export async function sendMessage(
     const history = toEngineHistory(loaded.messages.filter((m) => m.role !== "system"));
     history.push({ role: "user", content: message });
 
-    const tool = buildSaveIdeaTool({
-      supabase,
-      userId: user.id,
-      conversationId,
-    });
+    const tools = [
+      buildSaveIdeaTool({ supabase, userId: user.id, conversationId }),
+      tryBuildSearchCorpusTool({ supabase, userId: user.id }),
+    ].filter((t): t is ChatToolDefinition => t !== null);
 
     const admin = createSupabaseAdminClient();
     const [memories, userMethodology, methodologyHouse, methodologyChat, operatorRules] =
@@ -320,7 +344,7 @@ export async function sendMessage(
     const reply = await engine.reply({
       voiceDna: dna,
       history,
-      tools: [tool],
+      tools,
       memories,
       userMethodology,
       methodology: { house: methodologyHouse, chat: methodologyChat },
@@ -339,6 +363,7 @@ export async function sendMessage(
       user_id: user.id,
       history_length: history.length,
       tool_call_count: reply.tool_actions.length,
+      corpus_tool_enabled: tools.some((t) => t.name === "search_client_corpus"),
     });
 
     // Post-chat memory extraction. Runs in the background via after() so
