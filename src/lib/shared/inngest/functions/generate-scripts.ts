@@ -93,6 +93,45 @@ export const generateScripts = inngest.createFunction(
         return loadScriptAssetsContext(supabase, user_id);
       });
 
+      // Implicit corpus retrieval (BO-051). Grounds the batch in recent
+      // Fathom transcripts / questionnaires / notes. When VOYAGE_API_KEY
+      // is unset (dev environments without embeddings), the step returns
+      // null and the generator behaves exactly as it did pre-BO-051.
+      const corpusContext = await step.run("load-corpus-context", async () => {
+        const apiKey = process.env.VOYAGE_API_KEY;
+        if (!apiKey) {
+          log.warn("VOYAGE_API_KEY unset, skipping corpus retrieval", {
+            batch_id,
+            user_id,
+          });
+          return null;
+        }
+        const { VoyageEmbeddingsClient } = await import(
+          "@/lib/shared/embeddings"
+        );
+        const { loadScriptsCorpusContext } = await import(
+          "@/engines/content/corpus-context"
+        );
+        const embeddings = new VoyageEmbeddingsClient({ apiKey });
+        try {
+          return await loadScriptsCorpusContext(
+            { supabase, embeddings },
+            { userId: user_id, voiceDna: dna },
+          );
+        } catch (err) {
+          // Retrieval failures must not block batch generation. The
+          // batch is still valuable without corpus grounding; we just
+          // lose the recency boost. Logged so we can spot Voyage
+          // outages or RPC regressions.
+          log.warn("corpus retrieval failed, continuing without it", {
+            batch_id,
+            user_id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          return null;
+        }
+      });
+
       const methodologyContext = await step.run("load-methodology", async () => {
         const { loadMethodologySlice, listRulesForSlicePrompt } = await import(
           "@/engines/master-bot/persistence"
@@ -116,6 +155,7 @@ export const generateScripts = inngest.createFunction(
           count,
           userMethodology,
           clientAssets,
+          corpusContext,
           methodologyContext,
         });
         log.info("generation ok", {

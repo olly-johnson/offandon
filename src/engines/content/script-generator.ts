@@ -56,6 +56,7 @@ export class ScriptGenerator implements IScriptGenerator {
         ? { house: ctx.house, scripts: ctx.scripts }
         : undefined,
       ctx?.operatorRules ?? [],
+      input.corpusContext,
     );
     const user = JSON.stringify({ count: input.count }, null, 2);
 

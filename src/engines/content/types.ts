@@ -66,6 +66,15 @@ export interface GenerateScriptsInput {
    * block entirely so non-ingested users see no change.
    */
   clientAssets?: import("./client-assets-persistence").ScriptAssetsContext | null;
+  /**
+   * Optional top-k corpus retrieval (BO-051). When present, the system
+   * prompt embeds long-form chunks (Fathom transcripts, questionnaire
+   * responses, notes) the creator has accumulated since onboarding so
+   * the batch is grounded in their recent material, not just the
+   * operator-curated client_assets snapshot. Empty hits skip the block
+   * so non-ingested users see no change.
+   */
+  corpusContext?: import("./corpus-context").ScriptsCorpusContext | null;
   /** House methodology overrides (BO-048). */
   methodologyContext?: ContentMethodologyContext;
 }
