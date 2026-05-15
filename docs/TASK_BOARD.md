@@ -89,9 +89,9 @@ Two-tier client information model: Tier 1 (voice_dna, methodology, memories, cli
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-049 | Foundation: `pgvector` + `client_documents` + `client_document_chunks` + HNSW + `match_client_chunks` RPC. Embeddings client (OpenAI `text-embedding-3-small`, 1536-d) + chunker (~800 tokens, 100 overlap). Corpus engine: `saveClientDocument`, `replaceDocumentChunks`, `searchClientCorpus`, `formatCorpusHits`. | claude | In Progress | infra/client-corpus-foundation |
-| BO-050 | Chat: register `search_client_corpus` tool in chat-engine, handle tool_use loop, tighten system prompt with retrieval nudge. | claude | In Progress | feature/chat-corpus-search |
-| BO-051 | Script generator: implicit retrieval at gen start (embed seed prompt → top-k chunks injected into system prompt). Additive to existing `client_assets` loader. | claude | In Progress | feature/scripts-corpus-retrieval |
+| BO-049 | Foundation: `pgvector` + `client_documents` + `client_document_chunks` + HNSW + `match_client_chunks` RPC. Embeddings client (Voyage `voyage-3`, 1024-d) + chunker (~800 tokens, 100 overlap). Corpus engine: `saveClientDocument`, `replaceDocumentChunks`, `searchClientCorpus`, `formatCorpusHits`. | claude | Done | PR #43 |
+| BO-050 | Chat: register `search_client_corpus` tool in chat-engine, handle tool_use loop, tighten system prompt with retrieval nudge. | claude | Done | PR #47 |
+| BO-051 | Script generator: implicit retrieval at gen start (embed seed prompt → top-k chunks injected into system prompt). Additive to existing `client_assets` loader. | claude | In Progress | PR #45 |
 | BO-052 | Ingestion: incremental mode for `clients/<slug>/transcripts/*` + `clients/<slug>/questionnaires/*`. Chunk → embed → write to `client_documents` / `client_document_chunks`. Watermark by file mtime so weekly drops don't re-process the world. | - | Todo | - |
 
 ## Conventions
