@@ -58,6 +58,8 @@ export class SingleScriptGenerator implements ISingleScriptGenerator {
         ? { house: ctx.house, scripts: ctx.scripts }
         : undefined,
       ctx?.operatorRules ?? [],
+      input.clientAssets,
+      input.framework,
     );
     const user = JSON.stringify(
       {

@@ -8,7 +8,9 @@ import {
   DEFAULT_ASSET_CAPS,
   hasAnyAssets,
   loadScriptAssetsContext,
+  pickPastScriptsByFramework,
 } from "./client-assets-persistence";
+import type { ClientAssetRow } from "./client-assets-persistence";
 
 interface MockCalls {
   fromCalls: string[];
@@ -114,17 +116,20 @@ describe("loadScriptAssetsContext", () => {
     );
   });
 
-  it("orders by created_at desc and caps with DEFAULT_ASSET_CAPS", async () => {
+  it("orders by created_at desc and caps with DEFAULT_ASSET_CAPS (past_scripts over-fetched for framework grouping)", async () => {
     const { client, calls } = makeClient({});
     await loadScriptAssetsContext(client, USER_ID);
     expect(new Set(calls.orders.map((o) => o.column))).toEqual(new Set(["created_at"]));
     expect(calls.orders.every((o) => !o.ascending)).toBe(true);
+    // past_scripts over-fetches 4x so the framework-grouping in
+    // pickPastScriptsByFramework has enough rows to dedupe down to one
+    // per framework (BO-053). Other asset_types use their caps verbatim.
     expect(new Set(calls.limits)).toEqual(
       new Set([
         DEFAULT_ASSET_CAPS.stories,
         DEFAULT_ASSET_CAPS.viral_references,
         DEFAULT_ASSET_CAPS.templates,
-        DEFAULT_ASSET_CAPS.past_scripts,
+        DEFAULT_ASSET_CAPS.past_scripts * 4,
       ]),
     );
   });
@@ -158,6 +163,130 @@ describe("loadScriptAssetsContext", () => {
     const ctx = await loadScriptAssetsContext(client, USER_ID);
     expect(ctx.stories[0].metadata).toEqual({});
     expect(ctx.stories[1].metadata).toEqual({});
+  });
+
+  it("surfaces one of each framework first, then fills remaining slots with extras (BO-053)", async () => {
+    const { client } = makeClient({
+      past_script: [
+        { asset_type: "past_script", title: "Hero recent", body: "h1", metadata: { framework: "Hero's Journey" } },
+        { asset_type: "past_script", title: "Hero older",  body: "h2", metadata: { framework: "Hero's Journey" } },
+        { asset_type: "past_script", title: "Mih recent",  body: "m1", metadata: { framework: "Man in a Hole" } },
+        { asset_type: "past_script", title: "Mih older",   body: "m2", metadata: { framework: "Man in a Hole" } },
+        { asset_type: "past_script", title: "Lesson",      body: "l1", metadata: { framework: "The Lesson" } },
+      ],
+    });
+    const ctx = await loadScriptAssetsContext(client, USER_ID);
+    // Round-robin: one of each framework in the first three slots, then
+    // the leftovers fill remaining slots up to cap. Cap of 6 with 5 rows
+    // means we get all 5 back, with each framework represented before
+    // any framework gets a second example.
+    const fws = ctx.past_scripts.map((p) => p.metadata.framework);
+    expect(fws.slice(0, 3).sort()).toEqual([
+      "Hero's Journey",
+      "Man in a Hole",
+      "The Lesson",
+    ]);
+    expect(fws).toHaveLength(5);
+  });
+
+  it("respects the pastScriptFramework filter (only matching framework returned)", async () => {
+    const { client } = makeClient({
+      past_script: [
+        { asset_type: "past_script", title: "Hero 1", body: "h1", metadata: { framework: "Hero's Journey" } },
+        { asset_type: "past_script", title: "Mih 1",  body: "m1", metadata: { framework: "Man in a Hole" } },
+        { asset_type: "past_script", title: "Hero 2", body: "h2", metadata: { framework: "Hero's Journey" } },
+      ],
+    });
+    const ctx = await loadScriptAssetsContext(client, USER_ID, {
+      pastScriptFramework: "Hero's Journey",
+    });
+    expect(ctx.past_scripts.map((p) => p.title)).toEqual(["Hero 1", "Hero 2"]);
+  });
+
+  it("filter is case-insensitive on framework match", async () => {
+    const { client } = makeClient({
+      past_script: [
+        { asset_type: "past_script", title: "Hero 1", body: "h1", metadata: { framework: "Hero's Journey" } },
+      ],
+    });
+    const ctx = await loadScriptAssetsContext(client, USER_ID, {
+      pastScriptFramework: "hero's journey",
+    });
+    expect(ctx.past_scripts).toHaveLength(1);
+  });
+});
+
+describe("pickPastScriptsByFramework", () => {
+  const make = (i: number, fw: string | undefined): ClientAssetRow => ({
+    asset_type: "past_script",
+    title: `script ${i} (${fw ?? "untagged"})`,
+    body: `body ${i}`,
+    metadata: fw ? { framework: fw } : {},
+  });
+
+  it("returns [] when input is empty or limit <= 0", () => {
+    expect(pickPastScriptsByFramework([], 6)).toEqual([]);
+    expect(pickPastScriptsByFramework([make(1, "X")], 0)).toEqual([]);
+  });
+
+  it("round-robins across frameworks (one each before second of any)", () => {
+    const rows = [
+      make(1, "A"),
+      make(2, "A"),
+      make(3, "B"),
+      make(4, "B"),
+      make(5, "C"),
+    ];
+    const out = pickPastScriptsByFramework(rows, 6);
+    expect(out.map((r) => r.title)).toEqual([
+      "script 1 (A)",
+      "script 3 (B)",
+      "script 5 (C)",
+      "script 2 (A)",
+      "script 4 (B)",
+    ]);
+  });
+
+  it("caps at `limit` even when there's more available", () => {
+    const rows = [make(1, "A"), make(2, "B"), make(3, "C"), make(4, "D")];
+    const out = pickPastScriptsByFramework(rows, 2);
+    expect(out).toHaveLength(2);
+    expect(out.map((r) => r.metadata.framework)).toEqual(["A", "B"]);
+  });
+
+  it("pushes untagged ('_other') rows to the back of the round-robin", () => {
+    const rows = [
+      make(1, undefined),
+      make(2, "A"),
+      make(3, undefined),
+      make(4, "B"),
+    ];
+    const out = pickPastScriptsByFramework(rows, 4);
+    expect(out.map((r) => r.title)).toEqual([
+      "script 2 (A)",
+      "script 4 (B)",
+      "script 1 (untagged)",
+      "script 3 (untagged)",
+    ]);
+  });
+
+  it("with frameworkFilter, returns just that bucket up to limit (case-insensitive)", () => {
+    const rows = [
+      make(1, "Hero's Journey"),
+      make(2, "Man in a Hole"),
+      make(3, "Hero's Journey"),
+      make(4, "Hero's Journey"),
+    ];
+    const out = pickPastScriptsByFramework(rows, 2, "hero's journey");
+    expect(out.map((r) => r.title)).toEqual([
+      "script 1 (Hero's Journey)",
+      "script 3 (Hero's Journey)",
+    ]);
+  });
+
+  it("returns [] when frameworkFilter matches nothing", () => {
+    const rows = [make(1, "A")];
+    expect(pickPastScriptsByFramework(rows, 6, "B")).toEqual([]);
   });
 });
 

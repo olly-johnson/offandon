@@ -155,6 +155,43 @@ describe("scripts system prompt", () => {
     expect(prompt).toContain("@tomnoske");
   });
 
+  it("labels each past_script with its framework when provided (BO-053)", () => {
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA, null, {
+      stories: [],
+      viral_references: [],
+      templates: [],
+      past_scripts: [
+        {
+          asset_type: "past_script",
+          title: "P1",
+          body: "hero body",
+          metadata: { framework: "Hero's Journey" },
+        },
+        {
+          asset_type: "past_script",
+          title: "P2",
+          body: "mih body",
+          metadata: { framework: "Man in a Hole" },
+        },
+      ],
+    });
+    expect(prompt).toContain("[framework: Hero's Journey]");
+    expect(prompt).toContain("[framework: Man in a Hole]");
+    expect(prompt).toContain("structural anchor");
+  });
+
+  it("omits the framework label when metadata.framework is absent", () => {
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA, null, {
+      stories: [],
+      viral_references: [],
+      templates: [],
+      past_scripts: [
+        { asset_type: "past_script", title: "P1", body: "x", metadata: {} },
+      ],
+    });
+    expect(prompt).not.toContain("[framework:");
+  });
+
   it("truncates a long asset body to keep the prompt budget in check", () => {
     const long = "x".repeat(2000);
     const prompt = buildScriptsSystemPrompt(FIXTURE_DNA, null, {

@@ -10,7 +10,13 @@ import {
   renderUserMethodologyBlock,
 } from "@/lib/shared/methodology";
 
+import {
+  hasAnyAssets,
+  type ScriptAssetsContext,
+} from "./client-assets-persistence";
 import type { IMF } from "./types";
+
+const PAST_SCRIPT_RENDER_CAP = 1500;
 
 const MANIFESTO_HEADER = "## ✍️ The Humanization Manifesto";
 
@@ -57,6 +63,47 @@ const HUMANIZATION_MANIFESTO: string = extractSection(
  * concept + IMF + chosen hook, write ONE finished script body that
  * delivers on the hook's promise and lands the IMF message.
  */
+/**
+ * Render past_scripts as a focused reference block (BO-053). When the
+ * caller filters to a single framework (via `framework`), the block
+ * shows just that matching past piece. When unfiltered, it renders
+ * whatever framework-grouped set the loader returned. Empty input
+ * skips the block.
+ *
+ * Cap is bigger than the batch generator's because a single-script
+ * surface only renders one or two references max, so we can afford to
+ * show more of each.
+ */
+function renderPastScriptReferenceBlock(
+  clientAssets: ScriptAssetsContext | null | undefined,
+  framework?: string,
+): string {
+  if (!hasAnyAssets(clientAssets) || clientAssets!.past_scripts.length === 0) {
+    return "";
+  }
+  const past = clientAssets!.past_scripts;
+  const lines: string[] = [];
+  lines.push("");
+  lines.push("----- BEGIN PAST SCRIPT REFERENCE -----");
+  lines.push(
+    framework
+      ? `The creator has written this past script in the SAME framework you're working in (${framework}). Use it as your structural anchor: match the cadence, length of beats, hook→story→lesson→close shape, and language register. Do NOT copy phrasing verbatim — the new script must be its own piece on the new IMF.`
+      : "Recent past scripts the creator has approved, labelled by framework. Use whichever matches the framework you're writing in as your structural anchor. Do NOT copy phrasing verbatim.",
+  );
+  past.forEach((p, i) => {
+    const fw = typeof p.metadata?.framework === "string" ? p.metadata.framework : "";
+    const tag = fw ? ` [framework: ${fw}]` : "";
+    lines.push("");
+    lines.push(`${i + 1}. "${p.title}"${tag}`);
+    const body = p.body.length > PAST_SCRIPT_RENDER_CAP
+      ? `${p.body.slice(0, PAST_SCRIPT_RENDER_CAP).trimEnd()}...`
+      : p.body;
+    lines.push(body);
+  });
+  lines.push("----- END PAST SCRIPT REFERENCE -----");
+  return lines.join("\n");
+}
+
 export function buildSingleScriptSystemPrompt(
   voiceDna: VoiceDNA,
   hook: string,
@@ -64,6 +111,8 @@ export function buildSingleScriptSystemPrompt(
   userMethodology?: string | null,
   methodology?: { house: string; scripts: string },
   operatorRules: string[] = [],
+  clientAssets?: ScriptAssetsContext | null,
+  framework?: string,
 ): string {
   const house = methodology?.house ?? METHODOLOGY_HOUSE;
   const scripts = methodology?.scripts ?? METHODOLOGY_SCRIPTS_SLICE;
@@ -124,6 +173,7 @@ export function buildSingleScriptSystemPrompt(
     "",
     `prohibited_phrases (in addition to the manifesto): ${voiceDna.prohibited_phrases.join(", ")}`,
     "----- END CREATOR'S VOICE DNA -----",
+    renderPastScriptReferenceBlock(clientAssets, framework),
     imfBlock,
     "",
     "----- BEGIN LOCKED HOOK (use verbatim as the script's opening; do not rewrite) -----",

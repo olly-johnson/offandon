@@ -37,13 +37,29 @@ export interface ClientAssetCaps {
 /**
  * Defaults sized to keep the rendered block around 6-10K chars even on
  * a fully-stocked creator. Adjust here, not at call sites.
+ *
+ * `past_scripts` is bumped to 6 to fit one example per common framework
+ * (Hero's Journey, Man in a Hole, Lesson, Challenge to Victory, Big Goal
+ * / About Me / Myth Buster etc. — see BO-053). Each is rendered with
+ * its framework label so the LLM can pick the closest match per script.
  */
 export const DEFAULT_ASSET_CAPS: ClientAssetCaps = {
   stories: 12,
   viral_references: 5,
   templates: 5,
-  past_scripts: 3,
+  past_scripts: 6,
 };
+
+/**
+ * Optional framework filter for past_scripts loading. When supplied,
+ * only past_scripts whose `metadata.framework` matches (case-insensitive)
+ * are returned. Used by SingleScriptGenerator where the framework is
+ * fixed by the chosen hook.
+ */
+export interface LoadAssetsOptions {
+  caps?: ClientAssetCaps;
+  pastScriptFramework?: string;
+}
 
 type Client = SupabaseClient<Database>;
 
@@ -60,8 +76,14 @@ type Client = SupabaseClient<Database>;
 export async function loadScriptAssetsContext(
   supabase: Client,
   userId: string,
-  caps: ClientAssetCaps = DEFAULT_ASSET_CAPS,
+  optsOrCaps: LoadAssetsOptions | ClientAssetCaps = DEFAULT_ASSET_CAPS,
 ): Promise<ScriptAssetsContext> {
+  // Back-compat: callers passing `caps` directly (the old positional
+  // signature) keep working. New callers pass `LoadAssetsOptions`.
+  const opts: LoadAssetsOptions = isLoadAssetsOptions(optsOrCaps)
+    ? optsOrCaps
+    : { caps: optsOrCaps };
+  const caps = opts.caps ?? DEFAULT_ASSET_CAPS;
   const fetch = async (
     assetType: ClientAssetRow["asset_type"],
     limit: number,
@@ -88,14 +110,106 @@ export async function loadScriptAssetsContext(
     }));
   };
 
-  const [stories, viral_references, templates, past_scripts] = await Promise.all([
+  const [stories, viral_references, templates, allPastScripts] = await Promise.all([
     fetch("story", caps.stories),
     fetch("viral_reference", caps.viral_references),
     fetch("template", caps.templates),
-    fetch("past_script", caps.past_scripts),
+    // Over-fetch past_scripts so the framework-grouping below has enough
+    // rows to dedupe down to `caps.past_scripts` (one per framework).
+    fetch("past_script", Math.max(caps.past_scripts * 4, caps.past_scripts)),
   ]);
 
+  const past_scripts = pickPastScriptsByFramework(
+    allPastScripts,
+    caps.past_scripts,
+    opts.pastScriptFramework,
+  );
+
   return { stories, viral_references, templates, past_scripts };
+}
+
+function isLoadAssetsOptions(
+  v: LoadAssetsOptions | ClientAssetCaps,
+): v is LoadAssetsOptions {
+  return (
+    "caps" in v ||
+    "pastScriptFramework" in v ||
+    // A bare ClientAssetCaps has the four numeric keys; anything else is
+    // treated as LoadAssetsOptions (defensive against future option fields).
+    !("stories" in v && "past_scripts" in v)
+  );
+}
+
+/**
+ * Group past_scripts by `metadata.framework` and return one per framework
+ * (most-recent within each framework), capped at `limit` rows total.
+ *
+ * When `frameworkFilter` is supplied, only past_scripts whose framework
+ * matches (case-insensitive) are kept, and the framework grouping
+ * effectively becomes "the most-recent N within that framework."
+ *
+ * Past_scripts without a recognised framework fall into a single "_other"
+ * bucket and only surface after every named framework has had its turn —
+ * this keeps the framework-keyed examples in front when there's a mix of
+ * legacy (un-tagged) and BO-053-parsed rows.
+ */
+export function pickPastScriptsByFramework(
+  rows: ClientAssetRow[],
+  limit: number,
+  frameworkFilter?: string,
+): ClientAssetRow[] {
+  if (limit <= 0 || rows.length === 0) return [];
+
+  const normalise = (s: unknown): string =>
+    typeof s === "string" ? s.trim().toLowerCase() : "";
+
+  const filtered = frameworkFilter
+    ? rows.filter((r) => normalise(r.metadata?.framework) === normalise(frameworkFilter))
+    : rows;
+  if (filtered.length === 0) return [];
+
+  // Caller passed rows in created_at-desc order. We preserve that order
+  // within each framework bucket.
+  const buckets = new Map<string, ClientAssetRow[]>();
+  for (const r of filtered) {
+    const fw = normalise(r.metadata?.framework) || "_other";
+    if (!buckets.has(fw)) buckets.set(fw, []);
+    buckets.get(fw)!.push(r);
+  }
+
+  // When filtering to a single framework, return up to `limit` rows from
+  // that one bucket (they're already in recency order).
+  if (frameworkFilter) {
+    const only = buckets.get(normalise(frameworkFilter)) ?? [];
+    return only.slice(0, limit);
+  }
+
+  // Otherwise round-robin: take one from each bucket in order of first
+  // appearance, then a second from each if budget remains, etc. Named
+  // frameworks come first; "_other" gets visited last so a creator with
+  // no Framework: headers still gets surfaced.
+  const orderedKeys = [...buckets.keys()].sort((a, b) => {
+    if (a === "_other") return 1;
+    if (b === "_other") return -1;
+    return 0;
+  });
+
+  const out: ClientAssetRow[] = [];
+  let round = 0;
+  while (out.length < limit) {
+    let added = 0;
+    for (const k of orderedKeys) {
+      if (out.length >= limit) break;
+      const bucket = buckets.get(k)!;
+      if (round < bucket.length) {
+        out.push(bucket[round]);
+        added += 1;
+      }
+    }
+    if (added === 0) break;
+    round += 1;
+  }
+  return out;
 }
 
 /**

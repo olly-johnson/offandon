@@ -25,6 +25,7 @@ import { join, relative, resolve } from "node:path";
 
 import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
 import { IngestionExtractor } from "@/engines/ingestion";
+import { parseScriptsFolder } from "@/engines/ingestion/scripts-parser";
 import {
   INGESTION_MAX_TOKENS,
   INGESTION_MODEL,
@@ -162,6 +163,19 @@ async function main(): Promise<void> {
   }
   const duration = ((Date.now() - startedAt) / 1000).toFixed(1);
   console.log(`extraction done in ${duration}s`);
+
+  // Deterministic past_script pass (BO-053). Scripts under
+  // clients/<slug>/scripts/ carry a `Framework:` frontmatter header that
+  // the LLM doesn't need to interpret. Parse them in code and merge into
+  // client_assets so the loader can serve framework-keyed examples to
+  // the script generator. Idempotent re-runs upsert on the composed
+  // `source_file` key.
+  const parsedScripts = parseScriptsFolder(clientDir);
+  if (parsedScripts.length > 0) {
+    data = { ...data, client_assets: [...data.client_assets, ...parsedScripts] };
+    console.log(`  +${parsedScripts.length} past_scripts parsed from scripts/`);
+  }
+
   console.log(`  voice_dna.content_pillars: ${data.voice_dna.content_pillars.length}`);
   console.log(`  client_assets: ${data.client_assets.length}`);
   console.log(`  user_memories: ${data.user_memories.length}`);

@@ -179,6 +179,19 @@ export interface GenerateSingleScriptInput {
   userMethodology?: string | null;
   /** House methodology overrides (BO-048). */
   methodologyContext?: ContentMethodologyContext;
+  /**
+   * Optional framework label (e.g. "Hero's Journey", "Man in a Hole",
+   * "The Lesson"). Used to filter past_scripts to a single example whose
+   * `metadata.framework` matches (BO-053). When omitted, the caller may
+   * load past_scripts grouped by framework without a filter.
+   */
+  framework?: string;
+  /**
+   * Optional past_script references rendered into the prompt. Loaded by
+   * the caller via `loadScriptAssetsContext` with `pastScriptFramework`
+   * set to `framework` (BO-053). Empty / null skips the block.
+   */
+  clientAssets?: import("./client-assets-persistence").ScriptAssetsContext | null;
 }
 
 export interface IIMFExtractor {
