@@ -26,6 +26,10 @@ import {
   hasAnyAssets,
   type ScriptAssetsContext,
 } from "./client-assets-persistence";
+import {
+  hasCorpusHits,
+  type ScriptsCorpusContext,
+} from "./corpus-context";
 
 const MANIFESTO_HEADER = "## ✍️ The Humanization Manifesto";
 
@@ -139,12 +143,46 @@ function renderClientAssetsBlock(ctx: ScriptAssetsContext | null | undefined): s
   return lines.join("\n");
 }
 
+/**
+ * Render the corpus retrieval block (BO-051). Distinct from the operator-
+ * curated client_assets block above:
+ *   - client_assets is a small, hand-tuned reference set the operator
+ *     promoted as canonical voice anchors.
+ *   - corpus hits are top-k vector-search results over the full long-form
+ *     archive — fresher and broader, but the model should treat them as
+ *     RAW transcript / questionnaire excerpts, not approved samples.
+ *
+ * Each hit carries its source type + document title + capture date so
+ * the model can phrase references naturally ("on a recent call you
+ * said..." vs "in last week's check-in...").
+ */
+function renderCorpusContextBlock(ctx: ScriptsCorpusContext | null | undefined): string {
+  if (!hasCorpusHits(ctx)) return "";
+  const hits = ctx!.hits;
+  const lines: string[] = [];
+  lines.push("");
+  lines.push("----- BEGIN CREATOR'S CORPUS (recent recorded conversations + questionnaires) -----");
+  lines.push(
+    "Top-k chunks retrieved from the creator's long-form archive — Fathom call transcripts, weekly questionnaire answers, long-form notes. Use these to ground each script in real moments, real numbers, and real language the creator has used recently. Reference them implicitly (do NOT cite source IDs or capture dates literally in scripts) and do NOT invent details beyond what is represented here or in the voice samples.",
+  );
+  hits.forEach((h, i) => {
+    lines.push("");
+    lines.push(
+      `[${i + 1}] ${h.source_type} | "${h.document_title}" | captured ${h.captured_at.slice(0, 10)}`,
+    );
+    lines.push(`    ${truncateForPrompt(h.chunk_text.trim())}`);
+  });
+  lines.push("----- END CREATOR'S CORPUS -----");
+  return lines.join("\n");
+}
+
 export function buildScriptsSystemPrompt(
   voiceDna: VoiceDNA,
   userMethodology?: string | null,
   clientAssets?: ScriptAssetsContext | null,
   methodology?: { house: string; scripts: string },
   operatorRules: string[] = [],
+  corpusContext?: ScriptsCorpusContext | null,
 ): string {
   const house = methodology?.house ?? METHODOLOGY_HOUSE;
   const scripts = methodology?.scripts ?? METHODOLOGY_SCRIPTS_SLICE;
@@ -198,6 +236,7 @@ export function buildScriptsSystemPrompt(
     `prohibited_phrases (in addition to the Humanization Manifesto): ${voiceDna.prohibited_phrases.join(", ")}`,
     "----- END CREATOR'S VOICE DNA -----",
     renderClientAssetsBlock(clientAssets),
+    renderCorpusContextBlock(corpusContext),
     "",
     "Rules for each script:",
     "1. hook: 1 to 2 sentences, ideally under 30 words. Stops the scroll. Specific, not generic.",

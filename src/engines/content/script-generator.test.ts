@@ -167,6 +167,93 @@ describe("scripts system prompt", () => {
     expect(prompt).toContain("...");
     expect(prompt).not.toContain(long);
   });
+
+  it("skips the corpus block when no corpus context provided", () => {
+    const prompt = buildScriptsSystemPrompt(FIXTURE_DNA);
+    expect(prompt).not.toContain("BEGIN CREATOR'S CORPUS");
+  });
+
+  it("skips the corpus block when hits array is empty", () => {
+    const prompt = buildScriptsSystemPrompt(
+      FIXTURE_DNA,
+      null,
+      null,
+      undefined,
+      [],
+      { hits: [] },
+    );
+    expect(prompt).not.toContain("BEGIN CREATOR'S CORPUS");
+  });
+
+  it("renders corpus hits with source type, title, capture date, and chunk body", () => {
+    const prompt = buildScriptsSystemPrompt(
+      FIXTURE_DNA,
+      null,
+      null,
+      undefined,
+      [],
+      {
+        hits: [
+          {
+            chunk_id: "c1",
+            document_id: "d1",
+            chunk_index: 0,
+            chunk_text: "Her ICP is solo consultants charging 5 to 10K.",
+            source_type: "fathom_transcript",
+            document_title: "Strategy call with Sarah",
+            captured_at: "2026-05-10T15:00:00.000Z",
+            similarity: 0.82,
+          },
+          {
+            chunk_id: "c2",
+            document_id: "d2",
+            chunk_index: 1,
+            chunk_text: "Q3 goal: launch a paid tier by end of August.",
+            source_type: "questionnaire",
+            document_title: "Weekly form 2026-W20",
+            captured_at: "2026-05-12T00:00:00.000Z",
+            similarity: 0.76,
+          },
+        ],
+      },
+    );
+    expect(prompt).toContain("BEGIN CREATOR'S CORPUS");
+    expect(prompt).toContain("fathom_transcript");
+    expect(prompt).toContain("Strategy call with Sarah");
+    expect(prompt).toContain("2026-05-10");
+    expect(prompt).toContain("Her ICP is solo consultants");
+    expect(prompt).toContain("questionnaire");
+    expect(prompt).toContain("Weekly form 2026-W20");
+    expect(prompt).toContain("Q3 goal: launch a paid tier");
+    expect(prompt).toContain("END CREATOR'S CORPUS");
+  });
+
+  it("truncates a long corpus chunk to keep the prompt budget in check", () => {
+    const long = "y".repeat(2000);
+    const prompt = buildScriptsSystemPrompt(
+      FIXTURE_DNA,
+      null,
+      null,
+      undefined,
+      [],
+      {
+        hits: [
+          {
+            chunk_id: "c",
+            document_id: "d",
+            chunk_index: 0,
+            chunk_text: long,
+            source_type: "note",
+            document_title: "Big note",
+            captured_at: "2026-05-01T00:00:00.000Z",
+            similarity: 0.5,
+          },
+        ],
+      },
+    );
+    expect(prompt).toContain("...");
+    expect(prompt).not.toContain(long);
+  });
 });
 
 describe("ScriptGenerator.generate", () => {
@@ -181,6 +268,53 @@ describe("ScriptGenerator.generate", () => {
     expect(system).toContain("Humanization Manifesto");
     expect(system).toContain("Operator Frameworks");
     expect(user).toContain('"count": 2');
+  });
+
+  it("threads corpusContext into the system prompt when provided", async () => {
+    const llm = new MockLLM(
+      JSON.stringify({
+        scripts: [
+          makeScript(),
+          makeScript({ pillar: "Receipts and Postmortems", angle: "case_study" }),
+        ],
+      }),
+    );
+    const generator = new ScriptGenerator({ llm, now: FROZEN_NOW });
+
+    await generator.generate({
+      voiceDna: FIXTURE_DNA,
+      count: 2,
+      corpusContext: {
+        hits: [
+          {
+            chunk_id: "c1",
+            document_id: "d1",
+            chunk_index: 0,
+            chunk_text: "She quit consulting on a Tuesday.",
+            source_type: "fathom_transcript",
+            document_title: "Catch-up call",
+            captured_at: "2026-05-08T00:00:00.000Z",
+            similarity: 0.9,
+          },
+        ],
+      },
+    });
+
+    const { system } = llm.calls[0];
+    expect(system).toContain("BEGIN CREATOR'S CORPUS");
+    expect(system).toContain("fathom_transcript");
+    expect(system).toContain("She quit consulting on a Tuesday.");
+  });
+
+  it("omits the corpus block when corpusContext is null", async () => {
+    const llm = new MockLLM(JSON.stringify({ scripts: [makeScript()] }));
+    const generator = new ScriptGenerator({ llm, now: FROZEN_NOW });
+    await generator.generate({
+      voiceDna: FIXTURE_DNA,
+      count: 1,
+      corpusContext: null,
+    });
+    expect(llm.calls[0].system).not.toContain("BEGIN CREATOR'S CORPUS");
   });
 
   it("returns the parsed scripts and stamps generation metadata", async () => {

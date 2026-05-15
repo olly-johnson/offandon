@@ -11,6 +11,17 @@ export type {
   ClientAssetRow,
   ScriptAssetsContext,
 } from "./client-assets-persistence";
+export {
+  buildScriptsSeedQuery,
+  DEFAULT_SCRIPTS_CORPUS_LIMIT,
+  hasCorpusHits,
+  loadScriptsCorpusContext,
+} from "./corpus-context";
+export type {
+  LoadScriptsCorpusContextArgs,
+  LoadScriptsCorpusContextDeps,
+  ScriptsCorpusContext,
+} from "./corpus-context";
 export { IMFExtractor } from "./imf-extractor";
 export type { IMFExtractorOptions } from "./imf-extractor";
 export { HookGenerator, hookTotalScore } from "./hook-generator";
