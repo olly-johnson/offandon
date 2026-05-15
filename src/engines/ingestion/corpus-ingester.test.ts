@@ -145,7 +145,7 @@ function makeEmbedder(): IEmbeddingsClient & {
  * --------------------------------------------------------------------------- */
 
 describe("discoverCorpusFiles", () => {
-  it("walks the recognised subdirs and classifies each file by source_type", () => {
+  it("walks every directory and classifies by top-level subdir", () => {
     writeFile("transcripts/2026-05-10-call.txt", "transcript body");
     writeFile("questionnaires/2026-W20.md", "## answers");
     writeFile("notes/random.md", "scratch note");
@@ -154,7 +154,6 @@ describe("discoverCorpusFiles", () => {
     const out = discoverCorpusFiles(workspace);
     const byPath = new Map(out.map((f) => [f.relativePath, f]));
 
-    expect(out).toHaveLength(4);
     expect(byPath.get("transcripts/2026-05-10-call.txt")?.sourceType).toBe(
       "fathom_transcript",
     );
@@ -163,10 +162,51 @@ describe("discoverCorpusFiles", () => {
     expect(byPath.get("long_form/big-essay.md")?.sourceType).toBe("long_form");
   });
 
-  it("derives a human-friendly title from the filename", () => {
-    writeFile("transcripts/strategy-call_with-sarah.txt", "body");
+  it("classifies root-level files as long_form", () => {
+    writeFile("voice_profile.md", "voice samples");
+    writeFile("story_bank.md", "story bank");
+    writeFile("config.json", "{\"name\":\"x\"}");
+
+    const out = discoverCorpusFiles(workspace);
+    expect(out).toHaveLength(3);
+    for (const f of out) {
+      expect(f.sourceType).toBe("long_form");
+    }
+    expect(out.map((f) => f.relativePath).sort()).toEqual([
+      "config.json",
+      "story_bank.md",
+      "voice_profile.md",
+    ]);
+  });
+
+  it("classifies files in unrecognised subdirs as long_form", () => {
+    writeFile("scripts/2026-W08/script_01_hero.md", "hero script");
+    writeFile("viral_references/external.md", "viral ref");
+
+    const out = discoverCorpusFiles(workspace);
+    const byPath = new Map(out.map((f) => [f.relativePath, f]));
+    expect(byPath.get("scripts/2026-W08/script_01_hero.md")?.sourceType).toBe(
+      "long_form",
+    );
+    expect(byPath.get("viral_references/external.md")?.sourceType).toBe("long_form");
+  });
+
+  it("walks recursively into nested directories", () => {
+    writeFile("scripts/2026-W08/a.md", "a");
+    writeFile("scripts/2026-W08/b.md", "b");
+    writeFile("scripts/2026-W09/c.md", "c");
+    const out = discoverCorpusFiles(workspace);
+    expect(out.map((f) => f.relativePath).sort()).toEqual([
+      "scripts/2026-W08/a.md",
+      "scripts/2026-W08/b.md",
+      "scripts/2026-W09/c.md",
+    ]);
+  });
+
+  it("derives a human-friendly title from the full relative path", () => {
+    writeFile("scripts/2026-W08/script_01_top_hero.md", "body");
     const [file] = discoverCorpusFiles(workspace);
-    expect(file.title).toBe("strategy call with sarah");
+    expect(file.title).toBe("scripts 2026 W08 script 01 top hero");
   });
 
   it("skips *_audio.txt mirrors in transcripts/", () => {
@@ -177,33 +217,61 @@ describe("discoverCorpusFiles", () => {
     expect(out[0].relativePath).toBe("transcripts/abc.txt");
   });
 
-  it("ignores files with the wrong extension for a subdir", () => {
-    writeFile("transcripts/data.json", "{}");
-    writeFile("questionnaires/notes.pdf", "binary");
+  it("ingests JSON files (e.g. config.json) as long_form", () => {
+    writeFile("config.json", "{\"k\":\"v\"}");
+    const out = discoverCorpusFiles(workspace);
+    expect(out).toHaveLength(1);
+    expect(out[0].sourceType).toBe("long_form");
+  });
+
+  it("skips files with non-ingestible extensions", () => {
+    writeFile("voice_profile.pdf", "binary");
+    writeFile("dashboard.html", "<html/>");
+    writeFile("photo.png", "binary");
     const out = discoverCorpusFiles(workspace);
     expect(out).toEqual([]);
   });
 
-  it("ignores unrecognised subdirs entirely", () => {
-    writeFile("performance/dashboard.html", "<html/>");
-    writeFile("scripts/example.md", "no");
+  it("skips the always-skip dashboard / metrics files", () => {
+    writeFile("business_dashboard.html", "<html/>");
+    writeFile("dashboard.json", "{}");
+    writeFile("dashboard_insights.json", "{}");
+    writeFile("classified_posts.json", "{}");
+    writeFile("metrics_history.json", "{}");
+    writeFile("content_pipeline.json", "{}");
+    writeFile(".extracted.json", "{}");
+    writeFile(".corpus-ingested.json", "{}");
+    writeFile("voice_profile.md", "real content");
+
     const out = discoverCorpusFiles(workspace);
-    expect(out).toEqual([]);
+    expect(out.map((f) => f.relativePath)).toEqual(["voice_profile.md"]);
+  });
+
+  it("skips the always-skip directories (performance/, youtube/)", () => {
+    writeFile("performance/by_week.csv", "data");
+    writeFile("performance/charts.json", "{}");
+    writeFile("youtube/transcript.txt", "yt");
+    writeFile("voice_profile.md", "real content");
+
+    const out = discoverCorpusFiles(workspace);
+    expect(out.map((f) => f.relativePath)).toEqual(["voice_profile.md"]);
   });
 
   it("returns deterministic ordering (sorted by relativePath)", () => {
     writeFile("transcripts/z.txt", "x");
     writeFile("transcripts/a.txt", "x");
     writeFile("questionnaires/m.md", "x");
+    writeFile("voice_profile.md", "x");
     const out = discoverCorpusFiles(workspace);
     expect(out.map((f) => f.relativePath)).toEqual([
       "questionnaires/m.md",
       "transcripts/a.txt",
       "transcripts/z.txt",
+      "voice_profile.md",
     ]);
   });
 
-  it("returns empty array when no recognised subdirs exist", () => {
+  it("returns empty array when the client dir is empty", () => {
     expect(discoverCorpusFiles(workspace)).toEqual([]);
   });
 });

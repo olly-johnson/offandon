@@ -53,19 +53,57 @@ const log = createLogger("ingestion.corpus");
 
 export const CORPUS_WATERMARK_FILENAME = ".corpus-ingested.json";
 
-/** Filename of the sidecar that pins (path, mtime, document_id) so re-runs skip unchanged files. */
+/**
+ * Allow-list of file extensions to ingest. Anything outside this list is
+ * skipped silently (binaries, images, dashboards, etc.). Keep it small;
+ * a corpus document needs to be text-shaped for chunking and embedding
+ * to produce useful signal.
+ */
+const INGESTIBLE_EXTENSIONS: ReadonlySet<string> = new Set([
+  ".md",
+  ".txt",
+  ".json",
+]);
+
+/**
+ * Files and directories that look text-shaped but are operator-generated
+ * dashboards, performance dumps, or sidecars that don't belong in the
+ * retrieval corpus. Matched against the path relative to the client
+ * directory; trailing slash indicates a directory to skip wholesale.
+ */
+const ALWAYS_SKIP_PATHS: ReadonlySet<string> = new Set([
+  // Sidecars produced by this and the BO-042 ingestion pipelines.
+  ".extracted.json",
+  ".corpus-ingested.json",
+  // Generated dashboards / metrics / classified outputs — purely derived
+  // data that adds noise and bloats the corpus without informing
+  // anything the bot needs to re-derive.
+  "business_dashboard.html",
+  "dashboard.json",
+  "dashboard_insights.json",
+  "classified_posts.json",
+  "metrics_history.json",
+  "content_pipeline.json",
+]);
+
+const ALWAYS_SKIP_DIRS: ReadonlySet<string> = new Set([
+  "performance",
+  "youtube",
+  "node_modules",
+  ".git",
+]);
+
+/**
+ * Subdirectory → semantic source_type. Anything not listed here falls
+ * through to `long_form` (the catch-all). This keeps the source_type
+ * enum stable while still letting future ingest of (e.g.) Fathom drops
+ * be classified correctly when the operator drops files in
+ * `transcripts/`.
+ */
 const SUBDIR_TO_SOURCE_TYPE: Record<string, ClientDocumentSourceType> = {
   transcripts: "fathom_transcript",
   questionnaires: "questionnaire",
   notes: "note",
-  long_form: "long_form",
-};
-
-const EXTENSIONS_BY_SOURCE: Record<ClientDocumentSourceType, ReadonlySet<string>> = {
-  fathom_transcript: new Set([".txt"]),
-  questionnaire: new Set([".md", ".txt"]),
-  note: new Set([".md", ".txt"]),
-  long_form: new Set([".md", ".txt"]),
 };
 
 export interface DiscoveredCorpusFile {
@@ -119,66 +157,104 @@ export interface IngestCorpusResult {
  * --------------------------------------------------------------------------- */
 
 /**
- * Walk the recognised subdirectories under `clientDir` and return every
- * file that should be considered for ingestion. The result is sorted so
- * runs are deterministic (useful for logs and tests).
+ * Walk the entire `clientDir` recursively and return every file that
+ * should be ingested. Anything in `ALWAYS_SKIP_PATHS`, under an
+ * `ALWAYS_SKIP_DIRS` directory, or with an extension outside
+ * `INGESTIBLE_EXTENSIONS` is filtered out silently.
+ *
+ * source_type is assigned by the file's TOP-LEVEL directory under the
+ * client folder (so `transcripts/2025-W18/foo.txt` is a
+ * fathom_transcript). Files at the root of `clientDir` and anything
+ * inside a non-mapped subdirectory fall back to `long_form` — the
+ * catch-all that keeps every text-shaped file searchable without
+ * needing to expand the source_type enum every time a new operator
+ * convention shows up.
+ *
+ * The result is sorted by relative path so runs are deterministic.
  */
 export function discoverCorpusFiles(clientDir: string): DiscoveredCorpusFile[] {
   const out: DiscoveredCorpusFile[] = [];
-
-  for (const [subdir, sourceType] of Object.entries(SUBDIR_TO_SOURCE_TYPE)) {
-    const absSubdir = join(clientDir, subdir);
-    if (!existsSync(absSubdir)) continue;
-
-    let entries: string[];
-    try {
-      entries = readdirSync(absSubdir);
-    } catch (err) {
-      log.warn("could not read corpus subdir", {
-        subdir: absSubdir,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      continue;
-    }
-
-    for (const entry of entries) {
-      const abs = join(absSubdir, entry);
-      let stat;
-      try {
-        stat = statSync(abs);
-      } catch {
-        continue;
-      }
-      if (!stat.isFile()) continue;
-
-      const ext = extname(entry).toLowerCase();
-      if (!EXTENSIONS_BY_SOURCE[sourceType].has(ext)) continue;
-
-      // Fathom drops a speaker-attributed `<id>.txt` and an audio-only
-      // `<id>_audio.txt`. The first is canonical; skip the mirror so
-      // the same conversation doesn't get embedded twice.
-      if (sourceType === "fathom_transcript" && entry.toLowerCase().endsWith("_audio.txt")) {
-        continue;
-      }
-
-      out.push({
-        absolutePath: abs,
-        relativePath: `${subdir}/${entry}`,
-        sourceType,
-        title: humaniseFilename(entry, ext),
-        mtime: stat.mtime.toISOString(),
-      });
-    }
-  }
-
+  walk(clientDir, clientDir, out);
   out.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
   return out;
 }
 
-function humaniseFilename(filename: string, ext: string): string {
-  const base = filename.slice(0, filename.length - ext.length);
-  const cleaned = base.replace(/[_-]+/g, " ").trim();
-  return cleaned.length > 0 ? cleaned : filename;
+function walk(root: string, dir: string, out: DiscoveredCorpusFile[]): void {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch (err) {
+    log.warn("could not read directory", {
+      dir,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return;
+  }
+
+  for (const entry of entries) {
+    const abs = join(dir, entry);
+    const rel = relativeFromRoot(root, abs);
+
+    let stat;
+    try {
+      stat = statSync(abs);
+    } catch {
+      continue;
+    }
+
+    if (stat.isDirectory()) {
+      if (ALWAYS_SKIP_DIRS.has(entry)) continue;
+      walk(root, abs, out);
+      continue;
+    }
+    if (!stat.isFile()) continue;
+
+    if (ALWAYS_SKIP_PATHS.has(entry) || ALWAYS_SKIP_PATHS.has(rel)) continue;
+
+    const ext = extname(entry).toLowerCase();
+    if (!INGESTIBLE_EXTENSIONS.has(ext)) continue;
+
+    const topDir = rel.includes("/") ? rel.split("/", 1)[0] : "";
+    const sourceType: ClientDocumentSourceType =
+      SUBDIR_TO_SOURCE_TYPE[topDir] ?? "long_form";
+
+    // Fathom drops a speaker-attributed `<id>.txt` and an audio-only
+    // `<id>_audio.txt`. The first is canonical; skip the mirror so the
+    // same conversation doesn't get embedded twice.
+    if (
+      sourceType === "fathom_transcript" &&
+      entry.toLowerCase().endsWith("_audio.txt")
+    ) {
+      continue;
+    }
+
+    out.push({
+      absolutePath: abs,
+      relativePath: rel,
+      sourceType,
+      title: humaniseRelativePath(rel, ext),
+      mtime: stat.mtime.toISOString(),
+    });
+  }
+}
+
+function relativeFromRoot(root: string, abs: string): string {
+  // Use POSIX-style separators in the upsert key + watermark so a
+  // path written on Windows still matches the same file on Mac/Linux
+  // (and vice-versa). The on-disk operations use the platform-native
+  // absolutePath; only the stored relativePath is normalised.
+  return abs.slice(root.length).replace(/^[\\/]+/, "").replace(/\\/g, "/");
+}
+
+function humaniseRelativePath(rel: string, ext: string): string {
+  // Use the full relative path (sans extension) so files nested in
+  // subfolders carry context in their display title — a script called
+  // `script_01_top_hero's_journey.md` inside `scripts/2026-W08/` reads
+  // as `scripts 2026 W08 script 01 top hero's journey` rather than
+  // colliding with any other `script_01...` in another week.
+  const sansExt = rel.slice(0, rel.length - ext.length);
+  const cleaned = sansExt.replace(/[\\/_-]+/g, " ").trim();
+  return cleaned.length > 0 ? cleaned : rel;
 }
 
 /* ---------------------------------------------------------------------------
