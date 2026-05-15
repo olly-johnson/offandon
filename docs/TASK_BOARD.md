@@ -83,6 +83,17 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-047 | API usage tracking: `api_usage` table + service-role logger (`recordApiUsage`) + `onUsage` callback on `AnthropicLLMClient`. Wired into chat, voice DNA, memory extract, script gen, IMF, hooks, single-script, media analysis. Surfaced on `/admin` as 30d spend / per-surface / per-client cost. Pricing hardcoded in `src/engines/admin/usage.ts`; update when Anthropic re-prices. | claude | Done | PR #40 |
 | BO-048 | Master Bot for methodology edits: `/admin/master-bot` chat with tool-use over `methodology_rules` (Layer 1 one-liners) + `house_methodology` (Layer 2 slice content) + `house_methodology_proposals` (Apply/Discard flow). Engines load methodology from DB-or-file via `loadMethodologySlice` so admin edits propagate live to chat / scripts / IMF / hooks / single-script. | claude | In Progress | feature/master-bot |
 
+## Phase 5. Client corpus (Tier-2 retrieval)
+
+Two-tier client information model: Tier 1 (voice_dna, methodology, memories, client_assets) stays in the system prompt; Tier 2 (long-form raw artifacts — Fathom transcripts, weekly questionnaires, notes) is chunked + embedded + retrieved on demand. Solves the "we want to keep adding info per client without bloating the prompt" growth path.
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-049 | Foundation: `pgvector` + `client_documents` + `client_document_chunks` + HNSW + `match_client_chunks` RPC. Embeddings client (OpenAI `text-embedding-3-small`, 1536-d) + chunker (~800 tokens, 100 overlap). Corpus engine: `saveClientDocument`, `replaceDocumentChunks`, `searchClientCorpus`, `formatCorpusHits`. | claude | In Progress | infra/client-corpus-foundation |
+| BO-050 | Chat: register `search_client_corpus` tool in chat-engine, handle tool_use loop, tighten system prompt with retrieval nudge. | - | Todo | - |
+| BO-051 | Script generator: implicit retrieval at gen start (embed seed prompt → top-k chunks injected into system prompt). Additive to existing `client_assets` loader. | - | Todo | - |
+| BO-052 | Ingestion: incremental mode for `clients/<slug>/transcripts/*` + `clients/<slug>/questionnaires/*`. Chunk → embed → write to `client_documents` / `client_document_chunks`. Watermark by file mtime so weekly drops don't re-process the world. | - | Todo | - |
+
 ## Conventions
 
 - `Owner` is the agent name (e.g. `claude`) or a human name. Empty = unclaimed.

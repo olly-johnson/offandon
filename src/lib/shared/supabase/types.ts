@@ -739,6 +739,78 @@ export type Database = {
         };
         Relationships: [];
       };
+      client_documents: {
+        Row: {
+          id: string;
+          user_id: string;
+          source_type: "fathom_transcript" | "questionnaire" | "note" | "long_form";
+          title: string;
+          body: string;
+          captured_at: string;
+          source_path: string | null;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source_type: "fathom_transcript" | "questionnaire" | "note" | "long_form";
+          title: string;
+          body: string;
+          captured_at?: string;
+          source_path?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source_type?: "fathom_transcript" | "questionnaire" | "note" | "long_form";
+          title?: string;
+          body?: string;
+          captured_at?: string;
+          source_path?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      client_document_chunks: {
+        Row: {
+          id: string;
+          document_id: string;
+          user_id: string;
+          chunk_index: number;
+          chunk_text: string;
+          embedding: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          document_id: string;
+          user_id: string;
+          chunk_index: number;
+          chunk_text: string;
+          embedding: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          document_id?: string;
+          user_id?: string;
+          chunk_index?: number;
+          chunk_text?: string;
+          embedding?: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -753,6 +825,23 @@ export type Database = {
       delete_user_data: {
         Args: { target_user_id: string };
         Returns: undefined;
+      };
+      match_client_chunks: {
+        Args: {
+          query_embedding: string;
+          match_user_id: string;
+          match_count?: number;
+        };
+        Returns: Array<{
+          chunk_id: string;
+          document_id: string;
+          chunk_index: number;
+          chunk_text: string;
+          source_type: string;
+          document_title: string;
+          captured_at: string;
+          similarity: number;
+        }>;
       };
     };
     Enums: Record<string, never>;
