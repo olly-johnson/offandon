@@ -4,6 +4,7 @@
 - **Voice Engine (`src/engines/voice`):** Transforms raw questionnaire data into "Voice DNA." 
 - **Social Engine (`src/engines/social`):** Instagram Graph API + Scraper logic. (Feeds the **Analyst Skill**).
 - **Content Engine (`src/engines/content`):** Script generation + Humanization filtering. (Feeds the **Script Skill**).
+- **Corpus Engine (`src/engines/corpus`):** Tier-2 client-information retrieval. Long-form artifacts (Fathom transcripts, weekly questionnaires, notes) are chunked + embedded into `client_documents` / `client_document_chunks`, then retrieved on demand. **Chat** calls it explicitly via the `search_client_corpus` tool. **Script Generator** calls it implicitly at gen start. Tier-1 (`voice_dna`, `user_methodology`, `user_memories`, `client_assets`) stays in the prompt; Tier-2 never goes in wholesale.
 
 ## 🎯 Skill-to-Surface Mapping
 1. **Chat Skill:** Consumes Voice DNA + Social Context. Surface: `/chat`.
