@@ -132,9 +132,13 @@ function renderClientAssetsBlock(ctx: ScriptAssetsContext | null | undefined): s
 
   if (c.past_scripts.length > 0) {
     lines.push("");
-    lines.push("[past_scripts — creator's own published pieces; voice anchors]");
+    lines.push(
+      "[past_scripts — creator's own published pieces, labelled by framework. When you write a script in framework X, prefer the past_script tagged X as your structural anchor.]",
+    );
     c.past_scripts.forEach((p, i) => {
-      lines.push(`  ${i + 1}. "${p.title}"`);
+      const fw = typeof p.metadata?.framework === "string" ? p.metadata.framework : "";
+      const tag = fw ? ` [framework: ${fw}]` : "";
+      lines.push(`  ${i + 1}. "${p.title}"${tag}`);
       lines.push(`     ${truncateForPrompt(p.body)}`);
     });
   }
