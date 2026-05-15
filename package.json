@@ -13,7 +13,8 @@
     "test:app": "vitest --project app",
     "ingest:extract": "tsx scripts/ingest-extract.ts",
     "ingest:sanitize": "tsx scripts/ingest-sanitize.ts",
-    "ingest:commit": "tsx scripts/ingest-commit.ts"
+    "ingest:commit": "tsx scripts/ingest-commit.ts",
+    "ingest:corpus": "tsx scripts/ingest-corpus.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

@@ -91,8 +91,8 @@ Two-tier client information model: Tier 1 (voice_dna, methodology, memories, cli
 | :--- | :--- | :--- | :--- | :--- |
 | BO-049 | Foundation: `pgvector` + `client_documents` + `client_document_chunks` + HNSW + `match_client_chunks` RPC. Embeddings client (Voyage `voyage-3`, 1024-d) + chunker (~800 tokens, 100 overlap). Corpus engine: `saveClientDocument`, `replaceDocumentChunks`, `searchClientCorpus`, `formatCorpusHits`. | claude | Done | PR #43 |
 | BO-050 | Chat: register `search_client_corpus` tool in chat-engine, handle tool_use loop, tighten system prompt with retrieval nudge. | claude | Done | PR #47 |
-| BO-051 | Script generator: implicit retrieval at gen start (embed seed prompt → top-k chunks injected into system prompt). Additive to existing `client_assets` loader. | claude | In Progress | PR #45 |
-| BO-052 | Ingestion: incremental mode for `clients/<slug>/transcripts/*` + `clients/<slug>/questionnaires/*`. Chunk → embed → write to `client_documents` / `client_document_chunks`. Watermark by file mtime so weekly drops don't re-process the world. | - | Todo | - |
+| BO-051 | Script generator: implicit retrieval at gen start (embed seed prompt → top-k chunks injected into system prompt). Additive to existing `client_assets` loader. | claude | Done | PR #45 |
+| BO-052 | Ingestion: walk every text-shaped file under `clients/<slug>/` recursively (transcripts, questionnaires, notes, scripts, voice profile, story bank, all root-level operator files) — chunk → embed → write to `client_documents` / `client_document_chunks`. Watermark by file mtime so weekly drops don't re-process the world. New `npm run ingest:corpus`. | claude | In Progress | PR #46 |
 
 ## Conventions
 
