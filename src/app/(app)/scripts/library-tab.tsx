@@ -166,7 +166,7 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
                     {confirmDeleteId === s.id ? (
                       <>
                         <button
-                          className="text-xs"
+                          className="cursor-pointer text-xs disabled:cursor-not-allowed"
                           style={{ color: "var(--destructive)" }}
                           disabled={isDeleting}
                           onClick={() => handleDelete(s.id)}
@@ -174,7 +174,7 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
                           {isDeleting ? "Deleting..." : "Confirm delete"}
                         </button>
                         <button
-                          className="text-xs"
+                          className="cursor-pointer text-xs disabled:cursor-not-allowed"
                           style={{ color: "var(--oo-text-secondary)" }}
                           disabled={isDeleting}
                           onClick={() => setConfirmDeleteId(null)}

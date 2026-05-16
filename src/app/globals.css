@@ -348,7 +348,11 @@
     gap: 4px;
     font-size: 12px;
     line-height: 1;
+    cursor: pointer;
     transition: color 160ms cubic-bezier(0.4,0,0.2,1);
+  }
+  .oo-library-action:disabled {
+    cursor: not-allowed;
   }
   .oo-library-action__icon {
     transition:
