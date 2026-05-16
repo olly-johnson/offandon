@@ -339,6 +339,41 @@
     cursor: not-allowed;
   }
 
+  /* Library tab row actions (View / Delete). The action cell already
+     fades in on row hover; on top of that, each button's icon lifts and
+     scales on its own hover so the affordance is obvious. */
+  .oo-library-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    line-height: 1;
+    transition: color 160ms cubic-bezier(0.4,0,0.2,1);
+  }
+  .oo-library-action__icon {
+    transition:
+      transform 160ms cubic-bezier(0.4,0,0.2,1),
+      color 160ms cubic-bezier(0.4,0,0.2,1);
+  }
+  .oo-library-action:hover:not(:disabled) .oo-library-action__icon {
+    transform: translateY(-1px) scale(1.15);
+  }
+  .oo-library-action:active:not(:disabled) .oo-library-action__icon {
+    transform: scale(0.92);
+  }
+  .oo-library-action--view {
+    color: var(--oo-gold);
+  }
+  .oo-library-action--view:hover:not(:disabled) {
+    color: color-mix(in srgb, var(--oo-gold) 80%, white);
+  }
+  .oo-library-action--delete {
+    color: var(--oo-text-secondary);
+  }
+  .oo-library-action--delete:hover:not(:disabled) {
+    color: var(--destructive);
+  }
+
   .label-xs {
     font-size: 10px;
     letter-spacing: 0.10em;

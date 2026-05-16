@@ -158,11 +158,10 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      className="flex items-center gap-1 text-xs"
-                      style={{ color: "var(--oo-gold)" }}
+                      className="oo-library-action oo-library-action--view"
                       onClick={() => setManualOpen(s)}
                     >
-                      <Eye className="size-3.5" /> View
+                      <Eye className="size-3.5 oo-library-action__icon" /> View
                     </button>
                     {confirmDeleteId === s.id ? (
                       <>
@@ -185,15 +184,14 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
                       </>
                     ) : (
                       <button
-                        className="flex items-center gap-1 text-xs"
-                        style={{ color: "var(--oo-text-secondary)" }}
+                        className="oo-library-action oo-library-action--delete"
                         aria-label="Delete script"
                         onClick={() => {
                           setDeleteError(null);
                           setConfirmDeleteId(s.id);
                         }}
                       >
-                        <Trash2 className="size-3.5" /> Delete
+                        <Trash2 className="size-3.5 oo-library-action__icon" /> Delete
                       </button>
                     )}
                   </div>
