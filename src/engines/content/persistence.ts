@@ -4,7 +4,7 @@ import { createLogger } from "@/lib/shared/logger";
 import type { Database, Json } from "@/lib/shared/supabase";
 import type { VoiceDNA } from "@/engines/voice/types";
 
-import type { GeneratedScript } from "./types";
+import type { GeneratedScript, ScriptAngle } from "./types";
 
 const log = createLogger("content.persistence");
 
@@ -45,6 +45,8 @@ export async function saveGeneratedScripts(
     voice_dna_snapshot: args.voiceDnaSnapshot as unknown as Json,
     source: "generated" as const,
     status: "draft" as const,
+    angle: s.angle,
+    pillar: s.pillar,
   }));
 
   const { error } = await supabase.from("scripts").insert(rows);
@@ -172,6 +174,14 @@ export async function saveSingleScript(
     voiceDnaSnapshot: VoiceDNA;
     /** Optional title override. Defaults to truncated hook. */
     title?: string;
+    /**
+     * Wizard-supplied angle + pillar (BO-056). Persisted so the
+     * dashboard's funnel and pillar charts can tally wizard-saved
+     * scripts alongside batch-saved ones. Either may be omitted — the
+     * column accepts NULL and the chart filters nulls out.
+     */
+    angle?: ScriptAngle;
+    pillar?: string;
   },
 ): Promise<string> {
   const title =
@@ -189,6 +199,8 @@ export async function saveSingleScript(
       voice_dna_snapshot: args.voiceDnaSnapshot as unknown as Json,
       source: "generated" as const,
       status: "draft" as const,
+      angle: args.angle ?? null,
+      pillar: args.pillar ?? null,
     })
     .select("id")
     .single();

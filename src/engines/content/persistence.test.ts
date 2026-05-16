@@ -5,6 +5,7 @@ import {
   createScriptBatch,
   deleteScriptForUser,
   saveGeneratedScripts,
+  saveSingleScript,
   updateBatchStatus,
 } from "./persistence";
 import type { GeneratedScript } from "./types";
@@ -48,7 +49,7 @@ const FIXTURE_SCRIPTS: GeneratedScript[] = [
 ];
 
 describe("saveGeneratedScripts", () => {
-  it("inserts one row per script with batch_id, user_id, voice_dna snapshot, source, status", async () => {
+  it("inserts one row per script with batch_id, user_id, voice_dna snapshot, source, status, angle, pillar", async () => {
     const insert = vi.fn().mockResolvedValue({ error: null });
     const from = vi.fn().mockReturnValue({ insert });
     const supabase = { from } as unknown as ContentSupabaseClient;
@@ -70,6 +71,12 @@ describe("saveGeneratedScripts", () => {
       body: FIXTURE_SCRIPTS[0].body,
       source: "generated",
       status: "draft",
+      angle: FIXTURE_SCRIPTS[0].angle,
+      pillar: FIXTURE_SCRIPTS[0].pillar,
+    });
+    expect(rows[1]).toMatchObject({
+      angle: FIXTURE_SCRIPTS[1].angle,
+      pillar: FIXTURE_SCRIPTS[1].pillar,
     });
   });
 
@@ -164,6 +171,56 @@ describe("updateBatchStatus", () => {
     await expect(
       updateBatchStatus(supabase, "batch-1", { status: "failed" }),
     ).rejects.toThrow(/boom/);
+  });
+});
+
+describe("saveSingleScript", () => {
+  function buildInsertClient() {
+    const single = vi.fn().mockResolvedValue({ data: { id: "new-script-id" }, error: null });
+    const select = vi.fn().mockReturnValue({ single });
+    const insert = vi.fn().mockReturnValue({ select });
+    const from = vi.fn().mockReturnValue({ insert });
+    const supabase = { from } as unknown as ContentSupabaseClient;
+    return { supabase, insert };
+  }
+
+  it("persists angle + pillar so the script counts toward the funnel chart", async () => {
+    const { supabase, insert } = buildInsertClient();
+
+    const id = await saveSingleScript(supabase, {
+      userId: "user-1",
+      hook: "Most coaches lose leads at the same point.",
+      body: "It is the discovery call.",
+      voiceDnaSnapshot: FIXTURE_DNA,
+      angle: "story",
+      pillar: "Operator Frameworks",
+    });
+
+    expect(id).toBe("new-script-id");
+    const row = insert.mock.calls[0][0];
+    expect(row).toMatchObject({
+      user_id: "user-1",
+      batch_id: null,
+      source: "generated",
+      status: "draft",
+      angle: "story",
+      pillar: "Operator Frameworks",
+    });
+  });
+
+  it("falls back to nulls when angle / pillar are not supplied", async () => {
+    const { supabase, insert } = buildInsertClient();
+
+    await saveSingleScript(supabase, {
+      userId: "user-1",
+      hook: "hook",
+      body: "body",
+      voiceDnaSnapshot: FIXTURE_DNA,
+    });
+
+    const row = insert.mock.calls[0][0];
+    expect(row.angle).toBeNull();
+    expect(row.pillar).toBeNull();
   });
 });
 

@@ -10,6 +10,7 @@ import {
   type GeneratedHookBatch,
   type GeneratedSingleScript,
   type IMF,
+  type ScriptAngle,
 } from "@/engines/content";
 import { deleteScriptForUser, saveSingleScript } from "@/engines/content/persistence";
 import { getUserMethodology } from "@/engines/methodology/persistence";
@@ -261,6 +262,14 @@ export async function generateSingleScriptAction(input: {
 export async function saveScriptToLibraryAction(input: {
   hook: string;
   body: string;
+  /**
+   * Passed through from the wizard's GeneratedSingleScript so the
+   * dashboard's funnel + pillar charts can tally wizard-saved scripts
+   * alongside batch-saved ones (BO-056). Optional for back-compat with
+   * any caller that doesn't have them in scope.
+   */
+  angle?: ScriptAngle;
+  pillar?: string;
 }): Promise<{ id: string } | WizardError> {
   if (!input.hook || !input.body) {
     return { error: "Nothing to save. Generate a script first." };
@@ -283,6 +292,8 @@ export async function saveScriptToLibraryAction(input: {
       hook: input.hook,
       body: input.body,
       voiceDnaSnapshot: dna,
+      angle: input.angle,
+      pillar: input.pillar,
     });
     log.info("script saved to library", { user_id: user.id, script_id: id });
     // Re-render the Scripts page so the Library tab picks up the new row.

@@ -52,7 +52,7 @@ export async function loadDashboard(userId: string): Promise<DashboardSnapshot> 
       listConversationsForUser(supabase, userId, 1).then((rows) => rows.length),
       supabase
         .from("scripts")
-        .select("id, title, hook, status, created_at, batch_id")
+        .select("id, title, hook, status, created_at, batch_id, angle, pillar")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(RECENT_SCRIPT_WINDOW),
@@ -62,16 +62,25 @@ export async function loadDashboard(userId: string): Promise<DashboardSnapshot> 
         .eq("user_id", userId),
     ]);
 
-  // We need angle/pillar but the scripts table does not store them today
-  // (they live on the GeneratedScript before persistence). Until that is
-  // refactored, derive a lightweight pillar from the title keyword and a
-  // null angle. Funnel data therefore uses an empty list for users whose
-  // scripts predate this feature; fresh batches will populate later.
+  // angle + pillar live on the row as of migration 20260516000000
+  // (BO-056). The check constraint matches ScriptAngle, so any non-null
+  // value is safe to cast for the tally. Rows that predate the migration
+  // (or were saved via a code path that didn't supply them) stay null
+  // and naturally drop out of the funnel + pillar charts below.
+  const isScriptAngle = (v: string | null): v is ScriptAngle =>
+    v !== null &&
+    (v === "pain_point" ||
+      v === "aspiration" ||
+      v === "contrarian" ||
+      v === "case_study" ||
+      v === "framework" ||
+      v === "story" ||
+      v === "myth_buster");
   const recentScripts: DashboardScript[] = (recentScriptsResult.data ?? []).map((s) => ({
     id: s.id,
     title: s.title ?? s.hook ?? "Untitled",
-    pillar: null,
-    angle: null,
+    pillar: s.pillar,
+    angle: isScriptAngle(s.angle) ? s.angle : null,
     status: s.status,
     created_at: s.created_at,
     batch_id: s.batch_id,
