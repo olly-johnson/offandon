@@ -236,6 +236,33 @@ export async function listScriptsForUser(
 }
 
 /**
+ * Hard-delete a single script row. Always scoped to (id, user_id) so a
+ * stray id from another user can't be removed even if the caller forgets
+ * to check ownership. Returns `false` when nothing matched — the caller
+ * can map that to a 404 / silent no-op as appropriate.
+ */
+export async function deleteScriptForUser(
+  supabase: ContentSupabaseClient,
+  input: { userId: string; scriptId: string },
+): Promise<boolean> {
+  const { count, error } = await supabase
+    .from("scripts")
+    .delete({ count: "exact" })
+    .eq("id", input.scriptId)
+    .eq("user_id", input.userId);
+  if (error) {
+    log.error("scripts delete failed", {
+      user_id: input.userId,
+      script_id: input.scriptId,
+      code: error.code,
+      message: error.message,
+    });
+    throw new Error(`deleteScriptForUser: ${error.message}`);
+  }
+  return (count ?? 0) > 0;
+}
+
+/**
  * Update a batch's status. Used by the Inngest worker to mark running,
  * complete, or failed.
  */

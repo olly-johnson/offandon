@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Eye } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Eye, Trash2 } from "lucide-react";
 
 import type { ScriptLibraryRow } from "@/engines/content/persistence";
+
+import { deleteScriptAction } from "./actions";
 
 interface LibraryTabProps {
   scripts: ScriptLibraryRow[];
@@ -24,6 +26,9 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
 
   const [dismissedHighlightId, setDismissedHighlightId] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState<ScriptLibraryRow | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, startDelete] = useTransition();
 
   const open: ScriptLibraryRow | null =
     manualOpen ??
@@ -35,6 +40,21 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
     } else if (initialOpen) {
       setDismissedHighlightId(initialOpen.id);
     }
+  }
+
+  function handleDelete(scriptId: string) {
+    setDeleteError(null);
+    startDelete(async () => {
+      const res = await deleteScriptAction(scriptId);
+      if ("error" in res) {
+        setDeleteError(res.error);
+        return;
+      }
+      setConfirmDeleteId(null);
+      // If the row was open in the viewer, close it.
+      if (manualOpen?.id === scriptId) setManualOpen(null);
+      if (initialOpen?.id === scriptId) setDismissedHighlightId(scriptId);
+    });
   }
 
   const highlightRowRef = useRef<HTMLTableRowElement | null>(null);
@@ -78,6 +98,19 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
         />
       </div>
 
+      {deleteError ? (
+        <div
+          className="rounded-lg px-4 py-2 text-xs"
+          style={{
+            background: "color-mix(in srgb, var(--destructive) 12%, transparent)",
+            color: "var(--destructive)",
+            border: "1px solid var(--destructive)",
+          }}
+        >
+          {deleteError}
+        </div>
+      ) : null}
+
       <div className="oo-card-static overflow-hidden">
         <table className="w-full text-sm">
           <thead style={{ borderBottom: "1px solid var(--oo-border)" }}>
@@ -120,12 +153,48 @@ export function LibraryTab({ scripts, highlightId }: LibraryTabProps) {
                   {s.updated_at.slice(0, 10)}
                 </td>
                 <td className="px-5 py-3.5">
-                  <button
-                    className="flex items-center gap-1 text-xs opacity-0 transition-opacity group-hover:opacity-100"
-                    style={{ color: "var(--oo-gold)" }}
+                  <div
+                    className="flex items-center justify-end gap-3 opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Eye className="size-3.5" /> View
-                  </button>
+                    <button
+                      className="oo-library-action oo-library-action--view"
+                      onClick={() => setManualOpen(s)}
+                    >
+                      <Eye className="size-3.5 oo-library-action__icon" /> View
+                    </button>
+                    {confirmDeleteId === s.id ? (
+                      <>
+                        <button
+                          className="cursor-pointer text-xs disabled:cursor-not-allowed"
+                          style={{ color: "var(--destructive)" }}
+                          disabled={isDeleting}
+                          onClick={() => handleDelete(s.id)}
+                        >
+                          {isDeleting ? "Deleting..." : "Confirm delete"}
+                        </button>
+                        <button
+                          className="cursor-pointer text-xs disabled:cursor-not-allowed"
+                          style={{ color: "var(--oo-text-secondary)" }}
+                          disabled={isDeleting}
+                          onClick={() => setConfirmDeleteId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="oo-library-action oo-library-action--delete"
+                        aria-label="Delete script"
+                        onClick={() => {
+                          setDeleteError(null);
+                          setConfirmDeleteId(s.id);
+                        }}
+                      >
+                        <Trash2 className="size-3.5 oo-library-action__icon" /> Delete
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
               );

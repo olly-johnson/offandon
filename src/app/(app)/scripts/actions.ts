@@ -11,7 +11,7 @@ import {
   type GeneratedSingleScript,
   type IMF,
 } from "@/engines/content";
-import { saveSingleScript } from "@/engines/content/persistence";
+import { deleteScriptForUser, saveSingleScript } from "@/engines/content/persistence";
 import { getUserMethodology } from "@/engines/methodology/persistence";
 import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
 import {
@@ -294,5 +294,47 @@ export async function saveScriptToLibraryAction(input: {
       error: (err as Error).message,
     });
     return { error: "Could not save the script. Try again." };
+  }
+}
+
+/**
+ * Library tab: permanently remove a script. Scoped to the signed-in user
+ * at the query level, so a forged `scriptId` from another user is a no-op.
+ */
+export async function deleteScriptAction(
+  scriptId: string,
+): Promise<{ ok: true } | WizardError> {
+  if (!scriptId || typeof scriptId !== "string") {
+    return { error: "Missing script id." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    log.warn("deleteScriptAction without user");
+    redirect("/signin");
+  }
+
+  try {
+    const deleted = await deleteScriptForUser(supabase, {
+      userId: user.id,
+      scriptId,
+    });
+    if (!deleted) {
+      log.warn("deleteScriptAction: no row matched", { user_id: user.id, script_id: scriptId });
+      return { error: "Script not found." };
+    }
+    log.info("script deleted", { user_id: user.id, script_id: scriptId });
+    revalidatePath("/scripts");
+    return { ok: true };
+  } catch (err) {
+    log.error("deleteScriptAction failed", {
+      user_id: user.id,
+      script_id: scriptId,
+      error: (err as Error).message,
+    });
+    return { error: "Could not delete the script. Try again." };
   }
 }
