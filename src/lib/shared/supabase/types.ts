@@ -784,6 +784,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      weekly_checkins: {
+        Row: {
+          id: string;
+          user_id: string;
+          week_start: string;
+          raw_responses: Json;
+          submitted_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          week_start: string;
+          raw_responses?: Json;
+          submitted_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          week_start?: string;
+          raw_responses?: Json;
+          submitted_at?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       client_document_chunks: {
         Row: {
           id: string;

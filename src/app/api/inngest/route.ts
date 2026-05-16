@@ -3,7 +3,10 @@ import { serve } from "inngest/next";
 import { inngest } from "@/lib/shared/inngest/client";
 import { analyzeMedia } from "@/lib/shared/inngest/functions/analyze-media";
 import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts";
+import { refreshVoiceDna } from "@/lib/shared/inngest/functions/refresh-voice-dna";
 import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
+import { weeklyCheckinReminder } from "@/lib/shared/inngest/functions/weekly-checkin-reminder";
+import { weeklyCheckinSend } from "@/lib/shared/inngest/functions/weekly-checkin-send";
 
 /**
  * Inngest serve endpoint. Inngest cloud (and the local dev CLI) hit this
@@ -15,5 +18,12 @@ import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
  */
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [generateScripts, syncInstagram, analyzeMedia],
+  functions: [
+    generateScripts,
+    syncInstagram,
+    analyzeMedia,
+    weeklyCheckinSend,
+    weeklyCheckinReminder,
+    refreshVoiceDna,
+  ],
 });
