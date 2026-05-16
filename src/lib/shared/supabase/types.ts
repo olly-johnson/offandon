@@ -201,6 +201,8 @@ export type Database = {
           voice_dna_snapshot: Json | null;
           source: "generated" | "rewrite" | "imported";
           status: "draft" | "published" | "archived";
+          angle: string | null;
+          pillar: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -214,6 +216,8 @@ export type Database = {
           voice_dna_snapshot?: Json | null;
           source?: "generated" | "rewrite" | "imported";
           status?: "draft" | "published" | "archived";
+          angle?: string | null;
+          pillar?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -227,6 +231,8 @@ export type Database = {
           voice_dna_snapshot?: Json | null;
           source?: "generated" | "rewrite" | "imported";
           status?: "draft" | "published" | "archived";
+          angle?: string | null;
+          pillar?: string | null;
           created_at?: string;
           updated_at?: string;
         };

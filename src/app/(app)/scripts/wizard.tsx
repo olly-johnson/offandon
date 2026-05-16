@@ -130,6 +130,8 @@ export function ScriptWizard({
     const res = await saveScriptToLibraryAction({
       hook: script.hook,
       body: script.body,
+      angle: script.angle,
+      pillar: script.pillar,
     });
     setSaving(false);
     if ("error" in res) {
