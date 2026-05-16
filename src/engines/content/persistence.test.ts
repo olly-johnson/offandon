@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type ContentSupabaseClient,
   createScriptBatch,
+  deleteScriptForUser,
   saveGeneratedScripts,
   updateBatchStatus,
 } from "./persistence";
@@ -163,5 +164,53 @@ describe("updateBatchStatus", () => {
     await expect(
       updateBatchStatus(supabase, "batch-1", { status: "failed" }),
     ).rejects.toThrow(/boom/);
+  });
+});
+
+describe("deleteScriptForUser", () => {
+  function buildClient(result: { count: number | null; error: { code: string; message: string } | null }) {
+    const second = vi.fn().mockResolvedValue(result);
+    const first = vi.fn().mockReturnValue({ eq: second });
+    const del = vi.fn().mockReturnValue({ eq: first });
+    const from = vi.fn().mockReturnValue({ delete: del });
+    const supabase = { from } as unknown as ContentSupabaseClient;
+    return { supabase, from, del, first, second };
+  }
+
+  it("deletes the row scoped to (id, user_id) and returns true on a single deletion", async () => {
+    const { supabase, from, del, first, second } = buildClient({ count: 1, error: null });
+
+    const ok = await deleteScriptForUser(supabase, {
+      userId: "user-1",
+      scriptId: "script-1",
+    });
+
+    expect(ok).toBe(true);
+    expect(from).toHaveBeenCalledWith("scripts");
+    expect(del).toHaveBeenCalledWith({ count: "exact" });
+    expect(first).toHaveBeenCalledWith("id", "script-1");
+    expect(second).toHaveBeenCalledWith("user_id", "user-1");
+  });
+
+  it("returns false when no rows match (cross-user attempt or already deleted)", async () => {
+    const { supabase } = buildClient({ count: 0, error: null });
+
+    const ok = await deleteScriptForUser(supabase, {
+      userId: "stranger",
+      scriptId: "script-1",
+    });
+
+    expect(ok).toBe(false);
+  });
+
+  it("throws on delete error", async () => {
+    const { supabase } = buildClient({
+      count: null,
+      error: { code: "42501", message: "denied" },
+    });
+
+    await expect(
+      deleteScriptForUser(supabase, { userId: "u", scriptId: "s" }),
+    ).rejects.toThrow(/denied/);
   });
 });
