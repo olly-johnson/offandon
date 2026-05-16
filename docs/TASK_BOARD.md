@@ -98,6 +98,17 @@ Two-tier client information model: Tier 1 (voice_dna, methodology, memories, cli
 | BO-055 | Script library: delete action. `deleteScriptForUser` persistence helper (scoped to id+user_id), `deleteScriptAction` server action, inline two-stage confirm + trash icon on each library row. Vitest covers the helper. | claude | Done | PR #50 |
 | BO-056 | Funnel-chart wiring fix. Migration adds `scripts.angle` + `scripts.pillar` (nullable, angle check-constrained). `saveGeneratedScripts` and `saveSingleScript` persist them; `saveScriptToLibraryAction` + the wizard pass through. Dashboard selects them and stops hardcoding `angle: null`. Wizard-saved scripts now count toward the Trust Funnel Balance + pillar charts. | claude | In Progress | feature/funnel-chart-wiring |
 
+## Phase 6. Weekly check-in loop
+
+Weekly cadence that keeps the Voice DNA "fresh." Friday 09:00 Bali (UTC+8) the cohort gets emailed a Google Forms questionnaire; Saturday 09:00 Bali stragglers get a reminder. Apps Script attached to the form POSTs responses to `/api/weekly-checkin/webhook` (HMAC verified); the webhook persists to `weekly_checkins` and emits `voice/dna.refresh.requested`. The handler folds accumulated weekly answers into the user's onboarding shape and regenerates the active `voice_dna` row, so next week's scripts are written off this week's reality.
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-057 | Migration: `weekly_checkins(user_id, week_start, raw_responses jsonb, submitted_at)` + uniqueness on (user_id, week_start) + RLS (select-own only, writes are service-role) + `delete_user_data` updated. Database types updated. | claude | In Progress | feature/weekly-checkin |
+| BO-058 | Email infra: `IEmailClient` + `ResendEmailClient` (no SDK; direct fetch) + `DryRunEmailClient` for unset-key envs. `buildWeeklySendEmail` / `buildWeeklyReminderEmail` templates, anti-slop clean. `isoWeekStart` helper (Monday-anchored, UTC). | claude | In Progress | feature/weekly-checkin |
+| BO-059 | Inngest crons: `weekly-checkin-send` (cron `0 1 * * 5` = Fri 09:00 Bali) blasts the full cohort; `weekly-checkin-reminder` (cron `0 1 * * 6`) blasts only users without a `weekly_checkins` row for the current `week_start`. Apps Script template at `examples/google_form_webhook.gs`. | claude | In Progress | feature/weekly-checkin |
+| BO-060 | Webhook + voice refresh: `/api/weekly-checkin/webhook` verifies HMAC-SHA256 against `WEEKLY_CHECKIN_WEBHOOK_SECRET`, resolves user by email, persists check-in idempotently (23505 → 200), emits `voice/dna.refresh.requested`. Handler folds weeklies into `what_works` + `where_stuck` and rewrites the active `voice_dna` via a service-role replace (RPC's SECURITY INVOKER can't be reached from Inngest). | claude | In Progress | feature/weekly-checkin |
+
 ## Conventions
 
 - `Owner` is the agent name (e.g. `claude`) or a human name. Empty = unclaimed.

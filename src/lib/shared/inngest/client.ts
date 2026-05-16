@@ -23,6 +23,7 @@ export const inngest = new Inngest({
 export const INNGEST_EVENTS = {
   ScriptsBatchRequested: "scripts/batch.requested",
   MediaAnalyzeRequested: "research/media.analyze.requested",
+  VoiceDnaRefreshRequested: "voice/dna.refresh.requested",
 } as const;
 
 /**
@@ -45,4 +46,16 @@ export interface MediaAnalyzeRequestedData {
   user_id: string;
   media_id: string;
   force?: boolean;
+}
+
+/**
+ * Payload shape for voice/dna.refresh.requested (BO-060). Emitted by the
+ * weekly check-in webhook after a successful insert. The function reads
+ * the latest onboarding answers + accumulated weekly_checkins for the
+ * user and regenerates their active Voice DNA row.
+ */
+export interface VoiceDnaRefreshRequestedData {
+  user_id: string;
+  /** week_start of the check-in that triggered the refresh. Telemetry only. */
+  week_start?: string;
 }
