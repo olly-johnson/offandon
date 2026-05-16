@@ -85,27 +85,31 @@ export async function getWeekSubmitters(
 }
 
 /**
- * Returns every check-in for a single user, newest first. Read by the
- * voice-DNA refresh function to fold accumulated weekly answers into the
- * Voice DNA regeneration input.
+ * Returns the most recent check-in for a single user, or null if none
+ * exist. Used by the voice-DNA refresh function to fold ONLY the latest
+ * week into the existing folded source_answers — re-folding the full
+ * history would compound prior weeks every refresh.
  */
-export async function listCheckinsForUser(
+export async function getLatestCheckinForUser(
   supabase: CheckinSupabase,
   userId: string,
-): Promise<WeeklyCheckinRow[]> {
+): Promise<WeeklyCheckinRow | null> {
   const { data, error } = await supabase
     .from("weekly_checkins")
     .select("id, user_id, week_start, raw_responses, submitted_at")
     .eq("user_id", userId)
-    .order("submitted_at", { ascending: false });
+    .order("submitted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (error) {
-    throw new Error(`listCheckinsForUser: ${error.message}`);
+    throw new Error(`getLatestCheckinForUser: ${error.message}`);
   }
-  return (data ?? []).map((d) => ({
-    id: d.id,
-    userId: d.user_id,
-    weekStart: d.week_start,
-    rawResponses: (d.raw_responses ?? {}) as Record<string, unknown>,
-    submittedAt: d.submitted_at,
-  }));
+  if (!data) return null;
+  return {
+    id: data.id,
+    userId: data.user_id,
+    weekStart: data.week_start,
+    rawResponses: (data.raw_responses ?? {}) as Record<string, unknown>,
+    submittedAt: data.submitted_at,
+  };
 }

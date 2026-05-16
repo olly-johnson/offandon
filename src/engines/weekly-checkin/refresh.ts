@@ -1,6 +1,6 @@
 /**
- * Build an extended OnboardingAnswers by folding the user's accumulated
- * weekly check-ins into the original answers shape (BO-060).
+ * Build an extended OnboardingAnswers by folding weekly check-in rows
+ * into the answers shape (BO-060).
  *
  * The Voice Engine's input contract is OnboardingAnswers and we don't
  * want to widen it for one consumer, so we stay inside the schema by
@@ -8,9 +8,10 @@
  * the two free-text fields. The voice system prompt stringifies the
  * whole shape, so the LLM picks the new content up without prompt edits.
  *
- * Format kept terse-and-dated so the prompt stays scannable. Older
- * weekly entries are kept in (no truncation) — Voice DNA generation
- * runs once a week, not per-message, so prompt size isn't hot.
+ * Caller decides how many weeks to pass in. The refresh handler passes
+ * exactly one — the just-submitted check-in — because the active Voice
+ * DNA's source_answers already has prior weeks baked in; re-folding the
+ * full history every refresh would compound the same content N times.
  */
 
 import type { OnboardingAnswers } from "@/engines/voice/types";

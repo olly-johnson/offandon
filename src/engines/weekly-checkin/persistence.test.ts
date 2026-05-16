@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { CheckinSupabase } from "./persistence";
-import { getWeekSubmitters, saveCheckin } from "./persistence";
+import {
+  getLatestCheckinForUser,
+  getWeekSubmitters,
+  saveCheckin,
+} from "./persistence";
 
 /**
  * Hand-rolled fluent stub of the supabase-js builder shape. Only covers
@@ -86,5 +90,49 @@ describe("getWeekSubmitters", () => {
     expect(out.size).toBe(2);
     expect(out.has("u1")).toBe(true);
     expect(out.has("u2")).toBe(true);
+  });
+});
+
+/**
+ * Fluent stub for the latest-checkin chain:
+ *   .from("weekly_checkins").select(...).eq(...).order(...).limit(1).maybeSingle()
+ */
+function buildLatestStub(
+  row: {
+    id: string;
+    user_id: string;
+    week_start: string;
+    raw_responses: unknown;
+    submitted_at: string;
+  } | null,
+): CheckinSupabase {
+  const maybeSingle = vi.fn(async () => ({ data: row, error: null }));
+  const limit = vi.fn(() => ({ maybeSingle }));
+  const order = vi.fn(() => ({ limit }));
+  const eq = vi.fn(() => ({ order }));
+  const select = vi.fn(() => ({ eq }));
+  const from = vi.fn(() => ({ select }));
+  return { from } as unknown as CheckinSupabase;
+}
+
+describe("getLatestCheckinForUser", () => {
+  it("returns the parsed latest row", async () => {
+    const stub = buildLatestStub({
+      id: "row-1",
+      user_id: "user-1",
+      week_start: "2026-05-11",
+      raw_responses: { "11. Wins": "shipped" },
+      submitted_at: "2026-05-15T10:00:00.000Z",
+    });
+    const out = await getLatestCheckinForUser(stub, "user-1");
+    expect(out).not.toBeNull();
+    expect(out?.weekStart).toBe("2026-05-11");
+    expect(out?.rawResponses).toEqual({ "11. Wins": "shipped" });
+  });
+
+  it("returns null when the user has no check-ins", async () => {
+    const stub = buildLatestStub(null);
+    const out = await getLatestCheckinForUser(stub, "user-1");
+    expect(out).toBeNull();
   });
 });

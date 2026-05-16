@@ -4,7 +4,7 @@ import {
   adminReplaceVoiceDNA,
   foldWeekliesIntoAnswers,
   getActiveVoiceDNAForUser,
-  listCheckinsForUser,
+  getLatestCheckinForUser,
 } from "@/engines/weekly-checkin";
 import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
 import { createLogger } from "@/lib/shared/logger";
@@ -22,9 +22,16 @@ const log = createLogger("inngest.refresh-voice-dna");
  * voice/dna.refresh.requested handler (BO-060).
  *
  * Triggered by the weekly-checkin webhook after a successful insert.
- * Folds the user's accumulated weekly check-ins into their onboarding
- * answers (via the `what_works` + `where_stuck` fields the Voice prompt
- * already reads) and regenerates the active Voice DNA row.
+ * Folds ONLY the just-submitted check-in into the existing active Voice
+ * DNA's source_answers (which already carries every prior week's fold)
+ * and regenerates the active Voice DNA row.
+ *
+ * Why only the latest check-in: the previous refresh persisted a
+ * source_answers value that already had last week's check-in folded into
+ * `what_works` + `where_stuck`. Re-folding the whole history each run
+ * would compound the same weekly content N times and grow the prompt
+ * unboundedly. Reading the latest row + the prior folded answers is
+ * idempotent against duplicate webhook fires and self-bounded in size.
  *
  * Per-user serialisation: concurrency.key=event.data.user_id ensures
  * two webhooks for the same user (rare but possible if an operator edits
@@ -51,13 +58,19 @@ export const refreshVoiceDna = inngest.createFunction(
       return { skipped: true, reason: "no_active_voice_dna" };
     }
 
-    const checkins = await step.run("load-checkins", () =>
-      listCheckinsForUser(supabase, userId),
+    const latest = await step.run("load-latest-checkin", () =>
+      getLatestCheckinForUser(supabase, userId),
     );
+    if (!latest) {
+      // The webhook should always insert before emitting, but if a row
+      // got deleted between emit and run there's nothing to fold.
+      log.warn("no check-in to fold; skipping refresh", { user_id: userId });
+      return { skipped: true, reason: "no_checkin" };
+    }
 
     const answers = foldWeekliesIntoAnswers({
       base: active.source_answers,
-      checkins,
+      checkins: [latest],
     });
 
     const dna = await step.run("regenerate-dna", async () => {
@@ -76,13 +89,13 @@ export const refreshVoiceDna = inngest.createFunction(
     log.info("voice dna refreshed", {
       user_id: userId,
       week_start: weekStart ?? null,
-      checkins_count: checkins.length,
+      latest_checkin_week: latest.weekStart,
       primary_tone: dna.tone_profile.primary,
     });
 
     return {
       user_id: userId,
-      checkins_count: checkins.length,
+      latest_checkin_week: latest.weekStart,
     };
   },
 );

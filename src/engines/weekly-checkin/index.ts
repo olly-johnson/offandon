@@ -1,7 +1,7 @@
 export { dispatchWeekly, type DispatchInput, type DispatchKind, type DispatchResult } from "./dispatch";
 export {
+  getLatestCheckinForUser,
   getWeekSubmitters,
-  listCheckinsForUser,
   saveCheckin,
   type CheckinSupabase,
   type SaveCheckinInput,
