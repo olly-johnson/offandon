@@ -14,7 +14,8 @@
     "ingest:extract": "tsx scripts/ingest-extract.ts",
     "ingest:sanitize": "tsx scripts/ingest-sanitize.ts",
     "ingest:commit": "tsx scripts/ingest-commit.ts",
-    "ingest:corpus": "tsx scripts/ingest-corpus.ts"
+    "ingest:corpus": "tsx scripts/ingest-corpus.ts",
+    "backfill:fathom": "tsx scripts/backfill-fathom.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

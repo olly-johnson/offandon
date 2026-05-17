@@ -13,86 +13,91 @@ function makeFetch(body: unknown, status = 200): FetchMock {
   );
 }
 
-describe("FathomApiClient", () => {
-  it("GETs the recording url with bearer auth and normalises the payload", async () => {
-    const fetchImpl = makeFetch({
-      id: "rec_42",
-      title: "Strategy",
-      started_at: "2026-05-17T10:00:00Z",
-      duration_seconds: 1800,
-      invitees: [
-        { email: "OLLY@example.com", name: "Olly" },
-        { email: "alice@client.com", name: "Alice" },
-      ],
-      transcript_plaintext: "speaker text",
-      share_url: "https://fathom.video/calls/rec_42",
-    });
+const sampleItem = {
+  recording_id: 42,
+  title: "Coaching",
+  recording_start_time: "2026-05-17T10:00:00Z",
+  calendar_invitees: [
+    { name: "Olly", email: "olly@example.com", is_external: false },
+    { name: "Alice", email: "alice@client.com", is_external: true },
+  ],
+  recorded_by: { email: "olly@example.com" },
+  transcript: [
+    {
+      speaker: { display_name: "Olly" },
+      text: "hi",
+      timestamp: "00:00",
+    },
+  ],
+  share_url: "https://fathom.video/share/abc",
+};
 
+describe("FathomApiClient.listMeetings", () => {
+  it("GETs /meetings with X-Api-Key auth and parses items", async () => {
+    const fetchImpl = makeFetch({
+      items: [sampleItem],
+      next_cursor: "next-cursor-token",
+      limit: 1,
+    });
     const client = new FathomApiClient({
       apiKey: "k",
       baseUrl: "https://api.example.com",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
+    const page = await client.listMeetings({ limit: 1 });
 
-    const out = await client.getRecording("rec_42");
-    expect(out.recordingId).toBe("rec_42");
-    expect(out.title).toBe("Strategy");
-    expect(out.startedAt).toBe("2026-05-17T10:00:00Z");
-    expect(out.durationSeconds).toBe(1800);
-    expect(out.invitees.map((i) => i.email)).toEqual([
-      "olly@example.com",
-      "alice@client.com",
-    ]);
-    expect(out.transcriptPlaintext).toBe("speaker text");
-    expect(out.shareUrl).toBe("https://fathom.video/calls/rec_42");
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0].recordingId).toBe("42");
+    expect(page.items[0].invitees[1].isExternal).toBe(true);
+    expect(page.items[0].transcriptPlaintext).toBe("Olly: hi");
+    expect(page.nextCursor).toBe("next-cursor-token");
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const call = fetchImpl.mock.calls[0]!;
-    expect(call[0]).toBe("https://api.example.com/recordings/rec_42");
+    expect(call[0]).toBe("https://api.example.com/meetings?limit=1");
     const init = call[1] as RequestInit & { headers: Record<string, string> };
     expect(init.method).toBe("GET");
-    expect(init.headers["Authorization"]).toBe("Bearer k");
+    expect(init.headers["X-Api-Key"]).toBe("k");
   });
 
-  it("unwraps a nested 'recording' envelope", async () => {
+  it("passes the cursor through on subsequent pages", async () => {
+    const fetchImpl = makeFetch({ items: [], next_cursor: null });
+    const client = new FathomApiClient({
+      apiKey: "k",
+      baseUrl: "https://api.example.com",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    await client.listMeetings({ limit: 5, cursor: "abc==" });
+    const call = fetchImpl.mock.calls[0]!;
+    expect(call[0]).toBe("https://api.example.com/meetings?limit=5&cursor=abc%3D%3D");
+  });
+
+  it("skips malformed items but returns the well-formed ones", async () => {
     const fetchImpl = makeFetch({
-      recording: {
-        recording_id: "rec_inner",
-        started_at: "2026-05-17T10:00:00Z",
-        invitees: [{ email: "a@x.com" }],
-        transcript: "body",
-      },
+      items: [
+        sampleItem,
+        { recording_id: 7 }, // missing started_at + invitees + transcript
+      ],
+      next_cursor: null,
     });
     const client = new FathomApiClient({
       apiKey: "k",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    const out = await client.getRecording("rec_inner");
-    expect(out.recordingId).toBe("rec_inner");
-    expect(out.transcriptPlaintext).toBe("body");
+    const page = await client.listMeetings();
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0].recordingId).toBe("42");
+    expect(page.nextCursor).toBeNull();
   });
 
-  it("throws when the API returns no transcript", async () => {
-    const fetchImpl = makeFetch({
-      id: "rec_x",
-      started_at: "2026-05-17T10:00:00Z",
-      invitees: [{ email: "a@x.com" }],
-    });
-    const client = new FathomApiClient({
-      apiKey: "k",
-      fetchImpl: fetchImpl as unknown as typeof fetch,
-    });
-    await expect(client.getRecording("rec_x")).rejects.toThrow(/transcript/);
-  });
-
-  it("throws with status code on non-2xx", async () => {
+  it("throws with status on non-2xx", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () =>
-      new Response("nope", { status: 404 }),
+      new Response("nope", { status: 401 }),
     );
     const client = new FathomApiClient({
       apiKey: "k",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    await expect(client.getRecording("rec_404")).rejects.toThrow(/404/);
+    await expect(client.listMeetings()).rejects.toThrow(/401/);
   });
 });

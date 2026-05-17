@@ -24,7 +24,6 @@ export const INNGEST_EVENTS = {
   ScriptsBatchRequested: "scripts/batch.requested",
   MediaAnalyzeRequested: "research/media.analyze.requested",
   VoiceDnaRefreshRequested: "voice/dna.refresh.requested",
-  FathomRecordingReceived: "fathom/recording.received",
 } as const;
 
 /**
@@ -61,17 +60,3 @@ export interface VoiceDnaRefreshRequestedData {
   week_start?: string;
 }
 
-/**
- * Payload shape for fathom/recording.received (BO-061). Emitted by the
- * Fathom webhook after HMAC verification and user lookup; the function
- * fetches the full recording via the Fathom REST API and writes it into
- * client_documents + client_document_chunks. Payload is intentionally
- * tiny so we don't bump up against Inngest's event-size cap on a large
- * transcript — the API call retrieves the body.
- */
-export interface FathomRecordingReceivedData {
-  user_id: string;
-  recording_id: string;
-  started_at: string;
-  share_url?: string;
-}

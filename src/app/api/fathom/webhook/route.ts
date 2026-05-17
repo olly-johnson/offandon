@@ -1,12 +1,13 @@
 import type { NextRequest } from "next/server";
 
 import {
+  ingestFathomRecording,
   parseWebhookBody,
   pickClientInvitee,
   verifyHmac,
   WebhookParseError,
 } from "@/engines/fathom";
-import { inngest, INNGEST_EVENTS } from "@/lib/shared/inngest/client";
+import { VoyageEmbeddingsClient } from "@/lib/shared/embeddings";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 
@@ -21,27 +22,36 @@ const SIGNATURE_HEADER = "x-fathom-signature";
  * FATHOM_WEBHOOK_SECRET. The X-Fathom-Signature header carries the digest
  * prefixed with `sha256=`; the prefix is optional on the wire.
  *
- * Mapping rule: the webhook tells us WHICH recording is ready; we resolve
- * the client by intersecting the invitee list with our user table,
- * skipping anyone listed in FATHOM_OPERATOR_EMAILS. The matching invitee
- * email is looked up in auth.users (mirrors the weekly-checkin pattern).
+ * Mapping rule: Fathom's payload includes a structured transcript and
+ * calendar_invitees list. We resolve the client by:
+ *   1. preferring an invitee with is_external = true (the cleanest signal),
+ *   2. otherwise dropping FATHOM_OPERATOR_EMAILS and taking the first remaining,
+ * then looking up the resulting email in auth.users.
  *
- * On success we emit fathom/recording.received and return 200. The
- * Inngest function does the heavy work: fetches full transcript via
- * Fathom's REST API, chunks + embeds, persists to client_documents.
+ * Ingestion is synchronous: parse -> flatten transcript -> chunk + Voyage
+ * embed -> upsert into client_documents / client_document_chunks. Idempotent
+ * by source_path = `fathom://<recording_id>`.
  *
  * Status codes:
- *   200 ok=true                ingest event emitted
- *   200 ok=true skipped=true    payload valid but no matching user; nothing to do
- *   400                          unparseable body
- *   401                          bad or missing HMAC signature
- *   500                          environment not configured
+ *   200 ok=true                    ingested
+ *   200 ok=true skipped=true       payload valid but no matching user / no transcript
+ *   400                            unparseable body
+ *   401                            bad or missing HMAC signature
+ *   500                            environment not configured
  */
 export async function POST(request: NextRequest): Promise<Response> {
   const secret = process.env.FATHOM_WEBHOOK_SECRET;
   if (!secret) {
     log.error("FATHOM_WEBHOOK_SECRET unset; rejecting all calls");
     return Response.json({ ok: false, error: "not configured" }, { status: 500 });
+  }
+  const voyageKey = process.env.VOYAGE_API_KEY;
+  if (!voyageKey) {
+    log.error("VOYAGE_API_KEY unset; cannot embed Fathom transcripts");
+    return Response.json(
+      { ok: false, error: "embeddings not configured" },
+      { status: 500 },
+    );
   }
 
   const rawBody = await request.text();
@@ -51,9 +61,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ ok: false, error: "bad signature" }, { status: 401 });
   }
 
-  let payload;
+  let recording;
   try {
-    payload = parseWebhookBody(rawBody);
+    recording = parseWebhookBody(rawBody);
   } catch (err) {
     const msg =
       err instanceof WebhookParseError ? err.message : (err as Error).message;
@@ -61,16 +71,23 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ ok: false, error: msg }, { status: 400 });
   }
 
+  if (recording.transcriptPlaintext.trim().length === 0) {
+    log.info("recording arrived without a transcript; skipping", {
+      recording_id: recording.recordingId,
+    });
+    return Response.json({ ok: true, skipped: true, reason: "no transcript" });
+  }
+
   const operatorEmails = (process.env.FATHOM_OPERATOR_EMAILS ?? "")
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter((s) => s.length > 0);
 
-  const client = pickClientInvitee(payload.invitees, operatorEmails);
+  const client = pickClientInvitee(recording.invitees, operatorEmails);
   if (!client) {
-    log.warn("no non-operator invitee on recording", {
-      recording_id: payload.recordingId,
-      invitee_count: payload.invitees.length,
+    log.warn("no client invitee on recording", {
+      recording_id: recording.recordingId,
+      invitee_count: recording.invitees.length,
     });
     return Response.json({ ok: true, skipped: true, reason: "no client invitee" });
   }
@@ -89,26 +106,29 @@ export async function POST(request: NextRequest): Promise<Response> {
   );
   if (!user) {
     log.info("no user for fathom invitee; skipping", {
-      recording_id: payload.recordingId,
+      recording_id: recording.recordingId,
       email: client.email,
     });
     return Response.json({ ok: true, skipped: true, reason: "unknown invitee" });
   }
 
-  await inngest.send({
-    name: INNGEST_EVENTS.FathomRecordingReceived,
-    data: {
-      user_id: user.id,
-      recording_id: payload.recordingId,
-      started_at: payload.startedAt,
-      share_url: payload.shareUrl,
-    },
-  });
+  const embeddings = new VoyageEmbeddingsClient({ apiKey: voyageKey });
+  const result = await ingestFathomRecording(
+    { supabase, embeddings },
+    { userId: user.id, recording },
+  );
 
-  log.info("fathom event emitted", {
+  log.info("fathom recording ingested via webhook", {
     user_id: user.id,
-    recording_id: payload.recordingId,
+    recording_id: recording.recordingId,
+    document_id: result.documentId,
+    chunk_count: result.chunkCount,
   });
 
-  return Response.json({ ok: true, recording_id: payload.recordingId });
+  return Response.json({
+    ok: true,
+    recording_id: recording.recordingId,
+    document_id: result.documentId,
+    chunk_count: result.chunkCount,
+  });
 }

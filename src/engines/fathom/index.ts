@@ -1,11 +1,15 @@
 export type {
   FathomInvitee,
+  FathomMeetingsPage,
   FathomRecording,
+  FathomTranscriptTurn,
   FathomWebhookPayload,
   IFathomClient,
 } from "./types";
 
 export {
+  flattenTranscript,
+  normaliseRecording,
   parseWebhookBody,
   pickClientInvitee,
   signBody,

@@ -1,20 +1,24 @@
 /**
  * Thin HTTP client for the Fathom REST API.
  *
- * We only need one call: fetch a recording by id with its transcript and
- * basic metadata. The webhook gives us enough to know a recording is ready
- * + which user it belongs to; the API gives us the full transcript that
- * we then chunk + embed.
+ * Confirmed shape: GET /external/v1/meetings?limit=N&cursor=X with auth via
+ * X-Api-Key header. Cursor-paginated, newest first. The response inlines
+ * the full transcript for each meeting, so a separate fetch-by-id endpoint
+ * isn't needed (and Fathom doesn't expose one externally).
  *
- * Auth header pattern: `Authorization: Bearer <api_key>` (Fathom's
- * standard). Base URL is configurable so a stub can point at a local
- * fixture server during integration tests; the production default is
- * https://api.fathom.ai/external/v1.
+ * The backfill script paginates this list to seed every existing recording;
+ * the webhook receives essentially the same shape per recording.
  */
 
 import { createLogger } from "@/lib/shared/logger";
 
-import type { FathomInvitee, FathomRecording, IFathomClient } from "./types";
+import { normaliseRecording } from "./webhook";
+
+import type {
+  FathomMeetingsPage,
+  FathomRecording,
+  IFathomClient,
+} from "./types";
 
 const log = createLogger("fathom.client");
 
@@ -26,59 +30,10 @@ export interface FathomApiClientOptions {
   fetchImpl?: typeof fetch;
 }
 
-interface RawRecording {
-  id?: string;
-  recording_id?: string;
-  title?: string;
-  meeting_title?: string;
-  started_at?: string;
-  start_time?: string;
-  duration_seconds?: number;
-  duration?: number;
-  invitees?: Array<{ email?: string; name?: string | null }>;
-  attendees?: Array<{ email?: string; name?: string | null }>;
-  transcript_plaintext?: string;
-  transcript?: string;
-  share_url?: string;
-  recording_url?: string;
-  summary?: string;
-  ai_summary?: string;
-}
-
-function normaliseInvitees(raw: RawRecording): FathomInvitee[] {
-  const src = raw.invitees ?? raw.attendees ?? [];
-  const out: FathomInvitee[] = [];
-  for (const entry of src) {
-    if (!entry?.email) continue;
-    out.push({
-      email: entry.email.toLowerCase().trim(),
-      name: entry.name ?? null,
-    });
-  }
-  return out;
-}
-
-function normaliseRecording(raw: RawRecording): FathomRecording {
-  const recordingId = raw.id ?? raw.recording_id;
-  const startedAt = raw.started_at ?? raw.start_time;
-  const transcript = raw.transcript_plaintext ?? raw.transcript;
-
-  if (!recordingId) throw new Error("fathom api response missing recording id");
-  if (!startedAt) throw new Error("fathom api response missing started_at");
-  if (!transcript || transcript.trim().length === 0) {
-    throw new Error("fathom api response missing transcript");
-  }
-
-  return {
-    recordingId,
-    title: raw.title ?? raw.meeting_title ?? "Untitled call",
-    startedAt,
-    durationSeconds: raw.duration_seconds ?? raw.duration,
-    invitees: normaliseInvitees(raw),
-    transcriptPlaintext: transcript,
-    shareUrl: raw.share_url ?? raw.recording_url,
-    summary: raw.summary ?? raw.ai_summary,
-  };
+interface RawListResponse {
+  items?: unknown[];
+  next_cursor?: string | null;
+  limit?: number;
 }
 
 export class FathomApiClient implements IFathomClient {
@@ -95,30 +50,47 @@ export class FathomApiClient implements IFathomClient {
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }
 
-  async getRecording(recordingId: string): Promise<FathomRecording> {
-    const url = `${this.baseUrl}/recordings/${encodeURIComponent(recordingId)}`;
+  async listMeetings(
+    opts: { limit?: number; cursor?: string | null } = {},
+  ): Promise<FathomMeetingsPage> {
+    const params = new URLSearchParams();
+    if (opts.limit) params.set("limit", String(opts.limit));
+    if (opts.cursor) params.set("cursor", opts.cursor);
+    const query = params.toString();
+    const url = `${this.baseUrl}/meetings${query ? `?${query}` : ""}`;
+
     const res = await this.fetchImpl(url, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        "X-Api-Key": this.apiKey,
         Accept: "application/json",
       },
     });
     if (!res.ok) {
       const text = await safeReadText(res);
       log.warn("fathom api non-2xx", {
-        recording_id: recordingId,
+        url,
         status: res.status,
         body_excerpt: text.slice(0, 200),
       });
-      throw new Error(
-        `fathom getRecording ${recordingId}: ${res.status} ${text.slice(0, 120)}`,
-      );
+      throw new Error(`fathom listMeetings: ${res.status} ${text.slice(0, 120)}`);
     }
-    const raw = (await res.json()) as RawRecording | { recording?: RawRecording };
-    const rec =
-      "recording" in raw && raw.recording != null ? raw.recording : (raw as RawRecording);
-    return normaliseRecording(rec);
+    const raw = (await res.json()) as RawListResponse;
+    const rawItems = Array.isArray(raw.items) ? raw.items : [];
+    const items: FathomRecording[] = [];
+    for (const entry of rawItems) {
+      try {
+        items.push(normaliseRecording(entry));
+      } catch (err) {
+        log.warn("skipping malformed meeting in listMeetings page", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    return {
+      items,
+      nextCursor: typeof raw.next_cursor === "string" ? raw.next_cursor : null,
+    };
   }
 }
 

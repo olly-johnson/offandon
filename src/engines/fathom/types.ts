@@ -1,43 +1,42 @@
 /**
  * Fathom ingestion engine types (BO-061).
  *
- * Two payload shapes flow through the engine:
+ * Fathom's REST API and webhook payloads share the same meeting shape:
  *
- *  - FathomWebhookPayload   the minimal subset we parse from the webhook
- *                           POST body. Required fields are limited to what's
- *                           needed to identify the recording and the user;
- *                           the full transcript is fetched separately via
- *                           the Fathom REST API so we don't depend on
- *                           Fathom's webhook payload always including the
- *                           full plaintext.
+ *   {
+ *     recording_id: 123456,
+ *     title: "Coaching call",
+ *     recording_start_time: "2026-05-17T15:00:00Z",
+ *     calendar_invitees: [
+ *       { name, email, email_domain, is_external, ... },
+ *     ],
+ *     recorded_by: { name, email, email_domain, ... },
+ *     transcript: [
+ *       { speaker: { display_name, matched_calendar_invitee_email }, text, timestamp },
+ *       ...
+ *     ],
+ *     share_url: "https://fathom.video/share/...",
+ *     default_summary?: string | null,
+ *     ...
+ *   }
  *
- *  - FathomRecording        the canonical representation after the API
- *                           round-trip. Carries the full transcript + any
- *                           summary text so the ingester can build a single
- *                           rich client_documents row.
+ * FathomTranscriptTurn captures one speaker turn. FathomRecording is the
+ * normalised shape the rest of the engine consumes — invitees pre-cleaned,
+ * `transcriptPlaintext` produced via flattenTranscript().
  */
 
 export interface FathomInvitee {
   email: string;
   name?: string | null;
+  /** True when the invitee is from outside the recorder's team (typically the client). */
+  isExternal?: boolean;
 }
 
-export interface FathomWebhookPayload {
-  /** Unique recording id from Fathom. Stable across replays of the same call. */
-  recordingId: string;
-  /** Human title set by the recorder (meeting subject). */
-  title: string;
-  /** ISO timestamp the call started. */
-  startedAt: string;
-  /** Everyone on the call, including the operator. Used to resolve the client. */
-  invitees: FathomInvitee[];
-  /**
-   * Optional plaintext transcript when Fathom includes it on the wire. If
-   * absent, the ingester falls back to FathomApiClient.getRecording().
-   */
-  transcriptPlaintext?: string;
-  /** Optional shareable URL pointing to the Fathom recording page. */
-  shareUrl?: string;
+export interface FathomTranscriptTurn {
+  speaker: string;
+  speakerEmail: string | null;
+  text: string;
+  timestamp: string;
 }
 
 export interface FathomRecording {
@@ -46,16 +45,27 @@ export interface FathomRecording {
   startedAt: string;
   durationSeconds?: number;
   invitees: FathomInvitee[];
+  /** Email of the operator who recorded the call. Useful for filtering clients. */
+  recordedByEmail?: string | null;
+  transcript: FathomTranscriptTurn[];
+  /** Flattened "Speaker Name: text" lines joined by newline. */
   transcriptPlaintext: string;
   shareUrl?: string;
-  summary?: string;
+  summary?: string | null;
+}
+
+export type FathomWebhookPayload = FathomRecording;
+
+export interface FathomMeetingsPage {
+  items: FathomRecording[];
+  nextCursor: string | null;
 }
 
 export interface IFathomClient {
   /**
-   * Fetch a full recording including transcript by id. Implementations
-   * MUST throw on non-2xx or empty transcript so the ingester can fail the
-   * Inngest step and retry.
+   * Paginated list of meetings, newest first. Pass the previous response's
+   * nextCursor to get the next page; null cursor returns the first page.
+   * Implementations MUST throw on non-2xx responses.
    */
-  getRecording(recordingId: string): Promise<FathomRecording>;
+  listMeetings(opts?: { limit?: number; cursor?: string | null }): Promise<FathomMeetingsPage>;
 }

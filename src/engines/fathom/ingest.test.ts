@@ -12,8 +12,13 @@ const baseRecording: FathomRecording = {
   startedAt: "2026-05-17T15:00:00Z",
   durationSeconds: 1800,
   invitees: [
-    { email: "olly@example.com", name: "Olly" },
-    { email: "alice@client.com", name: "Alice" },
+    { email: "olly@example.com", name: "Olly", isExternal: false },
+    { email: "alice@client.com", name: "Alice", isExternal: true },
+  ],
+  recordedByEmail: "olly@example.com",
+  transcript: [
+    { speaker: "Olly", speakerEmail: "olly@example.com", text: "hello", timestamp: "00:00" },
+    { speaker: "Alice", speakerEmail: null, text: "hi there", timestamp: "00:01" },
   ],
   transcriptPlaintext: "Olly: hello\nAlice: hi there",
   shareUrl: "https://fathom.video/calls/rec_42",
