@@ -3,6 +3,7 @@ import { serve } from "inngest/next";
 import { inngest } from "@/lib/shared/inngest/client";
 import { analyzeMedia } from "@/lib/shared/inngest/functions/analyze-media";
 import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts";
+import { ingestFathomRecordingFn } from "@/lib/shared/inngest/functions/ingest-fathom-recording";
 import { refreshVoiceDna } from "@/lib/shared/inngest/functions/refresh-voice-dna";
 import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
 import { weeklyCheckinReminder } from "@/lib/shared/inngest/functions/weekly-checkin-reminder";
@@ -25,5 +26,6 @@ export const { GET, POST, PUT } = serve({
     weeklyCheckinSend,
     weeklyCheckinReminder,
     refreshVoiceDna,
+    ingestFathomRecordingFn,
   ],
 });
