@@ -59,3 +59,4 @@ export interface VoiceDnaRefreshRequestedData {
   /** week_start of the check-in that triggered the refresh. Telemetry only. */
   week_start?: string;
 }
+

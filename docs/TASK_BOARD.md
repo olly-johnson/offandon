@@ -109,6 +109,14 @@ Weekly cadence that keeps the Voice DNA "fresh." Friday 09:00 Bali (UTC+8) the c
 | BO-059 | Inngest crons: `weekly-checkin-send` (cron `0 1 * * 5` = Fri 09:00 Bali) blasts the full cohort; `weekly-checkin-reminder` (cron `0 1 * * 6`) blasts only users without a `weekly_checkins` row for the current `week_start`. Apps Script template at `examples/google_form_webhook.gs`. | claude | In Progress | feature/weekly-checkin |
 | BO-060 | Webhook + voice refresh: `/api/weekly-checkin/webhook` verifies HMAC-SHA256 against `WEEKLY_CHECKIN_WEBHOOK_SECRET`, resolves user by email, persists check-in idempotently (23505 → 200), emits `voice/dna.refresh.requested`. Handler folds weeklies into `what_works` + `where_stuck` and rewrites the active `voice_dna` via a service-role replace (RPC's SECURITY INVOKER can't be reached from Inngest). | claude | In Progress | feature/weekly-checkin |
 
+## Phase 7. Fathom transcript pipeline
+
+Auto-pull Fathom recordings into the corpus + give users a UI to read them. The webhook fires per completed recording, we resolve the user by intersecting the invitee list with `auth.users` (skipping operator emails), then an Inngest function fetches the full transcript via Fathom's REST API and writes it through the existing corpus engine. Idempotent by `source_path = fathom://<recording_id>`, so retries overwrite cleanly. New `/transcripts` route on the in-app shell lists every Fathom recording for the current user and a detail page shows the full body.
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-061 | Fathom ingestion engine + webhook + `/transcripts` UI. New `src/engines/fathom/` (webhook parse, HMAC verify, structured-transcript flatten, FathomApiClient against `/external/v1/meetings` with X-Api-Key, attendee resolution via auth.users + `public.fathom_email_aliases`, ingest into `client_documents` synchronously). New `/api/fathom/webhook` route ingests once per matched attendee so operator + clients share the recording. New CLIs `npm run backfill:fathom` (paginates history, prints unmatched-email report) and `npm run fathom:aliases` (CRUD for the alias table). Migration `20260517000000_fathom_email_aliases.sql` adds the table + trigger + RLS + delete_user_data extension. Sidebar entry + list/detail pages under `(app)/transcripts`. Fail-closed on `FATHOM_WEBHOOK_SECRET` / `FATHOM_API_KEY` / `VOYAGE_API_KEY`. | claude | In Progress | feature/fathom-ingestion |
+
 ## Conventions
 
 - `Owner` is the agent name (e.g. `claude`) or a human name. Empty = unclaimed.
