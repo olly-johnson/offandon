@@ -235,28 +235,3 @@ export function parseWebhookBody(body: string): FathomWebhookPayload {
   }
   return normaliseRecording(parsed);
 }
-
-/**
- * Pick the client invitee from the calendar_invitees list. Selection rule:
- *   1. If any invitees are marked `is_external: true`, prefer the first one.
- *   2. Otherwise, drop anyone in operatorEmails and pick the first remaining.
- *   3. Returns null if no candidate remains.
- *
- * Reason for the two-tier rule: Fathom marks attendees from outside the
- * operator's team as external, which is the cleanest signal. When the
- * operator records a call solo or the team flag isn't set, FATHOM_OPERATOR_EMAILS
- * acts as the fallback.
- */
-export function pickClientInvitee(
-  invitees: FathomInvitee[],
-  operatorEmails: string[],
-): FathomInvitee | null {
-  const external = invitees.find((i) => i.isExternal === true);
-  if (external) return external;
-
-  const ops = new Set(operatorEmails.map((e) => e.toLowerCase().trim()));
-  for (const inv of invitees) {
-    if (!ops.has(inv.email)) return inv;
-  }
-  return null;
-}

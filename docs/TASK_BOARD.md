@@ -115,7 +115,7 @@ Auto-pull Fathom recordings into the corpus + give users a UI to read them. The 
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-061 | Fathom ingestion engine + webhook + Inngest function + `/transcripts` UI. New `src/engines/fathom/` (webhook parse, HMAC verify, FathomApiClient, ingest into `client_documents`). New `/api/fathom/webhook` route. New `fathom/recording.received` event + handler (Voyage-embedded chunks via the shared corpus engine). Sidebar entry + list/detail pages under `(app)/transcripts`. Fail-closed on `FATHOM_WEBHOOK_SECRET` / `FATHOM_API_KEY` / `VOYAGE_API_KEY`. | claude | In Progress | feature/fathom-ingestion |
+| BO-061 | Fathom ingestion engine + webhook + `/transcripts` UI. New `src/engines/fathom/` (webhook parse, HMAC verify, structured-transcript flatten, FathomApiClient against `/external/v1/meetings` with X-Api-Key, attendee resolution via auth.users + `public.fathom_email_aliases`, ingest into `client_documents` synchronously). New `/api/fathom/webhook` route ingests once per matched attendee so operator + clients share the recording. New CLIs `npm run backfill:fathom` (paginates history, prints unmatched-email report) and `npm run fathom:aliases` (CRUD for the alias table). Migration `20260517000000_fathom_email_aliases.sql` adds the table + trigger + RLS + delete_user_data extension. Sidebar entry + list/detail pages under `(app)/transcripts`. Fail-closed on `FATHOM_WEBHOOK_SECRET` / `FATHOM_API_KEY` / `VOYAGE_API_KEY`. | claude | In Progress | feature/fathom-ingestion |
 
 ## Conventions
 

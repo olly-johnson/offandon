@@ -4,7 +4,6 @@ import {
   flattenTranscript,
   normaliseRecording,
   parseWebhookBody,
-  pickClientInvitee,
   signBody,
   verifyHmac,
   WebhookParseError,
@@ -201,42 +200,3 @@ describe("parseWebhookBody", () => {
   });
 });
 
-describe("pickClientInvitee", () => {
-  it("prefers an invitee with is_external=true regardless of operator list", () => {
-    const out = pickClientInvitee(
-      [
-        { email: "olly@example.com", isExternal: false },
-        { email: "alice@client.com", isExternal: true },
-      ],
-      [],
-    );
-    expect(out?.email).toBe("alice@client.com");
-  });
-
-  it("falls back to operator-filter when no invitee is marked external", () => {
-    const out = pickClientInvitee(
-      [
-        { email: "olly@example.com" },
-        { email: "alice@client.com" },
-      ],
-      ["olly@example.com"],
-    );
-    expect(out?.email).toBe("alice@client.com");
-  });
-
-  it("is case insensitive on the operator list", () => {
-    const out = pickClientInvitee(
-      [{ email: "olly@example.com" }, { email: "alice@client.com" }],
-      [" OLLY@example.com "],
-    );
-    expect(out?.email).toBe("alice@client.com");
-  });
-
-  it("returns null when only operators are present and no externals", () => {
-    const out = pickClientInvitee(
-      [{ email: "olly@example.com" }],
-      ["olly@example.com"],
-    );
-    expect(out).toBeNull();
-  });
-});

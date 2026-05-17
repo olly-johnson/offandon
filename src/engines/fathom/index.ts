@@ -11,11 +11,18 @@ export {
   flattenTranscript,
   normaliseRecording,
   parseWebhookBody,
-  pickClientInvitee,
   signBody,
   verifyHmac,
   WebhookParseError,
 } from "./webhook";
+
+export {
+  collectAttendeeEmails,
+  loadAuthUserEmailIndex,
+  resolveAttendees,
+  type AttendeeResolution,
+  type ResolvedAttendee,
+} from "./mapping";
 
 export {
   FathomApiClient,
