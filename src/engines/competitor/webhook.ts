@@ -1,19 +1,33 @@
 /**
  * Apify webhook payload parsing + token verification.
  *
- * We don't use HMAC because Apify lets us inject a static secret into
- * the webhook request headers via the actor's `webhooks[].headersTemplate`
- * field; that's the standard pattern for Apify integrations. The route
- * does a constant-time string compare against APIFY_WEBHOOK_SECRET.
+ * Apify's ad-hoc webhook delivers its default payload shape:
+ *   {
+ *     eventType: "ACTOR.RUN.SUCCEEDED" | "ACTOR.RUN.FAILED" | ...,
+ *     resource: { id, defaultDatasetId, status, ... },
+ *     ...
+ *   }
  *
- * The payload we receive is whatever we templated in
- * buildReelScraperInput (not Apify's default envelope), so the parser
- * matches that exact shape.
+ * We carry our own correlation IDs (competitor_id, user_id) as URL
+ * query parameters on the webhook URL — see buildReelScraperInput.
+ * Earlier we tried to inject them via Apify's `payloadTemplate` field,
+ * but the {{ }} placeholders came through as literal strings on
+ * delivery, so we abandoned that approach and put the IDs in the URL
+ * where they round-trip cleanly.
+ *
+ * Token auth: Apify lets us set a static secret in the webhook's
+ * `headersTemplate`. The route does a constant-time compare against
+ * APIFY_WEBHOOK_SECRET before reading anything else.
  */
 
 import { timingSafeEqual } from "node:crypto";
 
 export class ApifyWebhookParseError extends Error {}
+
+export interface ApifyWebhookCorrelation {
+  competitorId: string;
+  userId: string;
+}
 
 export interface ApifyWebhookPayload {
   competitorId: string;
@@ -36,7 +50,33 @@ export function verifyApifyWebhookToken(
   return timingSafeEqual(a, b);
 }
 
-export function parseApifyWebhookBody(body: string): ApifyWebhookPayload {
+/**
+ * Pull our correlation IDs off the request URL. Throws if either is
+ * missing so the route can reject the request before touching Inngest.
+ */
+export function parseWebhookCorrelation(
+  searchParams: URLSearchParams,
+): ApifyWebhookCorrelation {
+  const competitorId = (searchParams.get("competitor_id") ?? "").trim();
+  const userId = (searchParams.get("user_id") ?? "").trim();
+  if (!competitorId) {
+    throw new ApifyWebhookParseError("competitor_id missing from URL");
+  }
+  if (!userId) {
+    throw new ApifyWebhookParseError("user_id missing from URL");
+  }
+  return { competitorId, userId };
+}
+
+/**
+ * Defensive parser for Apify's default webhook body. Combines the URL
+ * correlation with the body fields into a single normalised payload
+ * the worker can act on. Throws if any required field is missing.
+ */
+export function parseApifyWebhookBody(
+  body: string,
+  correlation: ApifyWebhookCorrelation,
+): ApifyWebhookPayload {
   let parsed: unknown;
   try {
     parsed = JSON.parse(body);
@@ -50,19 +90,23 @@ export function parseApifyWebhookBody(body: string): ApifyWebhookPayload {
   }
   const obj = parsed as Record<string, unknown>;
 
-  const competitorId = required(obj.competitor_id, "competitor_id");
-  const userId = required(obj.user_id, "user_id");
-  const actorRunId = required(obj.actorRunId, "actorRunId");
-  const datasetId = required(obj.datasetId, "datasetId");
-  const status = required(obj.status, "status");
+  const eventType = required(obj.eventType, "eventType");
+
+  const resource = obj.resource;
+  if (!resource || typeof resource !== "object" || Array.isArray(resource)) {
+    throw new ApifyWebhookParseError("resource missing or not an object");
+  }
+  const r = resource as Record<string, unknown>;
+  const actorRunId = required(r.id, "resource.id");
+  const datasetId = required(r.defaultDatasetId, "resource.defaultDatasetId");
 
   return {
-    competitorId,
-    userId,
+    competitorId: correlation.competitorId,
+    userId: correlation.userId,
     actorRunId,
     datasetId,
-    status,
-    succeeded: status === "ACTOR.RUN.SUCCEEDED",
+    status: eventType,
+    succeeded: eventType === "ACTOR.RUN.SUCCEEDED",
   };
 }
 

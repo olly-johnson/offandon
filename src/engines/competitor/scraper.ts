@@ -85,7 +85,6 @@ export interface ReelScraperWebhookConfig {
   eventTypes: string[];
   requestUrl: string;
   headersTemplate: string;
-  payloadTemplate: string;
 }
 
 export interface ReelScraperRunBody {
@@ -109,10 +108,21 @@ export interface BuildReelScraperInputArgs {
  * body but ad-hoc webhooks as a base64url-encoded `webhooks` query
  * parameter — putting webhooks inside the body silently fails because
  * the actor just treats unknown fields as ignored input.
+ *
+ * Correlation IDs (competitor_id, user_id) ride on the webhook URL as
+ * query parameters rather than inside a payload template. Apify's
+ * payload-template variable substitution turned out to be unreliable
+ * in our setup (placeholders like {{resource.id}} arrived as literal
+ * strings), so we let Apify send its default payload shape and pull
+ * actorRunId / datasetId / status out of `resource` server-side.
  */
 export function buildReelScraperInput(
   args: BuildReelScraperInputArgs,
 ): ReelScraperRunBody {
+  const url = new URL(args.webhookUrl);
+  url.searchParams.set("competitor_id", args.runMetadata.competitor_id);
+  url.searchParams.set("user_id", args.runMetadata.user_id);
+
   return {
     input: {
       username: [args.username],
@@ -126,23 +136,12 @@ export function buildReelScraperInput(
           "ACTOR.RUN.ABORTED",
           "ACTOR.RUN.TIMED_OUT",
         ],
-        requestUrl: args.webhookUrl,
+        requestUrl: url.toString(),
         // Apify lets us inject custom headers on the webhook. We send a
         // shared secret so /api/apify/webhook can reject impostors with
         // a constant-time check.
         headersTemplate: JSON.stringify({
           "X-Apify-Webhook-Token": args.webhookSecret,
-        }),
-        // Apify interpolates {{ }} placeholders against the run
-        // resource at delivery time. We piggyback our own correlation
-        // ids so the webhook handler can route the result back to the
-        // right competitor without an extra Apify roundtrip.
-        payloadTemplate: JSON.stringify({
-          competitor_id: args.runMetadata.competitor_id,
-          user_id: args.runMetadata.user_id,
-          actorRunId: "{{resource.id}}",
-          datasetId: "{{resource.defaultDatasetId}}",
-          status: "{{eventType}}",
         }),
       },
     ],

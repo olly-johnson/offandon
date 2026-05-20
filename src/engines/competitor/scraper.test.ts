@@ -93,9 +93,6 @@ describe("buildReelScraperInput", () => {
     expect((run.input as unknown as Record<string, unknown>).webhooks).toBeUndefined();
 
     expect(run.webhooks).toHaveLength(1);
-    expect(run.webhooks[0].requestUrl).toBe(
-      "https://app.example/api/apify/webhook",
-    );
     expect(run.webhooks[0].eventTypes).toEqual([
       "ACTOR.RUN.SUCCEEDED",
       "ACTOR.RUN.FAILED",
@@ -105,12 +102,17 @@ describe("buildReelScraperInput", () => {
     expect(JSON.parse(run.webhooks[0].headersTemplate)).toEqual({
       "X-Apify-Webhook-Token": "shh",
     });
-    const payload = JSON.parse(run.webhooks[0].payloadTemplate);
-    expect(payload.competitor_id).toBe("c1");
-    expect(payload.user_id).toBe("u1");
-    expect(payload.actorRunId).toBe("{{resource.id}}");
-    expect(payload.datasetId).toBe("{{resource.defaultDatasetId}}");
-    expect(payload.status).toBe("{{eventType}}");
+    // Correlation IDs ride on the webhook URL as query params, NOT inside
+    // a payload template — Apify's {{ }} substitution turned out to be
+    // unreliable, so we let Apify send its default body and pull
+    // competitor_id + user_id back off the URL server-side.
+    const url = new URL(run.webhooks[0].requestUrl);
+    expect(url.origin + url.pathname).toBe(
+      "https://app.example/api/apify/webhook",
+    );
+    expect(url.searchParams.get("competitor_id")).toBe("c1");
+    expect(url.searchParams.get("user_id")).toBe("u1");
+    expect((run.webhooks[0] as unknown as Record<string, unknown>).payloadTemplate).toBeUndefined();
   });
 });
 
@@ -230,9 +232,12 @@ describe("ApifyCompetitorScraper.startReelScrape", () => {
       Buffer.from(webhooksParam as string, "base64url").toString("utf8"),
     );
     expect(decodedWebhooks).toHaveLength(1);
-    expect(decodedWebhooks[0].requestUrl).toBe(
+    const webhookUrl = new URL(decodedWebhooks[0].requestUrl);
+    expect(webhookUrl.origin + webhookUrl.pathname).toBe(
       "https://app.example/api/apify/webhook",
     );
+    expect(webhookUrl.searchParams.get("competitor_id")).toBe("c1");
+    expect(webhookUrl.searchParams.get("user_id")).toBe("u1");
 
     expect((init as RequestInit).method).toBe("POST");
     const headers = (init as RequestInit).headers as Record<string, string>;

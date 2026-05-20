@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import {
   ApifyWebhookParseError,
   parseApifyWebhookBody,
+  parseWebhookCorrelation,
   verifyApifyWebhookToken,
 } from "@/engines/competitor/webhook";
 import { inngest, INNGEST_EVENTS } from "@/lib/shared/inngest/client";
@@ -15,16 +16,16 @@ const TOKEN_HEADER = "x-apify-webhook-token";
 /**
  * Receives Apify actor-run completion webhooks.
  *
- * Wire shape: the actor is started by competitor-scrape-requested with a
- * `webhooks` field that injects this header + a custom payload template
- * (see buildReelScraperInput). Apify POSTs that exact payload here when
- * the run finishes; we verify the shared secret in
- * X-Apify-Webhook-Token, parse, and emit competitor/scrape.completed for
- * the Inngest ingest function to handle.
+ * Wire shape: the actor is started by competitor-scrape-requested with
+ * an ad-hoc webhook whose `requestUrl` includes our correlation IDs as
+ * query parameters (?competitor_id=...&user_id=...). Apify POSTs its
+ * default payload to that URL; we verify the shared secret in
+ * X-Apify-Webhook-Token, pull the IDs off the URL, parse the body, and
+ * emit competitor/scrape.completed for the Inngest ingest function.
  *
  * Outcomes:
- *   200 ok=true     event emitted (or already-noop for non-success status)
- *   400             body unparseable
+ *   200 ok=true     event emitted
+ *   400             body unparseable / correlation missing
  *   401             bad or missing token
  *   500             environment misconfigured
  */
@@ -35,20 +36,30 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ ok: false, error: "not configured" }, { status: 500 });
   }
 
-  const rawBody = await request.text();
   const token = request.headers.get(TOKEN_HEADER);
   if (!verifyApifyWebhookToken(secret, token)) {
     log.warn("apify webhook token mismatch", { had_header: token != null });
     return Response.json({ ok: false, error: "bad token" }, { status: 401 });
   }
 
-  let payload;
+  let correlation;
   try {
-    payload = parseApifyWebhookBody(rawBody);
+    correlation = parseWebhookCorrelation(request.nextUrl.searchParams);
   } catch (err) {
     const msg =
       err instanceof ApifyWebhookParseError ? err.message : (err as Error).message;
-    log.warn("apify webhook parse error", { error: msg });
+    log.warn("apify webhook correlation parse error", { error: msg });
+    return Response.json({ ok: false, error: msg }, { status: 400 });
+  }
+
+  const rawBody = await request.text();
+  let payload;
+  try {
+    payload = parseApifyWebhookBody(rawBody, correlation);
+  } catch (err) {
+    const msg =
+      err instanceof ApifyWebhookParseError ? err.message : (err as Error).message;
+    log.warn("apify webhook body parse error", { error: msg });
     return Response.json({ ok: false, error: msg }, { status: 400 });
   }
 
