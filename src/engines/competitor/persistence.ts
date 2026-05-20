@@ -46,6 +46,7 @@ export interface CompetitorRow {
   added_at: string;
   last_synced_at: string | null;
   last_sync_error: string | null;
+  sync_pending: boolean;
 }
 
 /**
@@ -73,7 +74,7 @@ export async function listCompetitors(
   const { data, error } = await supabase
     .from("competitor_accounts")
     .select(
-      "id, username, display_name, note, added_at, last_synced_at, last_sync_error",
+      "id, username, display_name, note, added_at, last_synced_at, last_sync_error, sync_pending",
     )
     .eq("user_id", userId)
     .order("added_at", { ascending: true });

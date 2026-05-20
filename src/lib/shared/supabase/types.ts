@@ -554,6 +554,7 @@ export type Database = {
           added_at: string;
           last_synced_at: string | null;
           last_sync_error: string | null;
+          sync_pending: boolean;
         };
         Insert: {
           id?: string;
@@ -564,6 +565,7 @@ export type Database = {
           added_at?: string;
           last_synced_at?: string | null;
           last_sync_error?: string | null;
+          sync_pending?: boolean;
         };
         Update: {
           id?: string;
@@ -574,6 +576,7 @@ export type Database = {
           added_at?: string;
           last_synced_at?: string | null;
           last_sync_error?: string | null;
+          sync_pending?: boolean;
         };
         Relationships: [];
       };

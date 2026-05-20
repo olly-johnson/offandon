@@ -89,9 +89,11 @@ export async function listMediaForCompetitor(
 }
 
 /**
- * Touch the competitor_accounts sync stamps. On success we clear
- * last_sync_error; on failure we clear last_synced_at so the UI badge
- * can render "Sync failed" without ambiguity.
+ * Touch the competitor_accounts sync stamps. sync_pending is the
+ * authoritative in-flight signal: server action flips it true when
+ * emitting the Inngest event, worker flips it back to false on
+ * success or failure. last_synced_at + last_sync_error capture the
+ * terminal state of the most recent run.
  */
 export async function updateCompetitorSyncState(
   supabase: CompetitorSupabaseClient,
@@ -100,6 +102,7 @@ export async function updateCompetitorSyncState(
     userId: string;
     lastSyncedAt: string | null;
     lastSyncError: string | null;
+    syncPending: boolean;
   },
 ): Promise<void> {
   const { error } = await supabase
@@ -107,6 +110,7 @@ export async function updateCompetitorSyncState(
     .update({
       last_synced_at: args.lastSyncedAt,
       last_sync_error: args.lastSyncError,
+      sync_pending: args.syncPending,
     })
     .eq("id", args.competitorId)
     .eq("user_id", args.userId);

@@ -77,6 +77,7 @@ export const competitorScrapeRequested = inngest.createFunction(
         userId: competitor.user_id,
         lastSyncedAt: null,
         lastSyncError: null,
+        syncPending: true,
       });
     });
 
@@ -113,6 +114,7 @@ export const competitorScrapeRequested = inngest.createFunction(
         userId: competitor.user_id,
         lastSyncedAt: null,
         lastSyncError: message.slice(0, 500),
+        syncPending: false,
       });
       throw err;
     }
@@ -158,6 +160,7 @@ export const competitorScrapeCompleted = inngest.createFunction(
           userId: user_id,
           lastSyncedAt: null,
           lastSyncError: `Apify run ${status}`,
+          syncPending: false,
         });
       });
       log.warn("apify run did not succeed", {
@@ -191,6 +194,7 @@ export const competitorScrapeCompleted = inngest.createFunction(
         userId: user_id,
         lastSyncedAt: now.toISOString(),
         lastSyncError: null,
+        syncPending: false,
       });
     });
 

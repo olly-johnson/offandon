@@ -78,6 +78,7 @@ export async function syncCompetitorAction(formData: FormData): Promise<void> {
       userId: user.id,
       lastSyncedAt: null,
       lastSyncError: null,
+      syncPending: true,
     });
     await inngest.send({
       name: INNGEST_EVENTS.CompetitorScrapeRequested,

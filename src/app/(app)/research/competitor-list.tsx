@@ -99,11 +99,19 @@ function AddCompetitorForm({ atCap }: { atCap: boolean }) {
 }
 
 interface SyncBadgeProps {
+  syncPending: boolean;
   lastSyncedAt: string | null;
   lastSyncError: string | null;
 }
 
-function SyncBadge({ lastSyncedAt, lastSyncError }: SyncBadgeProps) {
+function SyncBadge({ syncPending, lastSyncedAt, lastSyncError }: SyncBadgeProps) {
+  if (syncPending) {
+    return (
+      <span className="text-[11px]" style={{ color: "var(--oo-text-dim)" }}>
+        Syncing...
+      </span>
+    );
+  }
   if (lastSyncError) {
     return (
       <span
@@ -115,26 +123,22 @@ function SyncBadge({ lastSyncedAt, lastSyncError }: SyncBadgeProps) {
       </span>
     );
   }
-  if (!lastSyncedAt) {
+  if (lastSyncedAt) {
     return (
       <span className="text-[11px]" style={{ color: "var(--oo-text-dim)" }}>
-        Syncing...
+        Last sync {new Date(lastSyncedAt).toLocaleDateString()}
       </span>
     );
   }
   return (
     <span className="text-[11px]" style={{ color: "var(--oo-text-dim)" }}>
-      Last sync {new Date(lastSyncedAt).toLocaleDateString()}
+      Not synced yet
     </span>
   );
 }
 
 function CompetitorRowItem({ row }: { row: CompetitorRow }) {
-  // "Syncing..." state in this UI is "we requested it; the worker has
-  // not stamped last_synced_at yet". The server action wipes both
-  // last_synced_at and last_sync_error before emitting the Inngest
-  // event, so an in-flight competitor has both null.
-  const inFlight = row.last_synced_at === null && row.last_sync_error === null;
+  const inFlight = row.sync_pending;
 
   return (
     <div
@@ -155,6 +159,7 @@ function CompetitorRowItem({ row }: { row: CompetitorRow }) {
           @{row.username}
         </a>
         <SyncBadge
+          syncPending={row.sync_pending}
           lastSyncedAt={row.last_synced_at}
           lastSyncError={row.last_sync_error}
         />

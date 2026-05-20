@@ -108,7 +108,7 @@ describe("listMediaForCompetitor", () => {
 });
 
 describe("updateCompetitorSyncState", () => {
-  it("updates last_synced_at + last_sync_error on success", async () => {
+  it("updates last_synced_at + last_sync_error + sync_pending on success", async () => {
     const eqUser = vi.fn().mockResolvedValue({ error: null });
     const eqId = vi.fn().mockReturnValue({ eq: eqUser });
     const update = vi.fn().mockReturnValue({ eq: eqId });
@@ -120,12 +120,14 @@ describe("updateCompetitorSyncState", () => {
       userId: "u1",
       lastSyncedAt: NOW.toISOString(),
       lastSyncError: null,
+      syncPending: false,
     });
 
     expect(from).toHaveBeenCalledWith("competitor_accounts");
     expect(update).toHaveBeenCalledWith({
       last_synced_at: NOW.toISOString(),
       last_sync_error: null,
+      sync_pending: false,
     });
     expect(eqId).toHaveBeenCalledWith("id", "c1");
     expect(eqUser).toHaveBeenCalledWith("user_id", "u1");
@@ -143,10 +145,33 @@ describe("updateCompetitorSyncState", () => {
       userId: "u1",
       lastSyncedAt: null,
       lastSyncError: "out of credit",
+      syncPending: false,
     });
     expect(update).toHaveBeenCalledWith({
       last_synced_at: null,
       last_sync_error: "out of credit",
+      sync_pending: false,
+    });
+  });
+
+  it("flips sync_pending=true to mark a run in flight", async () => {
+    const eqUser = vi.fn().mockResolvedValue({ error: null });
+    const eqId = vi.fn().mockReturnValue({ eq: eqUser });
+    const update = vi.fn().mockReturnValue({ eq: eqId });
+    const from = vi.fn().mockReturnValue({ update });
+    const supabase = { from } as unknown as CompetitorSupabaseClient;
+
+    await updateCompetitorSyncState(supabase, {
+      competitorId: "c1",
+      userId: "u1",
+      lastSyncedAt: null,
+      lastSyncError: null,
+      syncPending: true,
+    });
+    expect(update).toHaveBeenCalledWith({
+      last_synced_at: null,
+      last_sync_error: null,
+      sync_pending: true,
     });
   });
 });
