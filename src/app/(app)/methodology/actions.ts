@@ -3,30 +3,37 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import { upsertUserMethodology } from "@/engines/methodology/persistence";
+import {
+  getUserMethodology,
+  upsertUserMethodology,
+} from "@/engines/methodology/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
 const log = createLogger("methodology.actions");
 
 const MAX_OVERLAY_CHARS = 8000;
+const MAX_ADDITION_CHARS = 2000;
 
 export type SaveMethodologyState = { error?: string; saved?: boolean };
 
 /**
- * Persist the creator's methodology overlay. Single textarea, one upsert.
- * Anything over 8000 chars is rejected at the action boundary to keep the
- * prompt budget sane; the table itself is unbounded text but the prompt
- * builders will eat through cache fast on giant overlays.
+ * Append a new rule to the creator's methodology overlay. The UI hides the
+ * existing overlay — clients only type the rule they want to add, and we
+ * join it onto whatever is already stored with a newline separator. Cap on
+ * the combined value keeps the prompt budget sane.
  */
 export async function saveMethodologyAction(
   _prev: SaveMethodologyState,
   form: FormData,
 ): Promise<SaveMethodologyState> {
-  const content = (form.get("content") ?? "").toString();
-  if (content.length > MAX_OVERLAY_CHARS) {
+  const addition = (form.get("content") ?? "").toString().trim();
+  if (addition.length === 0) {
+    return { error: "Write a rule first." };
+  }
+  if (addition.length > MAX_ADDITION_CHARS) {
     return {
-      error: `Overlay is too long. Keep it under ${MAX_OVERLAY_CHARS} characters.`,
+      error: `Rule is too long. Keep it under ${MAX_ADDITION_CHARS} characters.`,
     };
   }
 
@@ -37,13 +44,25 @@ export async function saveMethodologyAction(
   if (!user) redirect("/signin");
 
   try {
-    await upsertUserMethodology(supabase, { userId: user.id, content });
-    log.info("methodology saved", {
+    const existing = (await getUserMethodology(supabase, user.id)) ?? "";
+    const combined = existing.trim().length === 0
+      ? addition
+      : `${existing.trim()}\n${addition}`;
+
+    if (combined.length > MAX_OVERLAY_CHARS) {
+      return {
+        error: `Your methodology is full (${MAX_OVERLAY_CHARS} characters). Contact support to make room.`,
+      };
+    }
+
+    await upsertUserMethodology(supabase, { userId: user.id, content: combined });
+    log.info("methodology rule appended", {
       user_id: user.id,
-      char_count: content.trim().length,
+      addition_chars: addition.length,
+      total_chars: combined.length,
     });
   } catch (err) {
-    log.error("methodology save failed", {
+    log.error("methodology append failed", {
       user_id: user.id,
       error: err instanceof Error ? err.message : String(err),
     });

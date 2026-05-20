@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { Topbar } from "@/components/app-shell/topbar";
-import { getUserMethodology } from "@/engines/methodology/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
@@ -20,12 +19,7 @@ export default async function MethodologyPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
-  const content = await getUserMethodology(supabase, user.id);
-
-  log.debug("methodology page rendered", {
-    user_id: user.id,
-    char_count: (content ?? "").length,
-  });
+  log.debug("methodology page rendered", { user_id: user.id });
 
   return (
     <>
@@ -40,17 +34,16 @@ export default async function MethodologyPage() {
                 letterSpacing: "-0.03em",
               }}
             >
-              Your methodology
+              Add to your methodology
             </h2>
             <p
               className="mt-1 text-sm leading-relaxed"
               style={{ color: "var(--oo-text-secondary)" }}
             >
-              Personal rules the assistant follows on top of the house
-              methodology. Use this for word bans, preferred metaphors, hook
-              styles, or anything the house rules don&apos;t cover. Plain text,
-              one rule per line. Loaded into every chat, hook, and script
-              prompt.
+              Add a rule below — word bans, preferred metaphors, hook styles,
+              or anything the house rules don&apos;t cover. Each save appends
+              to your running list. Your prior rules stay applied in every
+              chat, hook, and script prompt.
             </p>
           </header>
 
@@ -82,7 +75,7 @@ export default async function MethodologyPage() {
             </ul>
           </section>
 
-          <MethodologyForm initialContent={content ?? ""} />
+          <MethodologyForm />
         </div>
       </div>
     </>
