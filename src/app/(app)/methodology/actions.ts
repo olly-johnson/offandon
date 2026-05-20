@@ -13,15 +13,15 @@ import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 const log = createLogger("methodology.actions");
 
 const MAX_OVERLAY_CHARS = 8000;
-const MAX_ADDITION_CHARS = 2000;
 
 export type SaveMethodologyState = { error?: string; saved?: boolean };
 
 /**
- * Append a new rule to the creator's methodology overlay. The UI hides the
- * existing overlay — clients only type the rule they want to add, and we
- * join it onto whatever is already stored with a newline separator. Cap on
- * the combined value keeps the prompt budget sane.
+ * Append the submitted text to the creator's methodology overlay. The UI
+ * hides the existing overlay, so clients type only the new rule(s) they
+ * want to add. We join the submission onto whatever is already stored with
+ * a newline separator. The 8000-char cap applies to the combined value to
+ * keep the prompt budget sane.
  */
 export async function saveMethodologyAction(
   _prev: SaveMethodologyState,
@@ -31,11 +31,6 @@ export async function saveMethodologyAction(
   if (addition.length === 0) {
     return { error: "Write a rule first." };
   }
-  if (addition.length > MAX_ADDITION_CHARS) {
-    return {
-      error: `Rule is too long. Keep it under ${MAX_ADDITION_CHARS} characters.`,
-    };
-  }
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -44,14 +39,14 @@ export async function saveMethodologyAction(
   if (!user) redirect("/signin");
 
   try {
-    const existing = (await getUserMethodology(supabase, user.id)) ?? "";
-    const combined = existing.trim().length === 0
+    const existing = ((await getUserMethodology(supabase, user.id)) ?? "").trim();
+    const combined = existing.length === 0
       ? addition
-      : `${existing.trim()}\n${addition}`;
+      : `${existing}\n${addition}`;
 
     if (combined.length > MAX_OVERLAY_CHARS) {
       return {
-        error: `Your methodology is full (${MAX_OVERLAY_CHARS} characters). Contact support to make room.`,
+        error: `Your methodology is full (${MAX_OVERLAY_CHARS.toLocaleString()} characters). Contact support to make room.`,
       };
     }
 

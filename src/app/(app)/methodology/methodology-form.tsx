@@ -5,33 +5,40 @@ import { Check, Loader2 } from "lucide-react";
 
 import { saveMethodologyAction, type SaveMethodologyState } from "./actions";
 
-const MAX_ADDITION_CHARS = 2000;
+const MAX_OVERLAY_CHARS = 8000;
 
 export function MethodologyForm() {
+  // Textarea starts empty: clients do not see their existing rules. What
+  // they type here is appended to their stored overlay on save and stays
+  // visible in the box so they can see what was just submitted. The dirty
+  // check on the Save button prevents an accidental double-submit creating
+  // a duplicate.
+  const [lastSaved, setLastSaved] = useState("");
   const [content, setContent] = useState("");
   const [state, formAction, pending] = useActionState<
     SaveMethodologyState,
     FormData
   >(async (prev, fd) => {
     const next = await saveMethodologyAction(prev, fd);
-    if (next.saved) setContent("");
+    if (next.saved) setLastSaved((fd.get("content") ?? "").toString());
     return next;
   }, {});
 
-  const overLimit = content.length > MAX_ADDITION_CHARS;
-  const showSaved = !pending && state.saved === true && content === "";
+  const overLimit = content.length > MAX_OVERLAY_CHARS;
+  const dirty = content !== lastSaved;
   const trimmed = content.trim();
+  const showSaved = !pending && state.saved === true && content === lastSaved;
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <textarea
         name="content"
-        rows={8}
-        placeholder="Add a new rule, e.g. 'Never use the word unlock.'"
+        rows={14}
+        placeholder="Write your personal rules here, one per line..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
         className="oo-input resize-y font-mono text-sm leading-relaxed"
-        style={{ minHeight: "180px" }}
+        style={{ minHeight: "320px" }}
       />
 
       <div className="flex items-center justify-between gap-3">
@@ -41,7 +48,7 @@ export function MethodologyForm() {
             color: overLimit ? "var(--oo-bof)" : "var(--oo-text-dim)",
           }}
         >
-          {content.length.toLocaleString()} / {MAX_ADDITION_CHARS.toLocaleString()} chars
+          {content.length.toLocaleString()} / {MAX_OVERLAY_CHARS.toLocaleString()} chars
         </p>
         <div className="flex items-center gap-3">
           {showSaved ? (
@@ -50,21 +57,21 @@ export function MethodologyForm() {
               style={{ color: "var(--oo-tof)" }}
             >
               <Check className="size-3.5" />
-              Added
+              Saved
             </span>
           ) : null}
           <button
             type="submit"
-            disabled={pending || overLimit || trimmed.length === 0}
+            disabled={pending || overLimit || !dirty || trimmed.length === 0}
             className="gold-btn flex items-center gap-2 px-5 py-2 text-xs disabled:opacity-50"
           >
             {pending ? (
               <>
                 <Loader2 className="oo-spin size-3.5" />
-                Adding...
+                Saving...
               </>
             ) : (
-              "Add rule"
+              "Save methodology"
             )}
           </button>
         </div>

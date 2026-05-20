@@ -34,16 +34,17 @@ export default async function MethodologyPage() {
                 letterSpacing: "-0.03em",
               }}
             >
-              Add to your methodology
+              Your methodology
             </h2>
             <p
               className="mt-1 text-sm leading-relaxed"
               style={{ color: "var(--oo-text-secondary)" }}
             >
-              Add a rule below — word bans, preferred metaphors, hook styles,
-              or anything the house rules don&apos;t cover. Each save appends
-              to your running list. Your prior rules stay applied in every
-              chat, hook, and script prompt.
+              Personal rules the assistant follows on top of the house
+              methodology. Use this for word bans, preferred metaphors, hook
+              styles, or anything the house rules don&apos;t cover. Plain
+              text, one rule per line. Each save adds to your existing rules
+              and loads into every chat, hook, and script prompt.
             </p>
           </header>
 
