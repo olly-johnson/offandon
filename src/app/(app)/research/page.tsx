@@ -82,6 +82,7 @@ export default async function ResearchPage() {
           </section>
 
           <CompetitorList
+            userId={user.id}
             competitors={competitors}
             limit={COMPETITOR_LIMIT_PER_USER}
           />

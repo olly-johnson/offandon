@@ -9,14 +9,17 @@ import {
   syncCompetitorAction,
   type AddCompetitorState,
 } from "./actions";
+import { useCompetitorRealtime } from "./use-competitor-realtime";
 import type { CompetitorRow } from "@/engines/competitor";
 
 interface CompetitorListProps {
+  userId: string;
   competitors: CompetitorRow[];
   limit: number;
 }
 
-export function CompetitorList({ competitors, limit }: CompetitorListProps) {
+export function CompetitorList({ userId, competitors, limit }: CompetitorListProps) {
+  useCompetitorRealtime(userId);
   const atCap = competitors.length >= limit;
 
   return (
