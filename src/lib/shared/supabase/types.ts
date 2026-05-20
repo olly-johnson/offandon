@@ -490,6 +490,60 @@ export type Database = {
         };
         Relationships: [];
       };
+      competitor_media: {
+        Row: {
+          id: string;
+          competitor_id: string;
+          user_id: string;
+          media_type: "VIDEO" | "REELS" | "IMAGE" | "CAROUSEL_ALBUM";
+          caption: string | null;
+          permalink: string | null;
+          media_url: string | null;
+          thumbnail_url: string | null;
+          posted_at: string | null;
+          like_count: number | null;
+          comments_count: number | null;
+          view_count: number | null;
+          duration_seconds: number | null;
+          scrape_run_id: string | null;
+          synced_at: string;
+        };
+        Insert: {
+          id: string;
+          competitor_id: string;
+          user_id: string;
+          media_type: "VIDEO" | "REELS" | "IMAGE" | "CAROUSEL_ALBUM";
+          caption?: string | null;
+          permalink?: string | null;
+          media_url?: string | null;
+          thumbnail_url?: string | null;
+          posted_at?: string | null;
+          like_count?: number | null;
+          comments_count?: number | null;
+          view_count?: number | null;
+          duration_seconds?: number | null;
+          scrape_run_id?: string | null;
+          synced_at?: string;
+        };
+        Update: {
+          id?: string;
+          competitor_id?: string;
+          user_id?: string;
+          media_type?: "VIDEO" | "REELS" | "IMAGE" | "CAROUSEL_ALBUM";
+          caption?: string | null;
+          permalink?: string | null;
+          media_url?: string | null;
+          thumbnail_url?: string | null;
+          posted_at?: string | null;
+          like_count?: number | null;
+          comments_count?: number | null;
+          view_count?: number | null;
+          duration_seconds?: number | null;
+          scrape_run_id?: string | null;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
       competitor_accounts: {
         Row: {
           id: string;

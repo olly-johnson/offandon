@@ -4,6 +4,10 @@ import { inngest } from "@/lib/shared/inngest/client";
 import { analyzeMedia } from "@/lib/shared/inngest/functions/analyze-media";
 import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts";
 import { refreshVoiceDna } from "@/lib/shared/inngest/functions/refresh-voice-dna";
+import {
+  competitorScrapeCompleted,
+  competitorScrapeRequested,
+} from "@/lib/shared/inngest/functions/scrape-competitor";
 import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
 import { weeklyCheckinReminder } from "@/lib/shared/inngest/functions/weekly-checkin-reminder";
 import { weeklyCheckinSend } from "@/lib/shared/inngest/functions/weekly-checkin-send";
@@ -25,5 +29,7 @@ export const { GET, POST, PUT } = serve({
     weeklyCheckinSend,
     weeklyCheckinReminder,
     refreshVoiceDna,
+    competitorScrapeRequested,
+    competitorScrapeCompleted,
   ],
 });

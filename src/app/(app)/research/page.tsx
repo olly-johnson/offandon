@@ -75,9 +75,10 @@ export default async function ResearchPage() {
             }}
             aria-label="Heads up"
           >
-            Video download + analysis is being wired (BO-062). For now you can
-            stage the list of accounts you want tracked; sync runs activate
-            when the scraper lands.
+            Hit the refresh icon on a tracked account to pull their recent
+            reels via Apify. Per-video transcription + structural analysis
+            lands in BO-063; for now you&apos;ll see the reel rows populate
+            after each sync.
           </section>
 
           <CompetitorList

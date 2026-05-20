@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
 
 import {
   addCompetitorAction,
   removeCompetitorAction,
+  syncCompetitorAction,
   type AddCompetitorState,
 } from "./actions";
 import type { CompetitorRow } from "@/engines/competitor";
@@ -94,7 +95,44 @@ function AddCompetitorForm({ atCap }: { atCap: boolean }) {
   );
 }
 
+interface SyncBadgeProps {
+  lastSyncedAt: string | null;
+  lastSyncError: string | null;
+}
+
+function SyncBadge({ lastSyncedAt, lastSyncError }: SyncBadgeProps) {
+  if (lastSyncError) {
+    return (
+      <span
+        className="text-[11px]"
+        style={{ color: "var(--oo-bof)" }}
+        title={lastSyncError}
+      >
+        Sync failed
+      </span>
+    );
+  }
+  if (!lastSyncedAt) {
+    return (
+      <span className="text-[11px]" style={{ color: "var(--oo-text-dim)" }}>
+        Syncing...
+      </span>
+    );
+  }
+  return (
+    <span className="text-[11px]" style={{ color: "var(--oo-text-dim)" }}>
+      Last sync {new Date(lastSyncedAt).toLocaleDateString()}
+    </span>
+  );
+}
+
 function CompetitorRowItem({ row }: { row: CompetitorRow }) {
+  // "Syncing..." state in this UI is "we requested it; the worker has
+  // not stamped last_synced_at yet". The server action wipes both
+  // last_synced_at and last_sync_error before emitting the Inngest
+  // event, so an in-flight competitor has both null.
+  const inFlight = row.last_synced_at === null && row.last_sync_error === null;
+
   return (
     <div
       className="flex items-center justify-between rounded-xl p-3"
@@ -113,26 +151,40 @@ function CompetitorRowItem({ row }: { row: CompetitorRow }) {
         >
           @{row.username}
         </a>
-        <span
-          className="text-[11px]"
-          style={{ color: "var(--oo-text-dim)" }}
-        >
-          {row.last_synced_at
-            ? `Last sync ${new Date(row.last_synced_at).toLocaleDateString()}`
-            : "Not synced yet"}
-        </span>
+        <SyncBadge
+          lastSyncedAt={row.last_synced_at}
+          lastSyncError={row.last_sync_error}
+        />
       </div>
-      <form action={removeCompetitorAction}>
-        <input type="hidden" name="id" value={row.id} />
-        <button
-          type="submit"
-          aria-label={`Stop tracking ${row.username}`}
-          className="oo-icon-btn rounded-lg p-2"
-          title="Stop tracking"
-        >
-          <Trash2 className="size-4" />
-        </button>
-      </form>
+      <div className="flex items-center gap-1">
+        <form action={syncCompetitorAction}>
+          <input type="hidden" name="id" value={row.id} />
+          <button
+            type="submit"
+            aria-label={`Sync ${row.username} now`}
+            className="oo-icon-btn rounded-lg p-2 disabled:opacity-40"
+            title={inFlight ? "Sync in progress" : "Sync now"}
+            disabled={inFlight}
+          >
+            {inFlight ? (
+              <Loader2 className="oo-spin size-4" />
+            ) : (
+              <RefreshCcw className="size-4" />
+            )}
+          </button>
+        </form>
+        <form action={removeCompetitorAction}>
+          <input type="hidden" name="id" value={row.id} />
+          <button
+            type="submit"
+            aria-label={`Stop tracking ${row.username}`}
+            className="oo-icon-btn rounded-lg p-2"
+            title="Stop tracking"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
