@@ -24,12 +24,16 @@ export {
   ApifyConfigError,
   ApifyCompetitorScraper,
   buildReelScraperInput,
+  encodeWebhooksParam,
   loadApifyConfig,
   parseReelItem,
 } from "./scraper";
 export type {
   ApifyConfig,
   CompetitorReel,
+  ReelScraperActorInput,
+  ReelScraperRunBody,
+  ReelScraperWebhookConfig,
 } from "./scraper";
 
 export {

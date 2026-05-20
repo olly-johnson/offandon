@@ -76,15 +76,23 @@ export interface ReelScraperRunMetadata {
   user_id: string;
 }
 
-export interface ReelScraperInput {
+export interface ReelScraperActorInput {
   username: string[];
   resultsLimit: number;
-  webhooks: Array<{
-    eventTypes: string[];
-    requestUrl: string;
-    headersTemplate: string;
-    payloadTemplate: string;
-  }>;
+}
+
+export interface ReelScraperWebhookConfig {
+  eventTypes: string[];
+  requestUrl: string;
+  headersTemplate: string;
+  payloadTemplate: string;
+}
+
+export interface ReelScraperRunBody {
+  /** Goes in the POST body — actor input only, never webhooks. */
+  input: ReelScraperActorInput;
+  /** Goes in the ?webhooks= query param, base64url-encoded. */
+  webhooks: ReelScraperWebhookConfig[];
 }
 
 export interface BuildReelScraperInputArgs {
@@ -96,16 +104,20 @@ export interface BuildReelScraperInputArgs {
 }
 
 /**
- * Pure input builder for the apify/instagram-reel-scraper actor.
- * Pulled out so the input shape (including the webhook config) is
- * unit-testable without mocking fetch.
+ * Pure builder for an Apify run request. Returns { input, webhooks }
+ * separately because Apify's API takes the actor input as the request
+ * body but ad-hoc webhooks as a base64url-encoded `webhooks` query
+ * parameter — putting webhooks inside the body silently fails because
+ * the actor just treats unknown fields as ignored input.
  */
 export function buildReelScraperInput(
   args: BuildReelScraperInputArgs,
-): ReelScraperInput {
+): ReelScraperRunBody {
   return {
-    username: [args.username],
-    resultsLimit: args.resultsLimit,
+    input: {
+      username: [args.username],
+      resultsLimit: args.resultsLimit,
+    },
     webhooks: [
       {
         eventTypes: [
@@ -135,6 +147,17 @@ export function buildReelScraperInput(
       },
     ],
   };
+}
+
+/**
+ * base64url-encode the webhooks config for the `?webhooks=` query
+ * parameter. Apify uses URL-safe base64 (RFC 4648 §5): `-` for `+`,
+ * `_` for `/`, no padding.
+ */
+export function encodeWebhooksParam(
+  webhooks: ReelScraperWebhookConfig[],
+): string {
+  return Buffer.from(JSON.stringify(webhooks), "utf8").toString("base64url");
 }
 
 export interface ReelScraperStartResult {
@@ -173,7 +196,7 @@ export class ApifyCompetitorScraper {
     webhookUrl: string;
     runMetadata: ReelScraperRunMetadata;
   }): Promise<ReelScraperStartResult> {
-    const body = buildReelScraperInput({
+    const run = buildReelScraperInput({
       username: args.username,
       resultsLimit: args.resultsLimit,
       webhookUrl: args.webhookUrl,
@@ -181,14 +204,15 @@ export class ApifyCompetitorScraper {
       runMetadata: args.runMetadata,
     });
 
-    const url = `${APIFY_API_BASE}/acts/${this.actorId}/runs`;
+    const webhooksParam = encodeWebhooksParam(run.webhooks);
+    const url = `${APIFY_API_BASE}/acts/${this.actorId}/runs?webhooks=${webhooksParam}`;
     const res = await this.fetchImpl(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(run.input),
     });
 
     if (!res.ok) {

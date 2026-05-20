@@ -4,6 +4,7 @@ import {
   ApifyConfigError,
   ApifyCompetitorScraper,
   buildReelScraperInput,
+  encodeWebhooksParam,
   loadApifyConfig,
   parseReelItem,
 } from "./scraper";
@@ -78,35 +79,58 @@ describe("loadApifyConfig", () => {
 });
 
 describe("buildReelScraperInput", () => {
-  it("targets the supplied username profile URL and caps results", () => {
-    const input = buildReelScraperInput({
+  it("returns actor input and webhooks separately (NOT merged)", () => {
+    const run = buildReelScraperInput({
       username: "ollyj",
       resultsLimit: 30,
       webhookUrl: "https://app.example/api/apify/webhook",
       webhookSecret: "shh",
       runMetadata: { competitor_id: "c1", user_id: "u1" },
     });
-    expect(input.username).toEqual(["ollyj"]);
-    expect(input.resultsLimit).toBe(30);
-    expect(input.webhooks).toHaveLength(1);
-    expect(input.webhooks[0].requestUrl).toBe(
+    // Actor input never contains webhooks; Apify's API takes those via a
+    // separate `?webhooks=` query parameter, not in the body.
+    expect(run.input).toEqual({ username: ["ollyj"], resultsLimit: 30 });
+    expect((run.input as unknown as Record<string, unknown>).webhooks).toBeUndefined();
+
+    expect(run.webhooks).toHaveLength(1);
+    expect(run.webhooks[0].requestUrl).toBe(
       "https://app.example/api/apify/webhook",
     );
-    expect(input.webhooks[0].eventTypes).toEqual([
+    expect(run.webhooks[0].eventTypes).toEqual([
       "ACTOR.RUN.SUCCEEDED",
       "ACTOR.RUN.FAILED",
       "ACTOR.RUN.ABORTED",
       "ACTOR.RUN.TIMED_OUT",
     ]);
-    expect(JSON.parse(input.webhooks[0].headersTemplate)).toEqual({
+    expect(JSON.parse(run.webhooks[0].headersTemplate)).toEqual({
       "X-Apify-Webhook-Token": "shh",
     });
-    const payload = JSON.parse(input.webhooks[0].payloadTemplate);
+    const payload = JSON.parse(run.webhooks[0].payloadTemplate);
     expect(payload.competitor_id).toBe("c1");
     expect(payload.user_id).toBe("u1");
     expect(payload.actorRunId).toBe("{{resource.id}}");
     expect(payload.datasetId).toBe("{{resource.defaultDatasetId}}");
     expect(payload.status).toBe("{{eventType}}");
+  });
+});
+
+describe("encodeWebhooksParam", () => {
+  it("base64url-encodes the JSON array (URL-safe, no padding)", () => {
+    const cfg = [
+      {
+        eventTypes: ["ACTOR.RUN.SUCCEEDED"],
+        requestUrl: "https://app.example/api/apify/webhook",
+        headersTemplate: '{"k":"v"}',
+        payloadTemplate: "{}",
+      },
+    ];
+    const encoded = encodeWebhooksParam(cfg);
+    // base64url alphabet excludes + / =
+    expect(encoded).not.toMatch(/[+/=]/);
+    const decoded = JSON.parse(
+      Buffer.from(encoded, "base64url").toString("utf8"),
+    );
+    expect(decoded).toEqual(cfg);
   });
 });
 
@@ -171,7 +195,7 @@ describe("parseReelItem", () => {
 });
 
 describe("ApifyCompetitorScraper.startReelScrape", () => {
-  it("POSTs to the actor runs endpoint with bearer auth + input body", async () => {
+  it("POSTs to the actor runs endpoint with webhooks as base64url query param", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
       status: 201,
@@ -196,16 +220,28 @@ describe("ApifyCompetitorScraper.startReelScrape", () => {
     expect(out).toEqual({ actorRunId: "run-1", defaultDatasetId: "ds-1" });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [url, init] = fetchImpl.mock.calls[0];
-    expect(url).toBe(
+    const parsedUrl = new URL(url as string);
+    expect(parsedUrl.origin + parsedUrl.pathname).toBe(
       "https://api.apify.com/v2/acts/apify~instagram-reel-scraper/runs",
     );
+    const webhooksParam = parsedUrl.searchParams.get("webhooks");
+    expect(webhooksParam).toBeTruthy();
+    const decodedWebhooks = JSON.parse(
+      Buffer.from(webhooksParam as string, "base64url").toString("utf8"),
+    );
+    expect(decodedWebhooks).toHaveLength(1);
+    expect(decodedWebhooks[0].requestUrl).toBe(
+      "https://app.example/api/apify/webhook",
+    );
+
     expect((init as RequestInit).method).toBe("POST");
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers["Authorization"]).toBe("Bearer apify_api_x");
     expect(headers["Content-Type"]).toBe("application/json");
     const body = JSON.parse((init as RequestInit).body as string);
-    expect(body.username).toEqual(["ollyj"]);
-    expect(body.resultsLimit).toBe(30);
+    // Body is actor input only — webhooks must NOT leak into the body.
+    expect(body).toEqual({ username: ["ollyj"], resultsLimit: 30 });
+    expect(body.webhooks).toBeUndefined();
   });
 
   it("throws on non-2xx from Apify", async () => {
