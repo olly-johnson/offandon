@@ -490,6 +490,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      competitor_accounts: {
+        Row: {
+          id: string;
+          user_id: string;
+          username: string;
+          display_name: string | null;
+          note: string | null;
+          added_at: string;
+          last_synced_at: string | null;
+          last_sync_error: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          username: string;
+          display_name?: string | null;
+          note?: string | null;
+          added_at?: string;
+          last_synced_at?: string | null;
+          last_sync_error?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          username?: string;
+          display_name?: string | null;
+          note?: string | null;
+          added_at?: string;
+          last_synced_at?: string | null;
+          last_sync_error?: string | null;
+        };
+        Relationships: [];
+      };
       instagram_connections: {
         Row: {
           user_id: string;

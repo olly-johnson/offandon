@@ -109,6 +109,17 @@ Weekly cadence that keeps the Voice DNA "fresh." Friday 09:00 Bali (UTC+8) the c
 | BO-059 | Inngest crons: `weekly-checkin-send` (cron `0 1 * * 5` = Fri 09:00 Bali) blasts the full cohort; `weekly-checkin-reminder` (cron `0 1 * * 6`) blasts only users without a `weekly_checkins` row for the current `week_start`. Apps Script template at `examples/google_form_webhook.gs`. | claude | In Progress | feature/weekly-checkin |
 | BO-060 | Webhook + voice refresh: `/api/weekly-checkin/webhook` verifies HMAC-SHA256 against `WEEKLY_CHECKIN_WEBHOOK_SECRET`, resolves user by email, persists check-in idempotently (23505 → 200), emits `voice/dna.refresh.requested`. Handler folds weeklies into `what_works` + `where_stuck` and rewrites the active `voice_dna` via a service-role replace (RPC's SECURITY INVOKER can't be reached from Inngest). | claude | In Progress | feature/weekly-checkin |
 
+## Phase 7. Research (competitor tracking + hook bank)
+
+Per-user "track up to 5 IG accounts" research surface. The user pins competitors on `/research`; a future scraper pulls their videos, transcribes them, runs structural analysis, and folds winning hooks/formats/topics back into `user_methodology` so chat and scripts pick them up. BO-061 is the foundation (table + UI + add/remove); the scraper, analysis, and methodology feedback land in BO-062..BO-064.
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-061 | Foundation: `competitor_accounts` table + RLS + grants + `delete_user_data` update. Engine `src/engines/competitor/*` with `addCompetitor`/`listCompetitors`/`removeCompetitor`, 5-account cap, handle normalisation + validation. `/research` page replaces the ComingSoon stub: tracked-accounts list, add-handle form, remove button. Sidebar unlocked. Vitest covers the persistence. | claude | In Progress | feature/research-competitors |
+| BO-062 | Scraping integration. Decide third-party scraper (Apify / RapidAPI Instagram / business_discovery), wire `ICompetitorScraper`, add `competitor_media` table + Inngest fan-out per tracked account. Persists video file URLs + caption + engagement for downstream analysis. | - | Todo | - |
+| BO-063 | Per-video analysis. Reuse `MediaAnalyzer` + Deepgram pipeline against `competitor_media`; persist to `competitor_media_analysis` with hook / structure / pillar / format fields. Promotes winners (top performance label) into a per-user hook bank. | - | Todo | - |
+| BO-064 | Methodology feedback. Surface a "promote to methodology" action on each winning hook/format; persists the rule into `user_methodology` so chat + script prompts pick it up automatically. UI for the hook bank lives on `/research`. | - | Todo | - |
+
 ## Conventions
 
 - `Owner` is the agent name (e.g. `claude`) or a human name. Empty = unclaimed.
