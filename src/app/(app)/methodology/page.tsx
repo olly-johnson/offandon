@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { Topbar } from "@/components/app-shell/topbar";
-import { isAdmin } from "@/engines/admin/auth";
 import { getUserMethodology } from "@/engines/methodology/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
@@ -20,12 +19,6 @@ export default async function MethodologyPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
-  // Methodology is an operator-tuning surface (per-user evergreen
-  // principles that the operator writes). Hidden from clients until
-  // we've had time to gather feedback on whether they want it.
-  // Sidebar nav hides the link for non-admins; this is defense-in-depth
-  // for direct URL access.
-  if (!isAdmin(user)) redirect("/dashboard");
 
   const content = await getUserMethodology(supabase, user.id);
 
