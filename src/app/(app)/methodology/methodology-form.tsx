@@ -5,19 +5,16 @@ import { Check, Loader2 } from "lucide-react";
 
 import { saveMethodologyAction, type SaveMethodologyState } from "./actions";
 
-interface MethodologyFormProps {
-  initialContent: string;
-}
-
 const MAX_OVERLAY_CHARS = 8000;
 
-export function MethodologyForm({ initialContent }: MethodologyFormProps) {
-  // After a successful save the server revalidates and re-renders the page,
-  // so initialContent reflects the freshly-persisted value. Tracking the
-  // user's "last saved snapshot" locally lets us show a quiet "Saved" badge
-  // until they start editing again, without needing a timer effect.
-  const [lastSaved, setLastSaved] = useState(initialContent);
-  const [content, setContent] = useState(initialContent);
+export function MethodologyForm() {
+  // Textarea starts empty: clients do not see their existing rules. What
+  // they type here is appended to their stored overlay on save and stays
+  // visible in the box so they can see what was just submitted. The dirty
+  // check on the Save button prevents an accidental double-submit creating
+  // a duplicate.
+  const [lastSaved, setLastSaved] = useState("");
+  const [content, setContent] = useState("");
   const [state, formAction, pending] = useActionState<
     SaveMethodologyState,
     FormData
@@ -28,7 +25,8 @@ export function MethodologyForm({ initialContent }: MethodologyFormProps) {
   }, {});
 
   const overLimit = content.length > MAX_OVERLAY_CHARS;
-  const dirty = content !== initialContent;
+  const dirty = content !== lastSaved;
+  const trimmed = content.trim();
   const showSaved = !pending && state.saved === true && content === lastSaved;
 
   return (
@@ -64,7 +62,7 @@ export function MethodologyForm({ initialContent }: MethodologyFormProps) {
           ) : null}
           <button
             type="submit"
-            disabled={pending || overLimit || !dirty}
+            disabled={pending || overLimit || !dirty || trimmed.length === 0}
             className="gold-btn flex items-center gap-2 px-5 py-2 text-xs disabled:opacity-50"
           >
             {pending ? (

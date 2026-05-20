@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { Topbar } from "@/components/app-shell/topbar";
-import { isAdmin } from "@/engines/admin/auth";
-import { getUserMethodology } from "@/engines/methodology/persistence";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
@@ -20,19 +18,8 @@ export default async function MethodologyPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
-  // Methodology is an operator-tuning surface (per-user evergreen
-  // principles that the operator writes). Hidden from clients until
-  // we've had time to gather feedback on whether they want it.
-  // Sidebar nav hides the link for non-admins; this is defense-in-depth
-  // for direct URL access.
-  if (!isAdmin(user)) redirect("/dashboard");
 
-  const content = await getUserMethodology(supabase, user.id);
-
-  log.debug("methodology page rendered", {
-    user_id: user.id,
-    char_count: (content ?? "").length,
-  });
+  log.debug("methodology page rendered", { user_id: user.id });
 
   return (
     <>
@@ -55,9 +42,9 @@ export default async function MethodologyPage() {
             >
               Personal rules the assistant follows on top of the house
               methodology. Use this for word bans, preferred metaphors, hook
-              styles, or anything the house rules don&apos;t cover. Plain text,
-              one rule per line. Loaded into every chat, hook, and script
-              prompt.
+              styles, or anything the house rules don&apos;t cover. Plain
+              text, one rule per line. Each save adds to your existing rules
+              and loads into every chat, hook, and script prompt.
             </p>
           </header>
 
@@ -89,7 +76,7 @@ export default async function MethodologyPage() {
             </ul>
           </section>
 
-          <MethodologyForm initialContent={content ?? ""} />
+          <MethodologyForm />
         </div>
       </div>
     </>
