@@ -27,31 +27,50 @@ export function useCompetitorRealtime(userId: string): void {
     console.log("[research-realtime] effect run", { userId });
     if (!userId) return;
     const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(`competitor-accounts-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "competitor_accounts",
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
+
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    // The browser supabase client reads auth cookies for HTTP calls, but
+    // the realtime WebSocket needs the access token attached explicitly
+    // via realtime.setAuth(token) before subscribing — otherwise the WS
+    // connects as the `anon` role and RLS filters every event out
+    // before it reaches us.
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token ?? null;
+      // eslint-disable-next-line no-console
+      console.log("[research-realtime] session lookup", { hasToken: !!token });
+      if (token) supabase.realtime.setAuth(token);
+      if (cancelled) return;
+
+      channel = supabase
+        .channel(`competitor-accounts-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "competitor_accounts",
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            // eslint-disable-next-line no-console
+            console.log("[research-realtime] event received", payload);
+            router.refresh();
+          },
+        )
+        .subscribe((status, err) => {
           // eslint-disable-next-line no-console
-          console.log("[research-realtime] event received", payload);
-          router.refresh();
-        },
-      )
-      .subscribe((status, err) => {
-        // eslint-disable-next-line no-console
-        console.log("[research-realtime] subscribe status", { status, err });
-      });
+          console.log("[research-realtime] subscribe status", { status, err });
+        });
+    })();
 
     return () => {
       // eslint-disable-next-line no-console
       console.log("[research-realtime] cleanup");
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [userId, router]);
 }
