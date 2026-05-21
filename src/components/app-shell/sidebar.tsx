@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { LogOut, Settings } from "lucide-react";
 
 import { signout } from "@/app/(app)/dashboard/actions";
@@ -70,15 +71,14 @@ export function Sidebar({ email, displayName, isAdmin }: SidebarProps) {
               {isAdmin ? "Admin" : "Client"}
             </p>
           </div>
-          <button
-            type="button"
-            disabled
+          <Link
+            href="/settings"
             aria-label="Settings"
-            title="Settings (coming soon)"
+            title="Settings"
             className="oo-icon-btn"
           >
             <Settings className="size-3.5" />
-          </button>
+          </Link>
           <ThemeToggle />
           <form action={signout}>
             <button

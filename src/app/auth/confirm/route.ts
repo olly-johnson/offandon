@@ -24,12 +24,20 @@ const VALID_OTP_TYPES = new Set<EmailOtpType>([
  *   {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite
  *
  * /auth/callback is the sibling for the OAuth-style code-exchange flow.
+ *
+ * `next` defaults by token type: invite/signup land on set-password,
+ * recovery lands on reset-password. Callers can override via ?next=.
  */
+function defaultNextFor(type: EmailOtpType | null): string {
+  if (type === "recovery") return "/auth/reset-password";
+  return "/onboarding/set-password";
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const token_hash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type") as EmailOtpType | null;
-  const next = url.searchParams.get("next") ?? "/onboarding/set-password";
+  const next = url.searchParams.get("next") ?? defaultNextFor(type);
 
   if (!token_hash || !type || !VALID_OTP_TYPES.has(type)) {
     log.warn("confirm missing or invalid params", {
