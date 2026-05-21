@@ -19,7 +19,12 @@ import { createSupabaseBrowserClient } from "@/lib/shared/supabase/browser";
 export function useCompetitorRealtime(userId: string): void {
   const router = useRouter();
 
+  // eslint-disable-next-line no-console
+  console.log("[research-realtime] hook invoked", { userId });
+
   useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("[research-realtime] effect run", { userId });
     if (!userId) return;
     const supabase = createSupabaseBrowserClient();
     const channel = supabase
@@ -32,13 +37,20 @@ export function useCompetitorRealtime(userId: string): void {
           table: "competitor_accounts",
           filter: `user_id=eq.${userId}`,
         },
-        () => {
+        (payload) => {
+          // eslint-disable-next-line no-console
+          console.log("[research-realtime] event received", payload);
           router.refresh();
         },
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        // eslint-disable-next-line no-console
+        console.log("[research-realtime] subscribe status", { status, err });
+      });
 
     return () => {
+      // eslint-disable-next-line no-console
+      console.log("[research-realtime] cleanup");
       supabase.removeChannel(channel);
     };
   }, [userId, router]);
