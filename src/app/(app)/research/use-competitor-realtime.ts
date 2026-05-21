@@ -19,12 +19,7 @@ import { createSupabaseBrowserClient } from "@/lib/shared/supabase/browser";
 export function useCompetitorRealtime(userId: string): void {
   const router = useRouter();
 
-  // eslint-disable-next-line no-console
-  console.log("[research-realtime] hook invoked", { userId });
-
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log("[research-realtime] effect run", { userId });
     if (!userId) return;
     const supabase = createSupabaseBrowserClient();
 
@@ -32,15 +27,14 @@ export function useCompetitorRealtime(userId: string): void {
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     // The browser supabase client reads auth cookies for HTTP calls, but
-    // the realtime WebSocket needs the access token attached explicitly
-    // via realtime.setAuth(token) before subscribing — otherwise the WS
-    // connects as the `anon` role and RLS filters every event out
-    // before it reaches us.
+    // the realtime WebSocket connects as the anon role unless we attach
+    // the access token explicitly via realtime.setAuth(). Without that,
+    // RLS filters every event out (auth.uid() is null vs the row's
+    // user_id) and the channel reports SUBSCRIBED forever while nothing
+    // arrives. Fetch the session, attach the JWT, then open the channel.
     void (async () => {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token ?? null;
-      // eslint-disable-next-line no-console
-      console.log("[research-realtime] session lookup", { hasToken: !!token });
       if (token) supabase.realtime.setAuth(token);
       if (cancelled) return;
 
@@ -54,21 +48,14 @@ export function useCompetitorRealtime(userId: string): void {
             table: "competitor_accounts",
             filter: `user_id=eq.${userId}`,
           },
-          (payload) => {
-            // eslint-disable-next-line no-console
-            console.log("[research-realtime] event received", payload);
+          () => {
             router.refresh();
           },
         )
-        .subscribe((status, err) => {
-          // eslint-disable-next-line no-console
-          console.log("[research-realtime] subscribe status", { status, err });
-        });
+        .subscribe();
     })();
 
     return () => {
-      // eslint-disable-next-line no-console
-      console.log("[research-realtime] cleanup");
       cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
