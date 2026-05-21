@@ -115,10 +115,15 @@ export async function listCompetitors(
   return (data ?? []) as CompetitorRow[];
 }
 
+export interface AddCompetitorResult {
+  id: string;
+  username: string;
+}
+
 export async function addCompetitor(
   supabase: CompetitorSupabaseClient,
   args: { userId: string; rawHandle: string; now?: Date },
-): Promise<void> {
+): Promise<AddCompetitorResult> {
   const username = normaliseHandle(args.rawHandle);
   const existing = await listCompetitors(supabase, args.userId);
 
@@ -130,11 +135,20 @@ export async function addCompetitor(
   }
 
   const stamp = (args.now ?? new Date()).toISOString();
-  const { error } = await supabase.from("competitor_accounts").insert({
-    user_id: args.userId,
-    username,
-    added_at: stamp,
-  });
+  // sync_pending: true on insert so the row renders "Syncing..." in
+  // the UI immediately, before the caller kicks off the actual scrape
+  // event. The worker resets it on success / failure like any other
+  // sync.
+  const { data, error } = await supabase
+    .from("competitor_accounts")
+    .insert({
+      user_id: args.userId,
+      username,
+      added_at: stamp,
+      sync_pending: true,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     if (error.code === "23505") {
@@ -147,6 +161,10 @@ export async function addCompetitor(
     });
     throw new Error(`addCompetitor: ${error.message}`);
   }
+  if (!data?.id) {
+    throw new Error("addCompetitor: insert succeeded but returned no id");
+  }
+  return { id: data.id, username };
 }
 
 export async function removeCompetitor(

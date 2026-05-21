@@ -66,7 +66,9 @@ describe("listCompetitors", () => {
 describe("addCompetitor", () => {
   function buildSupabase(opts: {
     existing: Array<{ username: string }>;
-    insertResponse?: { error: { code: string; message: string } | null };
+    insertResponse?:
+      | { data: { id: string }; error: null }
+      | { data: null; error: { code: string; message: string } };
   }) {
     const orderForList = vi
       .fn()
@@ -74,9 +76,13 @@ describe("addCompetitor", () => {
     const eqForList = vi.fn().mockReturnValue({ order: orderForList });
     const selectForList = vi.fn().mockReturnValue({ eq: eqForList });
 
-    const insert = vi
+    const single = vi
       .fn()
-      .mockResolvedValue(opts.insertResponse ?? { error: null });
+      .mockResolvedValue(
+        opts.insertResponse ?? { data: { id: "new-id" }, error: null },
+      );
+    const selectAfterInsert = vi.fn().mockReturnValue({ single });
+    const insert = vi.fn().mockReturnValue({ select: selectAfterInsert });
 
     const from = vi.fn().mockImplementation((table: string) => {
       if (table !== "competitor_accounts") throw new Error("unexpected table");
@@ -88,17 +94,19 @@ describe("addCompetitor", () => {
     };
   }
 
-  it("inserts a normalised username + user_id when under the cap", async () => {
+  it("inserts a normalised username + user_id + sync_pending=true when under the cap", async () => {
     const { supabase, insert } = buildSupabase({ existing: [] });
-    await addCompetitor(supabase, {
+    const result = await addCompetitor(supabase, {
       userId: "user-1",
       rawHandle: "@OllyJ",
       now: NOW,
     });
+    expect(result).toEqual({ id: "new-id", username: "ollyj" });
     expect(insert).toHaveBeenCalledWith({
       user_id: "user-1",
       username: "ollyj",
       added_at: NOW.toISOString(),
+      sync_pending: true,
     });
   });
 
@@ -125,7 +133,10 @@ describe("addCompetitor", () => {
   it("translates a unique-violation race into DuplicateCompetitorError", async () => {
     const { supabase } = buildSupabase({
       existing: [],
-      insertResponse: { error: { code: "23505", message: "duplicate" } },
+      insertResponse: {
+        data: null,
+        error: { code: "23505", message: "duplicate" },
+      },
     });
     await expect(
       addCompetitor(supabase, { userId: "user-1", rawHandle: "ollyj" }),
@@ -135,7 +146,10 @@ describe("addCompetitor", () => {
   it("propagates other insert errors as Error", async () => {
     const { supabase } = buildSupabase({
       existing: [],
-      insertResponse: { error: { code: "42501", message: "rls" } },
+      insertResponse: {
+        data: null,
+        error: { code: "42501", message: "rls" },
+      },
     });
     await expect(
       addCompetitor(supabase, { userId: "user-1", rawHandle: "ollyj" }),

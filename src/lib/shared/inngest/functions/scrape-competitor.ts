@@ -207,11 +207,9 @@ export const competitorScrapeCompleted = inngest.createFunction(
     //
     // Apify returns most-recent-first; sort defensively in case that
     // ever changes upstream. Reels without a media_url get skipped
-    // (no audio to feed Deepgram) and the analyzer itself short-
-    // circuits when an analysis row already exists, so re-syncs are
-    // cheap.
+    // (no audio to feed Deepgram).
     const AUTO_ANALYZE_LATEST = 5;
-    const analyzeCandidates = reels
+    const latestTopN = reels
       .filter((r) => r.media_url != null)
       .slice()
       .sort((a, b) => {
@@ -220,6 +218,35 @@ export const competitorScrapeCompleted = inngest.createFunction(
         return tb - ta;
       })
       .slice(0, AUTO_ANALYZE_LATEST);
+
+    // Skip reels that already have an analysis row — the analyzer
+    // short-circuits on those internally, but checking here avoids
+    // burning Inngest invocations on the no-ops. The common path on a
+    // nightly cron is "5 reels, 4 are already analysed, only 1 new" —
+    // pre-filtering keeps that down to 1 event instead of 5.
+    const analyzeCandidates = await step.run(
+      "filter-uncached-analysis-candidates",
+      async () => {
+        if (latestTopN.length === 0) return [];
+        const ids = latestTopN.map((r) => r.id);
+        const { data: existing, error } = await supabase
+          .from("competitor_media_analysis")
+          .select("media_id")
+          .in("media_id", ids);
+        if (error) {
+          // Best-effort: if the cache check fails, fall back to
+          // emitting all 5 — the worker will short-circuit cached
+          // ones itself.
+          log.warn("filter-uncached-analysis-candidates failed", {
+            message: error.message,
+          });
+          return latestTopN;
+        }
+        const cached = new Set((existing ?? []).map((r) => r.media_id));
+        return latestTopN.filter((r) => !cached.has(r.id));
+      },
+    );
+
     if (analyzeCandidates.length > 0) {
       await step.run("mark-analyze-pending", async () => {
         await markCompetitorMediaAnalysisPending(supabase, {

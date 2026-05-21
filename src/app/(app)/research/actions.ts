@@ -34,8 +34,9 @@ export async function addCompetitorAction(
 
   const raw = (form.get("handle") ?? "").toString();
 
+  let added;
   try {
-    await addCompetitor(supabase, { userId: user.id, rawHandle: raw });
+    added = await addCompetitor(supabase, { userId: user.id, rawHandle: raw });
   } catch (err) {
     if (
       err instanceof InvalidCompetitorHandleError ||
@@ -51,7 +52,28 @@ export async function addCompetitorAction(
     return { error: "Could not add competitor. Try again." };
   }
 
-  log.info("competitor added", { user_id: user.id });
+  // Kick off the initial scrape inline so the user sees the latest 5
+  // reels analyse without an extra click. addCompetitor already set
+  // sync_pending=true so the row renders "Syncing..." immediately.
+  try {
+    await inngest.send({
+      name: INNGEST_EVENTS.CompetitorScrapeRequested,
+      data: { competitor_id: added.id, user_id: user.id },
+    });
+    log.info("competitor added + initial sync queued", {
+      user_id: user.id,
+      competitor_id: added.id,
+    });
+  } catch (err) {
+    log.error("addCompetitorAction: initial sync emit failed", {
+      user_id: user.id,
+      competitor_id: added.id,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    // Non-fatal: the row exists and the user can click the refresh
+    // icon to retry. Don't bounce them back to a failed-add error.
+  }
+
   revalidatePath("/research");
   return { ok: true };
 }
