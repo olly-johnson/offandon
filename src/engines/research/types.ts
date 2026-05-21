@@ -8,20 +8,16 @@
  * table directly, so the analysis output is for human consumption.
  */
 
-export type PerformanceLabel =
-  | "top"
-  | "above_median"
-  | "median"
-  | "below_median"
-  | "bottom";
+/**
+ * 0-10 integer where 10 = top of this library's engagement
+ * distribution and 0 = bottom. Replaces the legacy bucket
+ * PerformanceLabel ("top"/"above_median"/...); same library-relative
+ * semantic, finer grain, renders cleaner as a badge.
+ */
+export type PerformanceScore = number;
 
-export const PERFORMANCE_LABELS: PerformanceLabel[] = [
-  "top",
-  "above_median",
-  "median",
-  "below_median",
-  "bottom",
-];
+export const PERFORMANCE_SCORE_MIN = 0;
+export const PERFORMANCE_SCORE_MAX = 10;
 
 /**
  * Aggregate library stats. Computed at analysis time from the user's
@@ -51,7 +47,7 @@ export interface MediaAnalysis {
   hook: string | null;
   structure: string | null;
   pillar_match: string | null;
-  performance_label: PerformanceLabel | null;
+  performance_score: PerformanceScore | null;
   what_worked: string | null;
   what_to_repeat: string | null;
 }

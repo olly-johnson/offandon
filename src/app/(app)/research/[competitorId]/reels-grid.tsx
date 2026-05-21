@@ -25,13 +25,12 @@ interface ReelsGridProps {
   analyses: Record<string, MediaAnalysis>;
 }
 
-const PERF_BADGE_STYLE: Record<string, { label: string; color: string }> = {
-  top: { label: "Top", color: "var(--oo-tof)" },
-  above_median: { label: "Above median", color: "var(--oo-tof)" },
-  median: { label: "Median", color: "var(--oo-text-dim)" },
-  below_median: { label: "Below median", color: "var(--oo-bof)" },
-  bottom: { label: "Bottom", color: "var(--oo-bof)" },
-};
+function performanceBadgeColor(score: number): string {
+  if (score >= 8) return "var(--oo-tof)";
+  if (score >= 6) return "var(--oo-tof)";
+  if (score >= 4) return "var(--oo-text-dim)";
+  return "var(--oo-bof)";
+}
 
 export function ReelsGrid({ userId, reels, analyses }: ReelsGridProps) {
   // Two subscriptions: one for new analyses landing (INSERT on
@@ -217,20 +216,19 @@ function AnalyzeButton({ mediaId, label }: { mediaId: string; label: string }) {
 }
 
 function AnalysisFields({ analysis }: { analysis: MediaAnalysis }) {
-
-  const perf = analysis.performance_label
-    ? PERF_BADGE_STYLE[analysis.performance_label] ?? null
-    : null;
+  const score = analysis.performance_score;
+  const color = score !== null ? performanceBadgeColor(score) : null;
 
   return (
     <div className="flex flex-col gap-2 rounded-lg p-2 text-[11px]" style={{ background: "var(--oo-bg-hover)" }}>
-      {perf ? (
+      {score !== null && color ? (
         <div className="flex items-center gap-2">
           <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-            style={{ color: perf.color, border: `1px solid ${perf.color}` }}
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums"
+            style={{ color, border: `1px solid ${color}` }}
+            title="Library-relative engagement score (0-10)"
           >
-            {perf.label}
+            {score}/10
           </span>
           {analysis.pillar_match ? (
             <span

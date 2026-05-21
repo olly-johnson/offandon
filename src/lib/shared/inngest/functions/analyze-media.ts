@@ -189,7 +189,7 @@ export const analyzeMedia = inngest.createFunction(
       log.info("analysis saved", {
         media_id,
         user_id,
-        performance_label: analysis.performance_label,
+        performance_score: analysis.performance_score,
         pillar_match: analysis.pillar_match,
       });
     });
@@ -197,7 +197,7 @@ export const analyzeMedia = inngest.createFunction(
     return {
       media_id,
       user_id,
-      performance_label: analysis.performance_label,
+      performance_score: analysis.performance_score,
     };
   },
 );

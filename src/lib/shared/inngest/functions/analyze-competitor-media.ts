@@ -212,7 +212,7 @@ export const analyzeCompetitorMedia = inngest.createFunction(
         media_id,
         competitor_id,
         user_id,
-        performance_label: analysis.performance_label,
+        performance_score: analysis.performance_score,
         pillar_match: analysis.pillar_match,
       });
     });
@@ -221,7 +221,7 @@ export const analyzeCompetitorMedia = inngest.createFunction(
       media_id,
       competitor_id,
       user_id,
-      performance_label: analysis.performance_label,
+      performance_score: analysis.performance_score,
     };
 
     } catch (err) {

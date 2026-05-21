@@ -40,7 +40,7 @@ export async function saveAnalysis(
       hook: args.analysis.hook,
       structure: args.analysis.structure,
       pillar_match: args.analysis.pillar_match,
-      performance_label: args.analysis.performance_label,
+      performance_score: args.analysis.performance_score,
       what_worked: args.analysis.what_worked,
       what_to_repeat: args.analysis.what_to_repeat,
       llm_model: args.llmModel,
@@ -70,7 +70,7 @@ export async function getAnalysisForMedia(
   const { data, error } = await supabase
     .from("instagram_media_analysis")
     .select(
-      "transcript, hook, structure, pillar_match, performance_label, what_worked, what_to_repeat",
+      "transcript, hook, structure, pillar_match, performance_score, what_worked, what_to_repeat",
     )
     .eq("media_id", mediaId)
     .maybeSingle();
@@ -91,7 +91,7 @@ export async function getAnalysesForMediaIds(
   const { data, error } = await supabase
     .from("instagram_media_analysis")
     .select(
-      "media_id, transcript, hook, structure, pillar_match, performance_label, what_worked, what_to_repeat",
+      "media_id, transcript, hook, structure, pillar_match, performance_score, what_worked, what_to_repeat",
     )
     .in("media_id", mediaIds);
   if (error) throw new Error(`getAnalysesForMediaIds: ${error.message}`);

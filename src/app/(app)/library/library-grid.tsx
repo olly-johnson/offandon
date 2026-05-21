@@ -378,8 +378,8 @@ function AnalysisSection({
   return (
     <div className="mt-2 border-t pt-2" style={{ borderColor: "var(--oo-border)" }}>
       <div className="flex flex-col gap-1.5">
-        {analysis.performance_label ? (
-          <PerformanceBadge label={analysis.performance_label} />
+        {analysis.performance_score !== null ? (
+          <PerformanceBadge score={analysis.performance_score} />
         ) : null}
         {analysis.hook ? (
           <p
@@ -442,28 +442,34 @@ function AnalysisSection({
   );
 }
 
-function PerformanceBadge({
-  label,
-}: {
-  label: MediaAnalysis["performance_label"];
-}) {
-  if (!label) return null;
-  const map: Record<NonNullable<MediaAnalysis["performance_label"]>, { text: string; bg: string; fg: string }> = {
-    top: { text: "Top performer", bg: "rgba(22,163,74,0.12)", fg: "var(--oo-tof)" },
-    above_median: { text: "Above median", bg: "rgba(22,163,74,0.06)", fg: "var(--oo-tof)" },
-    median: { text: "Median", bg: "var(--oo-bg-elevated)", fg: "var(--oo-text-secondary)" },
-    below_median: { text: "Below median", bg: "rgba(192,57,43,0.06)", fg: "var(--oo-bof)" },
-    bottom: { text: "Bottom", bg: "rgba(192,57,43,0.12)", fg: "var(--oo-bof)" },
-  };
-  const s = map[label];
+function PerformanceBadge({ score }: { score: number | null }) {
+  if (score === null) return null;
+  const style = performanceBadgeStyle(score);
   return (
     <span
-      className="inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
-      style={{ background: s.bg, color: s.fg }}
+      className="inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums"
+      style={{ background: style.bg, color: style.fg }}
+      title="Library-relative engagement score (0-10)"
     >
-      {s.text}
+      {score}/10
     </span>
   );
+}
+
+function performanceBadgeStyle(score: number): { bg: string; fg: string } {
+  if (score >= 8) {
+    return { bg: "rgba(22,163,74,0.12)", fg: "var(--oo-tof)" };
+  }
+  if (score >= 6) {
+    return { bg: "rgba(22,163,74,0.06)", fg: "var(--oo-tof)" };
+  }
+  if (score >= 4) {
+    return { bg: "var(--oo-bg-elevated)", fg: "var(--oo-text-secondary)" };
+  }
+  if (score >= 2) {
+    return { bg: "rgba(192,57,43,0.06)", fg: "var(--oo-bof)" };
+  }
+  return { bg: "rgba(192,57,43,0.12)", fg: "var(--oo-bof)" };
 }
 
 function Stat({

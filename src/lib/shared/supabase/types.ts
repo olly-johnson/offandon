@@ -503,6 +503,7 @@ export type Database = {
           structure: string | null;
           pillar_match: string | null;
           performance_label: string | null;
+          performance_score: number | null;
           what_worked: string | null;
           what_to_repeat: string | null;
           llm_model: string;
@@ -518,6 +519,7 @@ export type Database = {
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
+          performance_score?: number | null;
           what_worked?: string | null;
           what_to_repeat?: string | null;
           llm_model: string;
@@ -533,6 +535,7 @@ export type Database = {
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
+          performance_score?: number | null;
           what_worked?: string | null;
           what_to_repeat?: string | null;
           llm_model?: string;
@@ -742,6 +745,7 @@ export type Database = {
           structure: string | null;
           pillar_match: string | null;
           performance_label: string | null;
+          performance_score: number | null;
           what_worked: string | null;
           what_to_repeat: string | null;
           llm_model: string;
@@ -756,6 +760,7 @@ export type Database = {
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
+          performance_score?: number | null;
           what_worked?: string | null;
           what_to_repeat?: string | null;
           llm_model: string;
@@ -770,6 +775,7 @@ export type Database = {
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
+          performance_score?: number | null;
           what_worked?: string | null;
           what_to_repeat?: string | null;
           llm_model?: string;

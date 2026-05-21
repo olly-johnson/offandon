@@ -331,7 +331,7 @@ export async function saveAnalysisAsReference(
         hook: analysis.hook,
         structure: analysis.structure,
         pillar_match: analysis.pillar_match,
-        performance_label: analysis.performance_label,
+        performance_score: analysis.performance_score,
       },
       source_file: `instagram:${mediaId}`,
     },

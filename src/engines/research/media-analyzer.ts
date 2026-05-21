@@ -7,16 +7,14 @@ import {
   RESEARCH_ANALYSIS_SYSTEM_PROMPT,
 } from "./system-prompt";
 import {
-  PERFORMANCE_LABELS,
+  PERFORMANCE_SCORE_MAX,
+  PERFORMANCE_SCORE_MIN,
   type LibraryStats,
   type MediaAnalysis,
   type MediaAnalysisInput,
-  type PerformanceLabel,
 } from "./types";
 
 const log = createLogger("research.analyzer");
-
-const PERF_SET = new Set<PerformanceLabel>(PERFORMANCE_LABELS);
 
 export interface MediaAnalyzerOptions {
   llm: ILLMClient;
@@ -77,20 +75,33 @@ export function parseAnalysisJson(raw: string): ParsedAnalysis {
   }
   const obj = value as Record<string, unknown>;
 
-  const performance =
-    typeof obj.performance_label === "string" &&
-    PERF_SET.has(obj.performance_label as PerformanceLabel)
-      ? (obj.performance_label as PerformanceLabel)
-      : null;
-
   return {
     hook: stringOrNull(obj.hook),
     structure: stringOrNull(obj.structure),
     pillar_match: stringOrNull(obj.pillar_match),
-    performance_label: performance,
+    performance_score: scoreOrNull(obj.performance_score),
     what_worked: stringOrNull(obj.what_worked),
     what_to_repeat: stringOrNull(obj.what_to_repeat),
   };
+}
+
+function scoreOrNull(v: unknown): number | null {
+  // Accept int or numeric string (Sonnet sometimes returns quoted
+  // numbers despite the schema), clamp into 0-10, refuse anything
+  // outside that range or non-finite.
+  let n: number | null = null;
+  if (typeof v === "number" && Number.isFinite(v)) {
+    n = v;
+  } else if (typeof v === "string" && v.trim() !== "") {
+    const parsed = Number.parseFloat(v);
+    if (Number.isFinite(parsed)) n = parsed;
+  }
+  if (n === null) return null;
+  const rounded = Math.round(n);
+  if (rounded < PERFORMANCE_SCORE_MIN || rounded > PERFORMANCE_SCORE_MAX) {
+    return null;
+  }
+  return rounded;
 }
 
 function stringOrNull(v: unknown): string | null {

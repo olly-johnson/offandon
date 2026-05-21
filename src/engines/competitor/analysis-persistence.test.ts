@@ -13,7 +13,7 @@ const ANALYSIS: MediaAnalysis = {
   hook: "Three things I learned",
   structure: "List of three",
   pillar_match: "Operator Frameworks",
-  performance_label: "top",
+  performance_score: 9,
   what_worked: "Curiosity gap",
   what_to_repeat: "Number-led hook",
 };
@@ -48,7 +48,7 @@ describe("saveCompetitorAnalysis", () => {
       hook: "Three things I learned",
       structure: "List of three",
       pillar_match: "Operator Frameworks",
-      performance_label: "top",
+      performance_score: 9,
       what_worked: "Curiosity gap",
       what_to_repeat: "Number-led hook",
       llm_model: "claude-sonnet-4-6",

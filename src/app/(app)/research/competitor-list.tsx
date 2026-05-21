@@ -329,7 +329,12 @@ function ReelThumb({
         }}
       >
         {state === "analyzed" ? (
-          <span>{performanceShort(analysis?.performance_label)}</span>
+          <span className="tabular-nums">
+            {analysis?.performance_score !== null &&
+            analysis?.performance_score !== undefined
+              ? `${analysis.performance_score}/10`
+              : "Analysed"}
+          </span>
         ) : state === "pending" ? (
           <>
             <Loader2 className="oo-spin size-2.5" />
@@ -346,23 +351,6 @@ function ReelThumb({
       </div>
     </div>
   );
-}
-
-function performanceShort(label: string | null | undefined): string {
-  switch (label) {
-    case "top":
-      return "Top";
-    case "above_median":
-      return "Above";
-    case "median":
-      return "Median";
-    case "below_median":
-      return "Below";
-    case "bottom":
-      return "Bottom";
-    default:
-      return "Analysed";
-  }
 }
 
 function EmptyState() {
