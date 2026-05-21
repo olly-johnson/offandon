@@ -199,6 +199,23 @@ describe("parseAnalysisJson", () => {
     expect(out.performance_score).toBeNull();
   });
 
+  it("strips em-dashes from string fields via the ingestion sanitiser", () => {
+    const withDashes = JSON.stringify({
+      hook: "Three things — really three — broke me.",
+      structure: "Drug PSA framework — hostile aside up front.",
+      pillar_match: "Identity",
+      performance_score: 7,
+      what_worked: "Hook fronts a number — then the hostile aside.",
+      what_to_repeat: "Open with a numbered list, then add the aside.",
+    });
+    const out = parseAnalysisJson(withDashes);
+    expect(out.hook).toBe("Three things, really three, broke me.");
+    expect(out.structure).toBe("Drug PSA framework, hostile aside up front.");
+    expect(out.what_worked).toBe(
+      "Hook fronts a number, then the hostile aside.",
+    );
+  });
+
   it("throws when input is not parseable as JSON at all", () => {
     expect(() => parseAnalysisJson("Sorry I cannot help.")).toThrow(/parse/i);
   });

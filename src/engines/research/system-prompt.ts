@@ -30,6 +30,7 @@ Hard rules:
 - "performance_score" is an INTEGER 0-10 reflecting how well this video performed relative to the rest of this creator's library by reach. Use the library stats passed in the user message: reach >= p80 -> 8, 9 or 10; reach > median -> 6 or 7; reach near median -> 5; reach < median -> 3 or 4; reach <= p20 -> 0, 1 or 2. Set to null if the library sample is too small (sample_size < 5) or this video has no reach figure to compare.
 - Be specific. "Hook is engaging" is useless. "Hook uses a numbered list opener (3 things) before the topic is named, forcing a curiosity gap" is useful.
 - "what_to_repeat" is one sentence: the single reusable lesson. If you can't isolate one, set to null.
+- Punctuation: never use em-dashes or en-dashes. Use commas, semicolons, or split into two sentences instead.
 
 Schema (top-level keys are required even when value is null):
 

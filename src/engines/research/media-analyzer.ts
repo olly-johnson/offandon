@@ -1,3 +1,4 @@
+import { sanitizeString } from "@/engines/ingestion/sanitize";
 import { createLogger, timed } from "@/lib/shared/logger";
 import type { ILLMClient } from "@/engines/voice/voice";
 import type { VoiceDNA } from "@/engines/voice/types";
@@ -75,14 +76,25 @@ export function parseAnalysisJson(raw: string): ParsedAnalysis {
   }
   const obj = value as Record<string, unknown>;
 
+  // Sanitise every model-emitted string at the parse layer. Sonnet
+  // happily ships em-dashes in research prose despite our broader
+  // anti-em-dash policy; running the same sanitiser the ingestion
+  // pipeline uses (em-dash -> ", ", en-dash between words -> ", ")
+  // means analyses render clean in the UI without each consumer
+  // needing to remember to do it.
   return {
-    hook: stringOrNull(obj.hook),
-    structure: stringOrNull(obj.structure),
-    pillar_match: stringOrNull(obj.pillar_match),
+    hook: cleanOrNull(obj.hook),
+    structure: cleanOrNull(obj.structure),
+    pillar_match: cleanOrNull(obj.pillar_match),
     performance_score: scoreOrNull(obj.performance_score),
-    what_worked: stringOrNull(obj.what_worked),
-    what_to_repeat: stringOrNull(obj.what_to_repeat),
+    what_worked: cleanOrNull(obj.what_worked),
+    what_to_repeat: cleanOrNull(obj.what_to_repeat),
   };
+}
+
+function cleanOrNull(v: unknown): string | null {
+  const s = stringOrNull(v);
+  return s === null ? null : sanitizeString(s);
 }
 
 function scoreOrNull(v: unknown): number | null {
