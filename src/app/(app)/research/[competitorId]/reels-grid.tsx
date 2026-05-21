@@ -83,7 +83,6 @@ function ReelCard({
               fill
               sizes="96px"
               className="object-cover"
-              unoptimized
             />
           </div>
         ) : (
