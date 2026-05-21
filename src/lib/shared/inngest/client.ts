@@ -26,6 +26,7 @@ export const INNGEST_EVENTS = {
   VoiceDnaRefreshRequested: "voice/dna.refresh.requested",
   CompetitorScrapeRequested: "competitor/scrape.requested",
   CompetitorScrapeCompleted: "competitor/scrape.completed",
+  CompetitorMediaAnalyzeRequested: "competitor/media.analyze.requested",
 } as const;
 
 /**
@@ -87,4 +88,18 @@ export interface CompetitorScrapeCompletedData {
   dataset_id: string;
   succeeded: boolean;
   status: string;
+}
+
+/**
+ * Payload shape for competitor/media.analyze.requested (BO-063). The
+ * worker loads the competitor_media row + voice_dna by (user_id,
+ * media_id), runs Deepgram + Sonnet, and writes one
+ * competitor_media_analysis row. Force=true bypasses the cached short-
+ * circuit; matches the analyze-media pattern from BO-043.
+ */
+export interface CompetitorMediaAnalyzeRequestedData {
+  user_id: string;
+  competitor_id: string;
+  media_id: string;
+  force?: boolean;
 }

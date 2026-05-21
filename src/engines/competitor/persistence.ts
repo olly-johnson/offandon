@@ -67,6 +67,31 @@ export function normaliseHandle(raw: string): string {
   return trimmed;
 }
 
+export async function getCompetitorForUser(
+  supabase: CompetitorSupabaseClient,
+  args: { userId: string; id: string },
+): Promise<CompetitorRow | null> {
+  const { data, error } = await supabase
+    .from("competitor_accounts")
+    .select(
+      "id, username, display_name, note, added_at, last_synced_at, last_sync_error, sync_pending",
+    )
+    .eq("id", args.id)
+    .eq("user_id", args.userId)
+    .maybeSingle();
+
+  if (error) {
+    log.error("competitor_accounts get failed", {
+      user_id: args.userId,
+      id: args.id,
+      code: error.code,
+      message: error.message,
+    });
+    throw new Error(`getCompetitorForUser: ${error.message}`);
+  }
+  return (data ?? null) as CompetitorRow | null;
+}
+
 export async function listCompetitors(
   supabase: CompetitorSupabaseClient,
   userId: string,

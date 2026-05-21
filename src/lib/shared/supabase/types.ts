@@ -407,6 +407,7 @@ export type Database = {
             | "hooks"
             | "single_script"
             | "media_analysis"
+            | "competitor_analysis"
             | "other";
           model: string;
           input_tokens: number;
@@ -428,6 +429,7 @@ export type Database = {
             | "hooks"
             | "single_script"
             | "media_analysis"
+            | "competitor_analysis"
             | "other";
           model: string;
           input_tokens?: number;
@@ -449,6 +451,7 @@ export type Database = {
             | "hooks"
             | "single_script"
             | "media_analysis"
+            | "competitor_analysis"
             | "other";
           model?: string;
           input_tokens?: number;
@@ -487,6 +490,54 @@ export type Database = {
           error?: string | null;
           created_at?: string;
           accepted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      competitor_media_analysis: {
+        Row: {
+          media_id: string;
+          competitor_id: string;
+          user_id: string;
+          transcript: string;
+          hook: string | null;
+          structure: string | null;
+          pillar_match: string | null;
+          performance_label: string | null;
+          what_worked: string | null;
+          what_to_repeat: string | null;
+          llm_model: string;
+          transcript_model: string;
+          analyzed_at: string;
+        };
+        Insert: {
+          media_id: string;
+          competitor_id: string;
+          user_id: string;
+          transcript: string;
+          hook?: string | null;
+          structure?: string | null;
+          pillar_match?: string | null;
+          performance_label?: string | null;
+          what_worked?: string | null;
+          what_to_repeat?: string | null;
+          llm_model: string;
+          transcript_model: string;
+          analyzed_at?: string;
+        };
+        Update: {
+          media_id?: string;
+          competitor_id?: string;
+          user_id?: string;
+          transcript?: string;
+          hook?: string | null;
+          structure?: string | null;
+          pillar_match?: string | null;
+          performance_label?: string | null;
+          what_worked?: string | null;
+          what_to_repeat?: string | null;
+          llm_model?: string;
+          transcript_model?: string;
+          analyzed_at?: string;
         };
         Relationships: [];
       };

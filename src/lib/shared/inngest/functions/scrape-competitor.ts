@@ -198,12 +198,39 @@ export const competitorScrapeCompleted = inngest.createFunction(
       });
     });
 
+    // Fan out per-reel analysis. We only ask for an analyze run on
+    // reels that have a media_url (no point feeding Deepgram a null)
+    // and the analyzer itself short-circuits when an analysis row
+    // already exists, so re-syncs are cheap. Each event is independent
+    // — Inngest's concurrency cap on analyzeCompetitorMedia rate-limits
+    // the actual Deepgram / Anthropic calls.
+    const analyzeCandidates = reels.filter((r) => r.media_url != null);
+    if (analyzeCandidates.length > 0) {
+      await step.run("emit-analyze-events", async () => {
+        await inngest.send(
+          analyzeCandidates.map((r) => ({
+            name: INNGEST_EVENTS.CompetitorMediaAnalyzeRequested,
+            data: {
+              user_id,
+              competitor_id,
+              media_id: r.id,
+            },
+          })),
+        );
+      });
+    }
+
     log.info("apify scrape ingested", {
       competitor_id,
       user_id,
       actor_run_id,
       reel_count: reels.length,
+      analyze_queued: analyzeCandidates.length,
     });
-    return { succeeded: true, count: reels.length };
+    return {
+      succeeded: true,
+      count: reels.length,
+      analyze_queued: analyzeCandidates.length,
+    };
   },
 );

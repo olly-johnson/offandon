@@ -1,6 +1,7 @@
 import { serve } from "inngest/next";
 
 import { inngest } from "@/lib/shared/inngest/client";
+import { analyzeCompetitorMedia } from "@/lib/shared/inngest/functions/analyze-competitor-media";
 import { analyzeMedia } from "@/lib/shared/inngest/functions/analyze-media";
 import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts";
 import { refreshVoiceDna } from "@/lib/shared/inngest/functions/refresh-voice-dna";
@@ -31,5 +32,6 @@ export const { GET, POST, PUT } = serve({
     refreshVoiceDna,
     competitorScrapeRequested,
     competitorScrapeCompleted,
+    analyzeCompetitorMedia,
   ],
 });

@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
 
 import {
   addCompetitorAction,
@@ -148,16 +149,26 @@ function CompetitorRowItem({ row }: { row: CompetitorRow }) {
         border: "1px solid var(--oo-border-subtle)",
       }}
     >
-      <div className="flex flex-col">
-        <a
-          href={`https://instagram.com/${row.username}`}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="text-sm font-semibold hover:underline"
-          style={{ color: "var(--oo-text-primary)" }}
-        >
-          @{row.username}
-        </a>
+      <div className="flex min-w-0 flex-col">
+        <div className="flex items-center gap-1.5">
+          <Link
+            href={`/research/${row.id}`}
+            className="text-sm font-semibold hover:underline"
+            style={{ color: "var(--oo-text-primary)" }}
+          >
+            @{row.username}
+          </Link>
+          <a
+            href={`https://instagram.com/${row.username}`}
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-label={`Open @${row.username} on Instagram`}
+            className="opacity-50 hover:opacity-100"
+            style={{ color: "var(--oo-text-dim)" }}
+          >
+            <ExternalLink className="size-3" />
+          </a>
+        </div>
         <SyncBadge
           syncPending={row.sync_pending}
           lastSyncedAt={row.last_synced_at}

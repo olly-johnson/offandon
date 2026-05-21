@@ -22,6 +22,7 @@ export type ApiUsageSurface =
   | "hooks"
   | "single_script"
   | "media_analysis"
+  | "competitor_analysis"
   | "other";
 
 export interface ApiUsageRow {

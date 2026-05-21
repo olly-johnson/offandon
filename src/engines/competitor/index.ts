@@ -3,6 +3,7 @@ export {
   COMPETITOR_LIMIT_PER_USER,
   CompetitorLimitError,
   DuplicateCompetitorError,
+  getCompetitorForUser,
   InvalidCompetitorHandleError,
   listCompetitors,
   normaliseHandle,
@@ -19,6 +20,16 @@ export {
   upsertCompetitorMedia,
 } from "./media-persistence";
 export type { CompetitorMediaRow } from "./media-persistence";
+
+export {
+  getAnalysesForCompetitorMediaIds,
+  getAnalysisForCompetitorMedia,
+  saveCompetitorAnalysis,
+} from "./analysis-persistence";
+export type {
+  CompetitorAnalysisSupabaseClient,
+  SaveCompetitorAnalysisArgs,
+} from "./analysis-persistence";
 
 export {
   ApifyConfigError,
