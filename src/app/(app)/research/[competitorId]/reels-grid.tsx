@@ -2,16 +2,20 @@
 
 import Image from "next/image";
 import {
+  AlertTriangle,
   ExternalLink,
   Heart,
   Loader2,
   MessageCircle,
   Play,
+  Sparkles,
 } from "lucide-react";
 
 import type { CompetitorMediaRow } from "@/engines/competitor";
 import type { MediaAnalysis } from "@/engines/research";
 
+import { analyzeCompetitorMediaAction } from "../actions";
+import { useCompetitorMediaRealtime } from "../use-competitor-media-realtime";
 import { useCompetitorAnalysisRealtime } from "./use-competitor-analysis-realtime";
 
 interface ReelsGridProps {
@@ -30,7 +34,11 @@ const PERF_BADGE_STYLE: Record<string, { label: string; color: string }> = {
 };
 
 export function ReelsGrid({ userId, reels, analyses }: ReelsGridProps) {
+  // Two subscriptions: one for new analyses landing (INSERT on
+  // competitor_media_analysis), one for analysis_pending /
+  // analysis_failed_reason flipping on competitor_media itself.
   useCompetitorAnalysisRealtime(userId);
+  useCompetitorMediaRealtime(userId);
 
   if (reels.length === 0) {
     return (
@@ -132,23 +140,83 @@ function ReelCard({
         </div>
       </div>
 
-      <AnalysisPanel analysis={analysis} />
+      <ReelCardAnalysisPanel reel={reel} analysis={analysis} />
     </article>
   );
 }
 
-function AnalysisPanel({ analysis }: { analysis: MediaAnalysis | null }) {
-  if (!analysis) {
+function ReelCardAnalysisPanel({
+  reel,
+  analysis,
+}: {
+  reel: CompetitorMediaRow;
+  analysis: MediaAnalysis | null;
+}) {
+  if (analysis) return <AnalysisFields analysis={analysis} />;
+
+  if (reel.analysis_pending) {
     return (
       <div
         className="flex items-center gap-2 rounded-lg p-2 text-[11px]"
         style={{ background: "var(--oo-bg-hover)", color: "var(--oo-text-dim)" }}
       >
         <Loader2 className="oo-spin size-3" />
-        Analyzing...
+        Analysing...
       </div>
     );
   }
+
+  if (reel.analysis_failed_reason) {
+    return (
+      <div
+        className="flex items-center justify-between gap-2 rounded-lg p-2 text-[11px]"
+        style={{
+          background: "var(--oo-bg-hover)",
+          color: "var(--oo-bof)",
+          border: "1px solid rgba(192,57,43,0.25)",
+        }}
+      >
+        <span
+          className="flex min-w-0 items-center gap-1.5"
+          title={reel.analysis_failed_reason}
+        >
+          <AlertTriangle className="size-3 shrink-0" />
+          <span className="truncate">
+            Failed: {reel.analysis_failed_reason}
+          </span>
+        </span>
+        <AnalyzeButton mediaId={reel.id} label="Retry" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex items-center justify-between gap-2 rounded-lg p-2 text-[11px]"
+      style={{ background: "var(--oo-bg-hover)", color: "var(--oo-text-dim)" }}
+    >
+      <span>Not analysed yet</span>
+      <AnalyzeButton mediaId={reel.id} label="Analyse" />
+    </div>
+  );
+}
+
+function AnalyzeButton({ mediaId, label }: { mediaId: string; label: string }) {
+  return (
+    <form action={analyzeCompetitorMediaAction}>
+      <input type="hidden" name="media_id" value={mediaId} />
+      <button
+        type="submit"
+        className="gold-btn-outline flex items-center gap-1 rounded-md px-2 py-1 text-[10px]"
+      >
+        <Sparkles className="size-3" />
+        {label}
+      </button>
+    </form>
+  );
+}
+
+function AnalysisFields({ analysis }: { analysis: MediaAnalysis }) {
 
   const perf = analysis.performance_label
     ? PERF_BADGE_STYLE[analysis.performance_label] ?? null

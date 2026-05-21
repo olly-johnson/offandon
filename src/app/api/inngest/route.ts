@@ -8,6 +8,7 @@ import { refreshVoiceDna } from "@/lib/shared/inngest/functions/refresh-voice-dn
 import {
   competitorScrapeCompleted,
   competitorScrapeRequested,
+  syncAllCompetitorsNightly,
 } from "@/lib/shared/inngest/functions/scrape-competitor";
 import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
 import { weeklyCheckinReminder } from "@/lib/shared/inngest/functions/weekly-checkin-reminder";
@@ -32,6 +33,7 @@ export const { GET, POST, PUT } = serve({
     refreshVoiceDna,
     competitorScrapeRequested,
     competitorScrapeCompleted,
+    syncAllCompetitorsNightly,
     analyzeCompetitorMedia,
   ],
 });

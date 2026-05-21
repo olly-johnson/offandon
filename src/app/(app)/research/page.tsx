@@ -1,14 +1,20 @@
 import { redirect } from "next/navigation";
 
 import { Topbar } from "@/components/app-shell/topbar";
+import type { MediaAnalysis } from "@/engines/research";
 import {
   COMPETITOR_LIMIT_PER_USER,
+  getAnalysesForCompetitorMediaIds,
   listCompetitors,
+  listMediaForCompetitor,
+  type CompetitorMediaRow,
 } from "@/engines/competitor";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
 import { CompetitorList } from "./competitor-list";
+
+const PREVIEW_REELS_PER_COMPETITOR = 5;
 
 const log = createLogger("page.research");
 
@@ -23,9 +29,38 @@ export default async function ResearchPage() {
 
   const competitors = await listCompetitors(supabase, user.id);
 
+  // Per-competitor preview strip: 5 most recent reels each + any
+  // existing analyses, fetched in parallel so the page render is
+  // bounded by the slowest query, not the sum. For 5 competitors
+  // that's ~10 round-trips total - fine, no need for a custom RPC yet.
+  const reelsByCompetitor: Record<string, CompetitorMediaRow[]> = {};
+  const analysesByMediaId: Record<string, MediaAnalysis> = {};
+  if (competitors.length > 0) {
+    const reelLists = await Promise.all(
+      competitors.map((c) =>
+        listMediaForCompetitor(supabase, c.id, PREVIEW_REELS_PER_COMPETITOR),
+      ),
+    );
+    competitors.forEach((c, i) => {
+      reelsByCompetitor[c.id] = reelLists[i];
+    });
+    const allMediaIds = reelLists.flat().map((r) => r.id);
+    if (allMediaIds.length > 0) {
+      const analyses = await getAnalysesForCompetitorMediaIds(
+        supabase,
+        allMediaIds,
+      );
+      for (const [id, a] of analyses) analysesByMediaId[id] = a;
+    }
+  }
+
   log.debug("research page rendered", {
     user_id: user.id,
     competitor_count: competitors.length,
+    preview_reels: Object.values(reelsByCompetitor).reduce(
+      (n, list) => n + list.length,
+      0,
+    ),
   });
 
   return (
@@ -75,16 +110,18 @@ export default async function ResearchPage() {
             }}
             aria-label="Heads up"
           >
-            Hit the refresh icon on a tracked account to pull their recent
-            reels via Apify. Per-video transcription + structural analysis
-            lands in BO-063; for now you&apos;ll see the reel rows populate
-            after each sync.
+            Each sync pulls the latest reels via Apify and auto-analyses
+            the {PREVIEW_REELS_PER_COMPETITOR} most recent. Click any
+            handle for the full reel grid and to queue analysis on older
+            posts.
           </section>
 
           <CompetitorList
             userId={user.id}
             competitors={competitors}
             limit={COMPETITOR_LIMIT_PER_USER}
+            reelsByCompetitor={reelsByCompetitor}
+            analysesByMediaId={analysesByMediaId}
           />
         </div>
       </div>

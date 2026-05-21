@@ -1,8 +1,17 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ExternalLink,
+  Loader2,
+  Play,
+  Plus,
+  RefreshCcw,
+  Trash2,
+} from "lucide-react";
 
 import {
   addCompetitorAction,
@@ -11,16 +20,32 @@ import {
   type AddCompetitorState,
 } from "./actions";
 import { useCompetitorRealtime } from "./use-competitor-realtime";
-import type { CompetitorRow } from "@/engines/competitor";
+import { useCompetitorMediaRealtime } from "./use-competitor-media-realtime";
+import type {
+  CompetitorMediaRow,
+  CompetitorRow,
+} from "@/engines/competitor";
+import type { MediaAnalysis } from "@/engines/research";
 
 interface CompetitorListProps {
   userId: string;
   competitors: CompetitorRow[];
   limit: number;
+  reelsByCompetitor: Record<string, CompetitorMediaRow[]>;
+  analysesByMediaId: Record<string, MediaAnalysis>;
 }
 
-export function CompetitorList({ userId, competitors, limit }: CompetitorListProps) {
+export function CompetitorList({
+  userId,
+  competitors,
+  limit,
+  reelsByCompetitor,
+  analysesByMediaId,
+}: CompetitorListProps) {
+  // Two realtime channels: one for competitor_accounts (sync state badge)
+  // and one for competitor_media (preview-strip analysis state).
   useCompetitorRealtime(userId);
+  useCompetitorMediaRealtime(userId);
   const atCap = competitors.length >= limit;
 
   return (
@@ -30,10 +55,14 @@ export function CompetitorList({ userId, competitors, limit }: CompetitorListPro
       {competitors.length === 0 ? (
         <EmptyState />
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-3">
           {competitors.map((c) => (
             <li key={c.id}>
-              <CompetitorRowItem row={c} />
+              <CompetitorRowItem
+                row={c}
+                reels={reelsByCompetitor[c.id] ?? []}
+                analysesByMediaId={analysesByMediaId}
+              />
             </li>
           ))}
         </ul>
@@ -138,74 +167,202 @@ function SyncBadge({ syncPending, lastSyncedAt, lastSyncError }: SyncBadgeProps)
   );
 }
 
-function CompetitorRowItem({ row }: { row: CompetitorRow }) {
+function CompetitorRowItem({
+  row,
+  reels,
+  analysesByMediaId,
+}: {
+  row: CompetitorRow;
+  reels: CompetitorMediaRow[];
+  analysesByMediaId: Record<string, MediaAnalysis>;
+}) {
   const inFlight = row.sync_pending;
 
   return (
     <div
-      className="flex items-center justify-between rounded-xl p-3"
+      className="flex flex-col gap-3 rounded-xl p-3"
       style={{
         background: "var(--oo-bg-elevated)",
         border: "1px solid var(--oo-border-subtle)",
       }}
     >
-      <div className="flex min-w-0 flex-col">
-        <div className="flex items-center gap-1.5">
-          <Link
-            href={`/research/${row.id}`}
-            className="text-sm font-semibold hover:underline"
-            style={{ color: "var(--oo-text-primary)" }}
-          >
-            @{row.username}
-          </Link>
-          <a
-            href={`https://instagram.com/${row.username}`}
-            target="_blank"
-            rel="noreferrer noopener"
-            aria-label={`Open @${row.username} on Instagram`}
-            className="opacity-50 hover:opacity-100"
-            style={{ color: "var(--oo-text-dim)" }}
-          >
-            <ExternalLink className="size-3" />
-          </a>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-col">
+          <div className="flex items-center gap-1.5">
+            <Link
+              href={`/research/${row.id}`}
+              className="text-sm font-semibold hover:underline"
+              style={{ color: "var(--oo-text-primary)" }}
+            >
+              @{row.username}
+            </Link>
+            <a
+              href={`https://instagram.com/${row.username}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label={`Open @${row.username} on Instagram`}
+              className="opacity-50 hover:opacity-100"
+              style={{ color: "var(--oo-text-dim)" }}
+            >
+              <ExternalLink className="size-3" />
+            </a>
+          </div>
+          <SyncBadge
+            syncPending={row.sync_pending}
+            lastSyncedAt={row.last_synced_at}
+            lastSyncError={row.last_sync_error}
+          />
         </div>
-        <SyncBadge
-          syncPending={row.sync_pending}
-          lastSyncedAt={row.last_synced_at}
-          lastSyncError={row.last_sync_error}
-        />
+        <div className="flex items-center gap-1">
+          <form action={syncCompetitorAction}>
+            <input type="hidden" name="id" value={row.id} />
+            <button
+              type="submit"
+              aria-label={`Sync ${row.username} now`}
+              className="oo-icon-btn rounded-lg p-2 disabled:opacity-40"
+              title={inFlight ? "Sync in progress" : "Sync now"}
+              disabled={inFlight}
+            >
+              {inFlight ? (
+                <Loader2 className="oo-spin size-4" />
+              ) : (
+                <RefreshCcw className="size-4" />
+              )}
+            </button>
+          </form>
+          <form action={removeCompetitorAction}>
+            <input type="hidden" name="id" value={row.id} />
+            <button
+              type="submit"
+              aria-label={`Stop tracking ${row.username}`}
+              className="oo-icon-btn rounded-lg p-2"
+              title="Stop tracking"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </form>
+        </div>
       </div>
-      <div className="flex items-center gap-1">
-        <form action={syncCompetitorAction}>
-          <input type="hidden" name="id" value={row.id} />
-          <button
-            type="submit"
-            aria-label={`Sync ${row.username} now`}
-            className="oo-icon-btn rounded-lg p-2 disabled:opacity-40"
-            title={inFlight ? "Sync in progress" : "Sync now"}
-            disabled={inFlight}
-          >
-            {inFlight ? (
-              <Loader2 className="oo-spin size-4" />
-            ) : (
-              <RefreshCcw className="size-4" />
-            )}
-          </button>
-        </form>
-        <form action={removeCompetitorAction}>
-          <input type="hidden" name="id" value={row.id} />
-          <button
-            type="submit"
-            aria-label={`Stop tracking ${row.username}`}
-            className="oo-icon-btn rounded-lg p-2"
-            title="Stop tracking"
-          >
-            <Trash2 className="size-4" />
-          </button>
-        </form>
+
+      {reels.length > 0 ? (
+        <ReelStrip
+          competitorId={row.id}
+          reels={reels}
+          analysesByMediaId={analysesByMediaId}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ReelStrip({
+  competitorId,
+  reels,
+  analysesByMediaId,
+}: {
+  competitorId: string;
+  reels: CompetitorMediaRow[];
+  analysesByMediaId: Record<string, MediaAnalysis>;
+}) {
+  return (
+    <Link
+      href={`/research/${competitorId}`}
+      className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
+      aria-label="Open competitor drill-in"
+    >
+      {reels.map((reel) => (
+        <ReelThumb
+          key={reel.id}
+          reel={reel}
+          analysis={analysesByMediaId[reel.id] ?? null}
+        />
+      ))}
+    </Link>
+  );
+}
+
+function ReelThumb({
+  reel,
+  analysis,
+}: {
+  reel: CompetitorMediaRow;
+  analysis: MediaAnalysis | null;
+}) {
+  const state: "analyzed" | "pending" | "failed" | "idle" = analysis
+    ? "analyzed"
+    : reel.analysis_pending
+      ? "pending"
+      : reel.analysis_failed_reason
+        ? "failed"
+        : "idle";
+
+  return (
+    <div
+      className="relative h-28 w-20 shrink-0 overflow-hidden rounded-lg"
+      style={{ background: "var(--oo-bg-hover)" }}
+      title={
+        analysis?.hook ??
+        reel.analysis_failed_reason ??
+        reel.caption ??
+        undefined
+      }
+    >
+      {reel.thumbnail_url ? (
+        <Image
+          src={reel.thumbnail_url}
+          alt=""
+          fill
+          sizes="80px"
+          className="object-cover"
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center">
+          <Play className="size-5" style={{ color: "var(--oo-text-dim)" }} />
+        </div>
+      )}
+
+      <div
+        className="absolute inset-x-0 bottom-0 flex items-center gap-1 px-1 py-1 text-[9px] font-semibold"
+        style={{
+          background: "linear-gradient(transparent, rgba(0,0,0,0.7))",
+          color: "white",
+        }}
+      >
+        {state === "analyzed" ? (
+          <span>{performanceShort(analysis?.performance_label)}</span>
+        ) : state === "pending" ? (
+          <>
+            <Loader2 className="oo-spin size-2.5" />
+            <span>Analysing</span>
+          </>
+        ) : state === "failed" ? (
+          <>
+            <AlertTriangle className="size-2.5" />
+            <span>Failed</span>
+          </>
+        ) : (
+          <span style={{ opacity: 0.7 }}>Tap to analyse</span>
+        )}
       </div>
     </div>
   );
+}
+
+function performanceShort(label: string | null | undefined): string {
+  switch (label) {
+    case "top":
+      return "Top";
+    case "above_median":
+      return "Above";
+    case "median":
+      return "Median";
+    case "below_median":
+      return "Below";
+    case "bottom":
+      return "Bottom";
+    default:
+      return "Analysed";
+  }
 }
 
 function EmptyState() {

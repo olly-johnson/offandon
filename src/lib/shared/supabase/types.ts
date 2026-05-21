@@ -558,6 +558,8 @@ export type Database = {
           duration_seconds: number | null;
           scrape_run_id: string | null;
           synced_at: string;
+          analysis_failed_reason: string | null;
+          analysis_pending: boolean;
         };
         Insert: {
           id: string;
@@ -575,6 +577,8 @@ export type Database = {
           duration_seconds?: number | null;
           scrape_run_id?: string | null;
           synced_at?: string;
+          analysis_failed_reason?: string | null;
+          analysis_pending?: boolean;
         };
         Update: {
           id?: string;
@@ -592,6 +596,8 @@ export type Database = {
           duration_seconds?: number | null;
           scrape_run_id?: string | null;
           synced_at?: string;
+          analysis_failed_reason?: string | null;
+          analysis_pending?: boolean;
         };
         Relationships: [];
       };

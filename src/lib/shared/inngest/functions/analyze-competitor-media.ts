@@ -3,6 +3,7 @@ import {
   getAnalysisForCompetitorMedia,
   saveCompetitorAnalysis,
 } from "@/engines/competitor/analysis-persistence";
+import { setCompetitorMediaAnalysisFailure } from "@/engines/competitor/media-persistence";
 import {
   computeLibraryStats,
   DeepgramTranscriptionClient,
@@ -68,6 +69,8 @@ export const analyzeCompetitorMedia = inngest.createFunction(
     }
 
     const supabase = createSupabaseAdminClient();
+
+    try {
 
     const [mediaRow, dna] = await Promise.all([
       step.run("load-media", async () => {
@@ -199,6 +202,12 @@ export const analyzeCompetitorMedia = inngest.createFunction(
         llmModel: RESEARCH_ANALYSIS_MODEL,
         transcriptModel: transcript.model,
       });
+      // Clear any prior failure reason now that we have a fresh
+      // successful analysis on this reel.
+      await setCompetitorMediaAnalysisFailure(supabase, {
+        mediaId: media_id,
+        reason: null,
+      });
       log.info("competitor analysis saved", {
         media_id,
         competitor_id,
@@ -214,5 +223,22 @@ export const analyzeCompetitorMedia = inngest.createFunction(
       user_id,
       performance_label: analysis.performance_label,
     };
+
+    } catch (err) {
+      // Anywhere in the pipeline above can throw — Deepgram failure,
+      // missing voice_dna, rate-limit hit, Sonnet timeout. Without
+      // this catch, no analysis row lands and the UI spinner spins
+      // forever. Surface the reason on competitor_media so the tile
+      // can render "Failed: <reason>" with a retry button, then
+      // re-throw so Inngest marks the run failed and retries kick in.
+      const message = err instanceof Error ? err.message : String(err);
+      await step.run("record-failure", async () => {
+        await setCompetitorMediaAnalysisFailure(supabase, {
+          mediaId: media_id,
+          reason: message,
+        });
+      });
+      throw err;
+    }
   },
 );

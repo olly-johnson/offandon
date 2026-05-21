@@ -1,5 +1,6 @@
 import { ApifyCompetitorScraper } from "@/engines/competitor/scraper";
 import {
+  markCompetitorMediaAnalysisPending,
   updateCompetitorSyncState,
   upsertCompetitorMedia,
 } from "@/engines/competitor/media-persistence";
@@ -198,14 +199,33 @@ export const competitorScrapeCompleted = inngest.createFunction(
       });
     });
 
-    // Fan out per-reel analysis. We only ask for an analyze run on
-    // reels that have a media_url (no point feeding Deepgram a null)
-    // and the analyzer itself short-circuits when an analysis row
-    // already exists, so re-syncs are cheap. Each event is independent
-    // — Inngest's concurrency cap on analyzeCompetitorMedia rate-limits
-    // the actual Deepgram / Anthropic calls.
-    const analyzeCandidates = reels.filter((r) => r.media_url != null);
+    // Auto-fan-out only the latest N reels — the rest stay in
+    // competitor_media for the drill-in page, which exposes a manual
+    // "Analyze" button per reel. Keeps the cost of a nightly cron
+    // sweep bounded (5 reels × Deepgram+Sonnet ≈ $0.05/competitor)
+    // while still letting users drill deeper on demand.
+    //
+    // Apify returns most-recent-first; sort defensively in case that
+    // ever changes upstream. Reels without a media_url get skipped
+    // (no audio to feed Deepgram) and the analyzer itself short-
+    // circuits when an analysis row already exists, so re-syncs are
+    // cheap.
+    const AUTO_ANALYZE_LATEST = 5;
+    const analyzeCandidates = reels
+      .filter((r) => r.media_url != null)
+      .slice()
+      .sort((a, b) => {
+        const ta = a.posted_at ? Date.parse(a.posted_at) : 0;
+        const tb = b.posted_at ? Date.parse(b.posted_at) : 0;
+        return tb - ta;
+      })
+      .slice(0, AUTO_ANALYZE_LATEST);
     if (analyzeCandidates.length > 0) {
+      await step.run("mark-analyze-pending", async () => {
+        await markCompetitorMediaAnalysisPending(supabase, {
+          mediaIds: analyzeCandidates.map((r) => r.id),
+        });
+      });
       await step.run("emit-analyze-events", async () => {
         await inngest.send(
           analyzeCandidates.map((r) => ({
@@ -232,5 +252,69 @@ export const competitorScrapeCompleted = inngest.createFunction(
       count: reels.length,
       analyze_queued: analyzeCandidates.length,
     };
+  },
+);
+
+/**
+ * Nightly competitor refresh. Iterates every competitor_accounts row
+ * and emits one competitor/scrape.requested event per row; the rest of
+ * the chain (scrape -> webhook -> ingest -> auto-analyse latest 5)
+ * handles each independently.
+ *
+ * Same shape as syncInstagram (BO-005). The kill switch is the same
+ * COMPETITOR_SCRAPE_DISABLED env var as manual sync — when set, the
+ * downstream `competitor-scrape-requested` worker short-circuits.
+ *
+ * Cron: 04:00 UTC nightly. Chosen so it lands before working hours in
+ * APAC where the cohort actually opens the dashboard.
+ */
+export const syncAllCompetitorsNightly = inngest.createFunction(
+  {
+    id: "sync-all-competitors-nightly",
+    name: "Competitors: nightly refresh",
+    retries: 1,
+    triggers: [{ cron: "0 4 * * *" }],
+  },
+  async ({ step }) => {
+    const supabase = createSupabaseAdminClient();
+
+    const rows = await step.run("list-competitors", async () => {
+      const { data, error } = await supabase
+        .from("competitor_accounts")
+        .select("id, user_id");
+      if (error) throw new Error(`list-competitors: ${error.message}`);
+      return (data ?? []) as Array<{ id: string; user_id: string }>;
+    });
+
+    log.info("competitor nightly sync starting", { count: rows.length });
+
+    if (rows.length === 0) return { count: 0 };
+
+    // Mark every row as in-flight up front so the UI immediately shows
+    // "Syncing..." across the cohort, then fire one event per row.
+    await step.run("mark-in-flight", async () => {
+      const ids = rows.map((r) => r.id);
+      const { error } = await supabase
+        .from("competitor_accounts")
+        .update({
+          sync_pending: true,
+          last_synced_at: null,
+          last_sync_error: null,
+        })
+        .in("id", ids);
+      if (error) throw new Error(`mark-in-flight: ${error.message}`);
+    });
+
+    await step.run("emit-scrape-events", async () => {
+      await inngest.send(
+        rows.map((r) => ({
+          name: INNGEST_EVENTS.CompetitorScrapeRequested,
+          data: { competitor_id: r.id, user_id: r.user_id },
+        })),
+      );
+    });
+
+    log.info("competitor nightly sync queued", { count: rows.length });
+    return { count: rows.length };
   },
 );

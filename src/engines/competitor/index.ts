@@ -15,7 +15,10 @@ export type {
 } from "./persistence";
 
 export {
+  getCompetitorMediaForUser,
   listMediaForCompetitor,
+  markCompetitorMediaAnalysisPending,
+  setCompetitorMediaAnalysisFailure,
   updateCompetitorSyncState,
   upsertCompetitorMedia,
 } from "./media-persistence";

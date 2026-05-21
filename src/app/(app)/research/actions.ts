@@ -7,7 +7,9 @@ import {
   addCompetitor,
   CompetitorLimitError,
   DuplicateCompetitorError,
+  getCompetitorMediaForUser,
   InvalidCompetitorHandleError,
+  markCompetitorMediaAnalysisPending,
   removeCompetitor,
   updateCompetitorSyncState,
 } from "@/engines/competitor";
@@ -94,6 +96,65 @@ export async function syncCompetitorAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/research");
+}
+
+/**
+ * Manual per-reel analysis trigger. Used by the drill-in page so the
+ * user can analyze older reels (anything beyond the latest 5 that get
+ * auto-analyzed on sync) or retry a previously-failed analysis.
+ * Clears the failure reason up-front so the UI can flip from
+ * "Failed: ..." to "Analyzing..." immediately.
+ */
+export async function analyzeCompetitorMediaAction(formData: FormData): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/signin");
+
+  const mediaId = (formData.get("media_id") ?? "").toString();
+  if (!mediaId) return;
+
+  const admin = createSupabaseAdminClient();
+  // Ownership check + grab competitor_id for the event payload. RLS
+  // would already block writes for the wrong user, but verifying here
+  // gives us a cleaner failure mode and the FK ids we need.
+  const media = await getCompetitorMediaForUser(admin, {
+    userId: user.id,
+    mediaId,
+  });
+  if (!media) {
+    log.warn("analyzeCompetitorMediaAction: media not found for user", {
+      user_id: user.id,
+      media_id: mediaId,
+    });
+    return;
+  }
+
+  try {
+    await markCompetitorMediaAnalysisPending(admin, { mediaIds: [mediaId] });
+    await inngest.send({
+      name: INNGEST_EVENTS.CompetitorMediaAnalyzeRequested,
+      data: {
+        user_id: user.id,
+        competitor_id: media.competitor_id,
+        media_id: mediaId,
+        force: true,
+      },
+    });
+    log.info("competitor media analyze requested", {
+      user_id: user.id,
+      media_id: mediaId,
+    });
+  } catch (err) {
+    log.error("analyzeCompetitorMediaAction failed", {
+      user_id: user.id,
+      media_id: mediaId,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  revalidatePath(`/research/${media.competitor_id}`);
 }
 
 export async function removeCompetitorAction(formData: FormData): Promise<void> {

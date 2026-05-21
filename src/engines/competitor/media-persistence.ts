@@ -23,7 +23,12 @@ export interface CompetitorMediaRow {
   duration_seconds: number | null;
   scrape_run_id: string | null;
   synced_at: string;
+  analysis_failed_reason: string | null;
+  analysis_pending: boolean;
 }
+
+const MEDIA_COLUMNS =
+  "id, competitor_id, user_id, media_type, caption, permalink, media_url, thumbnail_url, posted_at, like_count, comments_count, view_count, duration_seconds, scrape_run_id, synced_at, analysis_failed_reason, analysis_pending";
 
 export async function upsertCompetitorMedia(
   supabase: CompetitorSupabaseClient,
@@ -75,9 +80,7 @@ export async function listMediaForCompetitor(
 ): Promise<CompetitorMediaRow[]> {
   const { data, error } = await supabase
     .from("competitor_media")
-    .select(
-      "id, competitor_id, user_id, media_type, caption, permalink, media_url, thumbnail_url, posted_at, like_count, comments_count, view_count, duration_seconds, scrape_run_id, synced_at",
-    )
+    .select(MEDIA_COLUMNS)
     .eq("competitor_id", competitorId)
     .order("posted_at", { ascending: false, nullsFirst: false })
     .limit(limit);
@@ -86,6 +89,79 @@ export async function listMediaForCompetitor(
     throw new Error(`listMediaForCompetitor: ${error.message}`);
   }
   return (data ?? []) as CompetitorMediaRow[];
+}
+
+/**
+ * Fetch one media row scoped to user_id. Used by the manual
+ * analyzeCompetitorMediaAction so we can verify ownership before
+ * firing an Inngest event.
+ */
+export async function getCompetitorMediaForUser(
+  supabase: CompetitorSupabaseClient,
+  args: { userId: string; mediaId: string },
+): Promise<CompetitorMediaRow | null> {
+  const { data, error } = await supabase
+    .from("competitor_media")
+    .select(MEDIA_COLUMNS)
+    .eq("id", args.mediaId)
+    .eq("user_id", args.userId)
+    .maybeSingle();
+  if (error) {
+    throw new Error(`getCompetitorMediaForUser: ${error.message}`);
+  }
+  return (data ?? null) as CompetitorMediaRow | null;
+}
+
+/**
+ * Record an analyzer failure on the media row so the UI can render
+ * "Failed: <reason>" with a retry button instead of an infinite
+ * spinner. Also clears analysis_pending so the spinner stops. Reason
+ * is truncated; full traceback lives in Inngest logs.
+ */
+export async function setCompetitorMediaAnalysisFailure(
+  supabase: CompetitorSupabaseClient,
+  args: { mediaId: string; reason: string | null },
+): Promise<void> {
+  const { error } = await supabase
+    .from("competitor_media")
+    .update({
+      analysis_failed_reason: args.reason?.slice(0, 500) ?? null,
+      analysis_pending: false,
+    })
+    .eq("id", args.mediaId);
+  if (error) {
+    log.error("competitor_media analysis_failed_reason update failed", {
+      media_id: args.mediaId,
+      message: error.message,
+    });
+    // Best-effort: don't crash the worker just because we couldn't
+    // surface the failure. The Inngest run will still record the
+    // underlying error in its own trace.
+  }
+}
+
+/**
+ * Mark one or more reels as "analysis in flight". Called by the
+ * auto-fan-out path (after scrape) and the manual analyze action so
+ * the UI tile flips to "Analyzing..." instead of showing the
+ * Analyze button. The worker resets it to false on success/failure.
+ */
+export async function markCompetitorMediaAnalysisPending(
+  supabase: CompetitorSupabaseClient,
+  args: { mediaIds: string[] },
+): Promise<void> {
+  if (args.mediaIds.length === 0) return;
+  const { error } = await supabase
+    .from("competitor_media")
+    .update({ analysis_pending: true, analysis_failed_reason: null })
+    .in("id", args.mediaIds);
+  if (error) {
+    log.error("competitor_media analysis_pending update failed", {
+      count: args.mediaIds.length,
+      message: error.message,
+    });
+    throw new Error(`markCompetitorMediaAnalysisPending: ${error.message}`);
+  }
 }
 
 /**
