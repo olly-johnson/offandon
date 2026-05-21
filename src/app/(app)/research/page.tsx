@@ -101,21 +101,6 @@ export default async function ResearchPage() {
             </span>
           </header>
 
-          <section
-            className="mb-4 rounded-xl p-3 text-[11px] leading-relaxed"
-            style={{
-              background: "var(--oo-bg-elevated)",
-              border: "1px solid var(--oo-border-subtle)",
-              color: "var(--oo-text-dim)",
-            }}
-            aria-label="Heads up"
-          >
-            Each sync pulls the latest reels via Apify and auto-analyses
-            the {PREVIEW_REELS_PER_COMPETITOR} most recent. Click any
-            handle for the full reel grid and to queue analysis on older
-            posts.
-          </section>
-
           <CompetitorList
             userId={user.id}
             competitors={competitors}
