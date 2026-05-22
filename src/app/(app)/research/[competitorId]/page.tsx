@@ -87,9 +87,8 @@ export default async function CompetitorResearchPage({
                   className="mt-1 text-sm leading-relaxed"
                   style={{ color: "var(--oo-text-secondary)" }}
                 >
-                  {reels.length} recent reels. Each one is being transcribed
-                  and structurally analysed against your pillars; the tiles
-                  fill in as the workers finish.
+                  {reels.length} recent reels. Each one can be transcribed and
+                  structurally analysed against your pillars.
                 </p>
               </div>
               <span
