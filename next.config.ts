@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "**.cdninstagram.com" },
       { protocol: "https", hostname: "**.fbcdn.net" },
+      // Supabase Storage public bucket for suggested-creator avatars.
+      { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
 };

@@ -1,7 +1,17 @@
 "use client";
 
+import { useState } from "react";
+import Image from "next/image";
+
+import {
+  PlatformGlyph,
+  platformBrandColor,
+  platformLabel,
+} from "./platform-icons";
 import {
   SUGGESTED_CREATORS,
+  SUPPORTED_TRACKING_PLATFORMS,
+  suggestedAvatarUrl,
   type SuggestedCreator,
 } from "./suggested-creators";
 
@@ -12,7 +22,7 @@ interface SuggestedCreatorsGridProps {
   currentHandle: string;
   /** Disabled because the user is at the tracking cap. */
   atCap: boolean;
-  /** Click handler: fills the add-form input with this handle. */
+  /** Click handler for IG chips: fills the add-form input with this handle. */
   onPick: (handle: string) => void;
 }
 
@@ -30,16 +40,18 @@ export function SuggestedCreatorsGrid({
       aria-label="Suggested creators"
     >
       {SUGGESTED_CREATORS.map((c) => {
-        const tracked = trackedHandles.has(c.handle.toLowerCase());
-        const isTyped = typed === c.handle.toLowerCase();
+        const supported = SUPPORTED_TRACKING_PLATFORMS.has(c.platform);
+        const tracked = supported && trackedHandles.has(c.handle.toLowerCase());
+        const isTyped = supported && typed === c.handle.toLowerCase();
         return (
           <SuggestedChip
-            key={c.handle}
+            key={`${c.platform}:${c.handle}`}
             creator={c}
+            supported={supported}
             tracked={tracked}
             highlighted={isTyped}
-            disabled={tracked || (atCap && !isTyped)}
-            onClick={() => onPick(c.handle)}
+            disabled={!supported || tracked || (atCap && !isTyped)}
+            onClick={() => supported && onPick(c.handle)}
           />
         );
       })}
@@ -49,36 +61,34 @@ export function SuggestedCreatorsGrid({
 
 function SuggestedChip({
   creator,
+  supported,
   tracked,
   highlighted,
   disabled,
   onClick,
 }: {
   creator: SuggestedCreator;
+  supported: boolean;
   tracked: boolean;
   highlighted: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
-  const initial = creator.handle.charAt(0).toUpperCase();
+  const tooltip = !supported
+    ? `${platformLabel(creator.platform)} tracking is coming soon`
+    : tracked
+      ? `@${creator.handle} - already tracked`
+      : creator.bio
+        ? `@${creator.handle} - ${creator.bio}`
+        : `@${creator.handle}`;
 
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={
-        tracked
-          ? `@${creator.handle} - already tracked`
-          : creator.bio
-            ? `@${creator.handle} - ${creator.bio}`
-            : `@${creator.handle}`
-      }
-      aria-label={
-        tracked
-          ? `${creator.handle}, already tracked`
-          : `Use ${creator.handle} as the handle to track`
-      }
+      title={tooltip}
+      aria-label={tooltip}
       className="flex items-center gap-2.5 rounded-xl p-2.5 text-left transition disabled:opacity-50"
       style={{
         background: highlighted
@@ -90,16 +100,7 @@ function SuggestedChip({
         cursor: disabled ? "not-allowed" : "pointer",
       }}
     >
-      <span
-        aria-hidden
-        className="flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-        style={{
-          background: gradientFor(creator.handle),
-          color: "white",
-        }}
-      >
-        {initial}
-      </span>
+      <CreatorAvatar creator={creator} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span
           className="truncate text-xs font-semibold"
@@ -108,22 +109,62 @@ function SuggestedChip({
           {creator.handle}
         </span>
         <span
-          className="text-[10px]"
+          className="flex items-center gap-1 text-[10px]"
           style={{ color: "var(--oo-text-dim)" }}
         >
-          {tracked
-            ? "Already tracking"
-            : `${formatFollowers(creator.follower_count)} followers`}
+          <PlatformGlyph
+            platform={creator.platform}
+            className="size-2.5"
+            style={{ color: platformBrandColor(creator.platform) }}
+          />
+          {!supported
+            ? "Coming soon"
+            : tracked
+              ? "Already tracking"
+              : creator.platform === "youtube_shorts"
+                ? `${formatCount(creator.follower_count)} subscribers`
+                : `${formatCount(creator.follower_count)} followers`}
         </span>
       </span>
     </button>
   );
 }
 
+function CreatorAvatar({ creator }: { creator: SuggestedCreator }) {
+  const url = suggestedAvatarUrl(creator.handle);
+  const [loadError, setLoadError] = useState(false);
+  const initial = creator.handle.charAt(0).toUpperCase();
+  const showImage = url !== null && !loadError;
+
+  return (
+    <span
+      aria-hidden
+      className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold"
+      style={{
+        background: showImage ? "var(--oo-bg-hover)" : gradientFor(creator.handle),
+        color: "white",
+      }}
+    >
+      {showImage && url ? (
+        <Image
+          src={url}
+          alt=""
+          width={36}
+          height={36}
+          className="size-full object-cover"
+          onError={() => setLoadError(true)}
+          unoptimized
+        />
+      ) : (
+        initial
+      )}
+    </span>
+  );
+}
+
 /**
  * Deterministic warm gradient per handle so the same creator always
- * paints the same avatar circle. Hash the handle, pick two HSL hues
- * 40deg apart, lock saturation/lightness to brand-warm values.
+ * paints the same avatar placeholder when no bucket image exists.
  */
 function gradientFor(handle: string): string {
   let h = 0;
@@ -136,7 +177,7 @@ function gradientFor(handle: string): string {
   return `linear-gradient(135deg, ${a}, ${b})`;
 }
 
-function formatFollowers(n: number): string {
+function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
   return String(n);
