@@ -287,29 +287,60 @@ export const competitorScrapeCompleted = inngest.createFunction(
       },
     );
 
-    if (analyzeCandidates.length > 0) {
-      await step.run("mark-analyze-pending", async () => {
+    // Two-batch fan-out so the user sees the latest 5 reels finish
+    // analysing quickly while the rest queue in the background. With
+    // YT's 2-concurrency download cap a single 30-reel batch can
+    // take 15+ minutes before any tile resolves; batching means the
+    // top 5 are done within 3 minutes.
+    //
+    // Only the active batch is marked analysis_pending so the UI
+    // doesn't show 30 spinners while only 2 workers are actually
+    // doing anything. Idle reels show "Tap to analyse" until their
+    // batch fires.
+    const PRIORITY_BATCH_SIZE = 5;
+    const priorityBatch = analyzeCandidates.slice(0, PRIORITY_BATCH_SIZE);
+    const deferredBatch = analyzeCandidates.slice(PRIORITY_BATCH_SIZE);
+    // YT downloads run at concurrency 2 (memory cap), so 5 reels
+    // take ~150s. Give the priority batch a little extra slack
+    // before queuing the next wave. Other platforms work faster.
+    const DEFERRED_DELAY =
+      platform === "youtube_shorts" ? "3m" : "90s";
+
+    // YT goes through the download-first pipeline; other platforms
+    // already have a usable media_url from the list scraper.
+    const eventName =
+      platform === "youtube_shorts"
+        ? INNGEST_EVENTS.YoutubeMediaDownloadRequested
+        : INNGEST_EVENTS.CompetitorMediaAnalyzeRequested;
+
+    if (priorityBatch.length > 0) {
+      await step.run("mark-priority-pending", async () => {
         await markCompetitorMediaAnalysisPending(supabase, {
-          mediaIds: analyzeCandidates.map((r) => r.id),
+          mediaIds: priorityBatch.map((r) => r.id),
         });
       });
-      await step.run("emit-fanout-events", async () => {
-        // YT goes through the download-first pipeline so the analyser
-        // gets a fetch-stable mp4 URL. Other platforms fan out
-        // straight to analysis since their media_url is already
-        // populated by the list scraper.
-        const eventName =
-          platform === "youtube_shorts"
-            ? INNGEST_EVENTS.YoutubeMediaDownloadRequested
-            : INNGEST_EVENTS.CompetitorMediaAnalyzeRequested;
+      await step.run("emit-priority-events", async () => {
         await inngest.send(
-          analyzeCandidates.map((r) => ({
+          priorityBatch.map((r) => ({
             name: eventName,
-            data: {
-              user_id,
-              competitor_id,
-              media_id: r.id,
-            },
+            data: { user_id, competitor_id, media_id: r.id },
+          })),
+        );
+      });
+    }
+
+    if (deferredBatch.length > 0) {
+      await step.sleep("priority-batch-grace", DEFERRED_DELAY);
+      await step.run("mark-deferred-pending", async () => {
+        await markCompetitorMediaAnalysisPending(supabase, {
+          mediaIds: deferredBatch.map((r) => r.id),
+        });
+      });
+      await step.run("emit-deferred-events", async () => {
+        await inngest.send(
+          deferredBatch.map((r) => ({
+            name: eventName,
+            data: { user_id, competitor_id, media_id: r.id },
           })),
         );
       });
@@ -320,12 +351,14 @@ export const competitorScrapeCompleted = inngest.createFunction(
       user_id,
       actor_run_id,
       reel_count: reels.length,
-      analyze_queued: analyzeCandidates.length,
+      priority_queued: priorityBatch.length,
+      deferred_queued: deferredBatch.length,
     });
     return {
       succeeded: true,
       count: reels.length,
-      analyze_queued: analyzeCandidates.length,
+      priority_queued: priorityBatch.length,
+      deferred_queued: deferredBatch.length,
     };
   },
 );
