@@ -41,6 +41,12 @@ function nextYoutubeFallback(src: string): string | null {
 }
 
 export function ReelThumbnail(props: ImageProps) {
+  // Destructure so we can rebuild the props with our fallback src
+  // without TypeScript flagging duplicate keys from the spread.
+  const { alt, src: _initialSrc, onError: _origOnError, ...rest } = props;
+  void _initialSrc;
+  void _origOnError;
+
   const initial = typeof props.src === "string" ? props.src : "";
   const [currentSrc, setCurrentSrc] = useState(initial);
   const [exhausted, setExhausted] = useState(false);
@@ -66,8 +72,8 @@ export function ReelThumbnail(props: ImageProps) {
 
   return (
     <Image
-      alt={typeof props.alt === "string" ? props.alt : ""}
-      {...props}
+      {...rest}
+      alt={alt ?? ""}
       src={currentSrc}
       onError={handleError}
     />
