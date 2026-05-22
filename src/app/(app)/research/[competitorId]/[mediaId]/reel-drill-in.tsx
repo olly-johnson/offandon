@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   AlertTriangle,
   ArrowLeft,
+  Bookmark,
+  BookmarkCheck,
   ExternalLink,
   Eye,
   Heart,
@@ -22,7 +24,11 @@ import type {
 } from "@/engines/competitor";
 import type { MediaAnalysis } from "@/engines/research";
 
-import { analyzeCompetitorMediaAction } from "../../actions";
+import {
+  analyzeCompetitorMediaAction,
+  saveCompetitorToVaultAction,
+  type VaultActionState,
+} from "../../actions";
 import { useCompetitorAnalysisRealtime } from "../use-competitor-analysis-realtime";
 import { useCompetitorMediaRealtime } from "../../use-competitor-media-realtime";
 
@@ -46,6 +52,7 @@ interface ReelDrillInProps {
   outlierRatio: number | null;
   engagementRate: number | null;
   siblingCount: number;
+  inVault: boolean;
 }
 
 export function ReelDrillIn({
@@ -57,6 +64,7 @@ export function ReelDrillIn({
   outlierRatio,
   engagementRate,
   siblingCount,
+  inVault,
 }: ReelDrillInProps) {
   // Live-refresh when an analysis lands or the pending flag flips.
   useCompetitorAnalysisRealtime(userId);
@@ -77,32 +85,37 @@ export function ReelDrillIn({
 
       <ChannelPill competitor={competitor} />
 
-      <header className="flex flex-col gap-1">
-        <h1
-          className="line-clamp-2 text-xl font-bold leading-snug"
-          style={{
-            color: "var(--oo-text-primary)",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          {analysis?.hook ?? media.caption ?? "(no caption)"}
-        </h1>
-        <p
-          className="flex items-center gap-2 text-xs"
-          style={{ color: "var(--oo-text-dim)" }}
-        >
-          <span>@{competitor.username}</span>
-          {media.permalink ? (
-            <a
-              href={media.permalink}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="inline-flex items-center gap-1 hover:underline"
-            >
-              View on Instagram <ExternalLink className="size-3" />
-            </a>
-          ) : null}
-        </p>
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1
+            className="line-clamp-2 text-xl font-bold leading-snug"
+            style={{
+              color: "var(--oo-text-primary)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {analysis?.hook ?? media.caption ?? "(no caption)"}
+          </h1>
+          <p
+            className="flex items-center gap-2 text-xs"
+            style={{ color: "var(--oo-text-dim)" }}
+          >
+            <span>@{competitor.username}</span>
+            {media.permalink ? (
+              <a
+                href={media.permalink}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center gap-1 hover:underline"
+              >
+                View on Instagram <ExternalLink className="size-3" />
+              </a>
+            ) : null}
+          </p>
+        </div>
+        {analysis ? (
+          <SaveToVaultButton mediaId={media.id} initiallyInVault={inVault} />
+        ) : null}
       </header>
 
       <div className="grid gap-5 md:grid-cols-[200px_1fr]">
@@ -571,6 +584,67 @@ function AnalysisCTA({ media }: { media: CompetitorMediaRow }) {
       </p>
       <AnalyzeForm mediaId={media.id} label="Analyse this reel" />
     </div>
+  );
+}
+
+function SaveToVaultButton({
+  mediaId,
+  initiallyInVault,
+}: {
+  mediaId: string;
+  initiallyInVault: boolean;
+}) {
+  const [state, formAction, pending] = useActionState<
+    VaultActionState,
+    FormData
+  >(async (prev, fd) => saveCompetitorToVaultAction(prev, fd), {});
+
+  // Server probe gives us the initial value; the action result wins
+  // once the user clicks. Treat "saved" success as our local truth
+  // since revalidatePath will refresh server data on next nav.
+  const saved = state.saved ? true : initiallyInVault;
+
+  return (
+    <form action={formAction} className="shrink-0">
+      <input type="hidden" name="media_id" value={mediaId} />
+      <button
+        type="submit"
+        disabled={pending || saved}
+        title={
+          saved
+            ? "Already in your research vault"
+            : "Save this reel as a reference for script generation"
+        }
+        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-default"
+        style={{
+          background: saved
+            ? "var(--oo-gold-dim)"
+            : "var(--oo-bg-elevated)",
+          color: saved ? "var(--oo-gold)" : "var(--oo-text-primary)",
+          border: `1px solid ${
+            saved ? "var(--oo-border-gold)" : "var(--oo-border-subtle)"
+          }`,
+        }}
+      >
+        {pending ? (
+          <Loader2 className="oo-spin size-3" />
+        ) : saved ? (
+          <BookmarkCheck className="size-3" />
+        ) : (
+          <Bookmark className="size-3" />
+        )}
+        {saved ? "Saved to vault" : "Save to vault"}
+      </button>
+      {state.error ? (
+        <p
+          className="mt-1 text-[10px]"
+          role="alert"
+          style={{ color: "var(--oo-bof)" }}
+        >
+          {state.error}
+        </p>
+      ) : null}
+    </form>
   );
 }
 

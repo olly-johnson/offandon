@@ -9,6 +9,7 @@ import {
 } from "@/engines/competitor";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 
 import { ReelDrillIn } from "./reel-drill-in";
 
@@ -49,6 +50,18 @@ export default async function ReelDrillInPage({
 
   const analysis = await getAnalysisForCompetitorMedia(supabase, mediaId);
 
+  // Is this reel already in the user's research vault? Cheap point
+  // read on client_assets; lets the drill-in button render the right
+  // state ("Save to vault" vs "Saved") on first paint.
+  const admin = createSupabaseAdminClient();
+  const { data: vaultProbe } = await admin
+    .from("client_assets")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("source_file", `competitor:${mediaId}`)
+    .maybeSingle();
+  const inVault = vaultProbe !== null;
+
   const viewCounts = siblingReels
     .map((r) => r.view_count)
     .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
@@ -85,6 +98,7 @@ export default async function ReelDrillInPage({
             outlierRatio={outlierRatio}
             engagementRate={engagementRate}
             siblingCount={siblingReels.length}
+            inVault={inVault}
           />
         </div>
       </div>

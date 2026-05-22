@@ -7,10 +7,14 @@ import {
   addCompetitor,
   CompetitorLimitError,
   DuplicateCompetitorError,
+  getAnalysisForCompetitorMedia,
+  getCompetitorForUser,
   getCompetitorMediaForUser,
   InvalidCompetitorHandleError,
   markCompetitorMediaAnalysisPending,
   removeCompetitor,
+  removeFromVault,
+  saveToVault,
   updateCompetitorSyncState,
 } from "@/engines/competitor";
 import { inngest, INNGEST_EVENTS } from "@/lib/shared/inngest/client";
@@ -177,6 +181,100 @@ export async function analyzeCompetitorMediaAction(formData: FormData): Promise<
   }
 
   revalidatePath(`/research/${media.competitor_id}`);
+}
+
+/**
+ * Step 4 / Research Vault: pin a competitor reel's analysis as a
+ * past_script reference. Same client_assets table the existing
+ * /scripts wizard already reads, so saving here automatically
+ * makes the reel available to script generation in the user's
+ * voice. Source_file 'competitor:<media_id>' keeps the row idem-
+ * potent and grep-able.
+ */
+export type VaultActionState = { error?: string; saved?: boolean };
+
+export async function saveCompetitorToVaultAction(
+  _prev: VaultActionState,
+  form: FormData,
+): Promise<VaultActionState> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/signin");
+
+  const mediaId = (form.get("media_id") ?? "").toString();
+  if (!mediaId) return { error: "Missing media id." };
+
+  const media = await getCompetitorMediaForUser(supabase, {
+    userId: user.id,
+    mediaId,
+  });
+  if (!media) return { error: "Reel not found." };
+
+  const competitor = await getCompetitorForUser(supabase, {
+    userId: user.id,
+    id: media.competitor_id,
+  });
+  if (!competitor) return { error: "Competitor not found." };
+
+  const analysis = await getAnalysisForCompetitorMedia(supabase, mediaId);
+  if (!analysis) {
+    return { error: "Run an analysis first, then save to the vault." };
+  }
+
+  const admin = createSupabaseAdminClient();
+  try {
+    await saveToVault(admin, {
+      userId: user.id,
+      competitor: { id: competitor.id, username: competitor.username },
+      media: {
+        id: media.id,
+        permalink: media.permalink,
+        posted_at: media.posted_at,
+        view_count: media.view_count,
+        like_count: media.like_count,
+        comments_count: media.comments_count,
+      },
+      analysis,
+    });
+  } catch (err) {
+    log.error("saveCompetitorToVaultAction failed", {
+      user_id: user.id,
+      media_id: mediaId,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return { error: "Could not save to vault. Try again." };
+  }
+
+  revalidatePath(`/research/${competitor.id}/${mediaId}`);
+  revalidatePath("/research");
+  return { saved: true };
+}
+
+export async function removeFromVaultAction(form: FormData): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/signin");
+
+  const mediaId = (form.get("media_id") ?? "").toString();
+  if (!mediaId) return;
+
+  const admin = createSupabaseAdminClient();
+  try {
+    await removeFromVault(admin, { userId: user.id, mediaId });
+    log.info("removed from vault", { user_id: user.id, media_id: mediaId });
+  } catch (err) {
+    log.error("removeFromVaultAction failed", {
+      user_id: user.id,
+      media_id: mediaId,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  revalidatePath("/research");
 }
 
 export async function removeCompetitorAction(formData: FormData): Promise<void> {

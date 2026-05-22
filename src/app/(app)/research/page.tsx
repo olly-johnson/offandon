@@ -9,14 +9,17 @@ import {
   getOutlierFeed,
   listCompetitors,
   listMediaForCompetitor,
+  listResearchVault,
   type CompetitorMediaRow,
 } from "@/engines/competitor";
 import type { OutlierFeedPlatform } from "@/engines/competitor/outlier-feed";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 
 import { CompetitorList } from "./competitor-list";
 import { OutlierFeed } from "./outlier-feed";
+import { VaultPanel } from "./vault-panel";
 
 const PREVIEW_REELS_PER_COMPETITOR = 5;
 
@@ -82,6 +85,14 @@ export default async function ResearchPage({ searchParams }: ResearchPageProps) 
 
   const competitors = await listCompetitors(supabase, user.id);
   const outliers = await getOutlierFeed(supabase, user.id, filters);
+  // Vault rows live on client_assets; RLS lets the user read their own
+  // rows so we could use the user-scoped client. The admin client just
+  // skips the policy roundtrip and the data is server-rendered anyway.
+  const vaultItems = await listResearchVault(
+    createSupabaseAdminClient(),
+    user.id,
+    20,
+  );
 
   // Per-competitor preview strip: 5 most recent reels each + any
   // existing analyses, fetched in parallel so the page render is
@@ -175,6 +186,10 @@ export default async function ResearchPage({ searchParams }: ResearchPageProps) 
               hasCompetitors={competitors.length > 0}
               filters={filters}
             />
+          </div>
+
+          <div className="mt-10">
+            <VaultPanel items={vaultItems} />
           </div>
         </div>
       </div>

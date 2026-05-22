@@ -66,3 +66,14 @@ export type {
   OutlierFeedItem,
   OutlierFeedOptions,
 } from "./outlier-feed";
+
+export {
+  buildVaultRow,
+  listResearchVault,
+  removeFromVault,
+  saveToVault,
+} from "./vault";
+export type {
+  VaultListRow,
+  VaultRowMetadata,
+} from "./vault";
