@@ -31,7 +31,7 @@ export interface SuggestedCreator {
 export const SUGGESTED_CREATORS: SuggestedCreator[] = [
   // Instagram - operator + creator-business
   {
-    handle: "alexhormozi",
+    handle: "hormozi",
     platform: "instagram",
     follower_count: 4_100_000,
     bio: "Acquisition.com - frameworks, offers, scale",
