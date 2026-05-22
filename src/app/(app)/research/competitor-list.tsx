@@ -223,12 +223,13 @@ function CompetitorRowItem({
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col">
           <div className="flex items-center gap-1.5">
-            <span
-              className="text-sm font-semibold"
+            <Link
+              href={`/research/${row.id}`}
+              className="text-sm font-semibold hover:underline"
               style={{ color: "var(--oo-text-primary)" }}
             >
               @{row.username}
-            </span>
+            </Link>
             <a
               href={`https://instagram.com/${row.username}`}
               target="_blank"
