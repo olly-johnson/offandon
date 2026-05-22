@@ -34,14 +34,17 @@ describe("ApifyYoutubeDownloader.fetchMediaUrl", () => {
     );
     expect(init.method).toBe("POST");
     const body = JSON.parse(String(init.body));
-    // `videos` is the documented streamers-actor input field; we
-    // also send `videoUrls` for other downloader actors that use
-    // that key. Both should carry the watch URL.
-    expect(body.videos).toEqual(["https://www.youtube.com/shorts/abc"]);
-    expect(body.videoUrls).toEqual(["https://www.youtube.com/shorts/abc"]);
-    // 360p quality cap: lowest tier where YT reliably muxes audio
-    // with video, so Deepgram gets a non-silent file at minimum cost.
+    // videos is an array of { url } objects, not bare strings.
+    expect(body.videos).toEqual([
+      { url: "https://www.youtube.com/shorts/abc" },
+    ]);
+    // mp3 output drops the video stream, ~85% cheaper per MB.
+    expect(body.preferredFormat).toBe("mp3");
+    // 360p source variant before the mp3 strip; lowest tier with
+    // a reliable audio track.
     expect(body.preferredQuality).toBe("360p");
+    // Without storeInKVStore=true the actor doesn't persist output.
+    expect(body.storeInKVStore).toBe(true);
   });
 
   it("returns null when the dataset is empty (private / age-gated / pulled)", async () => {

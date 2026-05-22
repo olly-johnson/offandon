@@ -21,14 +21,18 @@ const APIFY_API_BASE = "https://api.apify.com/v2";
 const DEFAULT_ACTOR_ID = "streamers~youtube-video-downloader";
 
 /**
- * Quality cap on the mp4 download. Deepgram only needs the audio
- * track, so the lowest stable quality is fine and meaningfully
- * cheaper: the downloader bills per MB transferred. 360p shorts
- * land around ~2-3 MB ($0.012-0.018 each) vs ~3-5 MB at 480p.
- *
- * We deliberately don't go to 144p: YouTube serves audio + video as
- * separate streams at that tier and some downloader actors return a
- * silent file. 360p is the lowest where audio is reliably muxed in.
+ * Output format. mp3 is audio-only, which is all Deepgram needs;
+ * skipping the video stream brings the per-reel download from
+ * ~2-3 MB (mp4 at 360p) to ~300-500 KB. Same transcript quality,
+ * roughly 85% cheaper on the downloader's per-MB bill.
+ */
+const DEFAULT_FORMAT = "mp3";
+
+/**
+ * Quality cap. Still passed because the actor uses it to pick the
+ * source variant before stripping to audio - lower quality source
+ * means a tighter audio mux. 360p is the lowest tier where YouTube
+ * reliably ships a usable audio track.
  */
 const DEFAULT_QUALITY = "360p";
 
@@ -60,17 +64,16 @@ export class ApifyYoutubeDownloader {
   }
 
   /**
-   * Fetches a stable mp4 URL for a YouTube watch URL via the
+   * Fetches a stable audio URL for a YouTube watch URL via the
    * downloader actor's run-sync-get-dataset-items endpoint. Returns
    * null when the actor's dataset is empty (typical for private,
    * age-gated, or pulled videos).
    *
-   * Input shape targets streamers~youtube-video-downloader (the
-   * Apify-maintained actor): `videos` is the URL list, and
-   * `preferredQuality` caps download size. Other downloader actors
-   * tend to accept the same `videos` key but some still use
-   * `videoUrls` - we send the URL on both for compat; actors with
-   * strict JSON-schema validation ignore the duplicate.
+   * Input shape matches streamers~youtube-video-downloader exactly:
+   *   - videos:        [{ url }]   array of objects, not bare strings
+   *   - preferredFormat: "mp3"     audio-only output for Deepgram
+   *   - preferredQuality: "360p"   source variant before mp3 strip
+   *   - storeInKVStore: true       persist output, return stable URL
    */
   async fetchMediaUrl(watchUrl: string): Promise<string | null> {
     const endpoint = `${APIFY_API_BASE}/acts/${this.actorId}/run-sync-get-dataset-items`;
@@ -81,9 +84,10 @@ export class ApifyYoutubeDownloader {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        videos: [watchUrl],
-        videoUrls: [watchUrl],
+        videos: [{ url: watchUrl }],
+        preferredFormat: DEFAULT_FORMAT,
         preferredQuality: DEFAULT_QUALITY,
+        storeInKVStore: true,
       }),
     });
 
