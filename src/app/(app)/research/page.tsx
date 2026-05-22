@@ -4,7 +4,9 @@ import { Topbar } from "@/components/app-shell/topbar";
 import type { MediaAnalysis } from "@/engines/research";
 import {
   COMPETITOR_LIMIT_PER_USER,
+  DEFAULT_OUTLIER_FEED_OPTIONS,
   getAnalysesForCompetitorMediaIds,
+  getOutlierFeed,
   listCompetitors,
   listMediaForCompetitor,
   type CompetitorMediaRow,
@@ -13,21 +15,50 @@ import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
 import { CompetitorList } from "./competitor-list";
+import { OutlierFeed } from "./outlier-feed";
 
 const PREVIEW_REELS_PER_COMPETITOR = 5;
+
+const ALLOWED_OUTLIER_RATIOS = new Set([2, 3, 5, 10]);
+const ALLOWED_WINDOW_DAYS = new Set([30, 90, 180, 365]);
+
+function parseFilters(params: Record<string, string | string[] | undefined>) {
+  const outlierRaw = Number(
+    Array.isArray(params.outlier) ? params.outlier[0] : params.outlier,
+  );
+  const windowRaw = Number(
+    Array.isArray(params.window) ? params.window[0] : params.window,
+  );
+  return {
+    minOutlierRatio: ALLOWED_OUTLIER_RATIOS.has(outlierRaw)
+      ? outlierRaw
+      : DEFAULT_OUTLIER_FEED_OPTIONS.minOutlierRatio,
+    windowDays: ALLOWED_WINDOW_DAYS.has(windowRaw)
+      ? windowRaw
+      : DEFAULT_OUTLIER_FEED_OPTIONS.windowDays,
+  };
+}
 
 const log = createLogger("page.research");
 
 export const metadata = { title: "Research · Bot OS" };
 
-export default async function ResearchPage() {
+interface ResearchPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function ResearchPage({ searchParams }: ResearchPageProps) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
+  const params = await searchParams;
+  const filters = parseFilters(params);
+
   const competitors = await listCompetitors(supabase, user.id);
+  const outliers = await getOutlierFeed(supabase, user.id, filters);
 
   // Per-competitor preview strip: 5 most recent reels each + any
   // existing analyses, fetched in parallel so the page render is
@@ -114,6 +145,14 @@ export default async function ResearchPage() {
             reelsByCompetitor={reelsByCompetitor}
             analysesByMediaId={analysesByMediaId}
           />
+
+          <div className="mt-10">
+            <OutlierFeed
+              items={outliers}
+              hasCompetitors={competitors.length > 0}
+              filters={filters}
+            />
+          </div>
         </div>
       </div>
     </>

@@ -56,3 +56,13 @@ export {
   verifyApifyWebhookToken,
 } from "./webhook";
 export type { ApifyWebhookPayload } from "./webhook";
+
+export {
+  computeOutliers,
+  DEFAULT_OUTLIER_FEED_OPTIONS,
+  getOutlierFeed,
+} from "./outlier-feed";
+export type {
+  OutlierFeedItem,
+  OutlierFeedOptions,
+} from "./outlier-feed";
