@@ -229,13 +229,13 @@ function parseYoutubeItem(item: unknown): CompetitorReel | null {
     caption: stringOrNull(obj.title) ?? stringOrNull(obj.description),
     permalink,
     media_url: null,
-    // Prefer the predictable max-res URL built from the video id.
-    // The list-scraper sometimes returns hqdefault.jpg (480x360) or
-    // the static "default.jpg" (120x90) which look blurry on the
-    // 80px wide tiles. maxresdefault always exists for shorts
-    // uploaded in the last few years; older ones 404 cleanly and
-    // Next/Image's fallback paint takes over.
-    thumbnail_url: `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`,
+    // oardefault.jpg is YouTube's Shorts-native vertical thumbnail
+    // (1080x1920). maxresdefault.jpg is 1280x720 landscape, which
+    // object-cover crops to a tall slice through the middle of the
+    // frame, often missing the subject entirely. oardefault exists
+    // for any short uploaded in the last few years; the rare miss
+    // 404s cleanly and Next/Image paints empty.
+    thumbnail_url: `https://i.ytimg.com/vi/${id}/oardefault.jpg`,
     posted_at:
       stringOrNull(obj.date) ??
       stringOrNull(obj.publishedAt) ??

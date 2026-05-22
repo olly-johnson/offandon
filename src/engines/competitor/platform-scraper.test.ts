@@ -179,11 +179,11 @@ describe("parseScrapeItem", () => {
     // media_url stays null: YT watch URLs aren't directly transcribable,
     // so the auto-analyser must skip these rather than crash on HTML.
     expect(out?.media_url).toBeNull();
-    // Thumbnail is constructed from the video id so we get the
-    // max-res copy even when the list scraper returned a low-res
-    // hqdefault.
+    // oardefault.jpg is YouTube's Shorts-native 9:16 vertical
+    // thumbnail; ignoring the list scraper's lower-res or 16:9
+    // landscape thumbnails and constructing directly from the id.
     expect(out?.thumbnail_url).toBe(
-      "https://i.ytimg.com/vi/abc-XYZ/maxresdefault.jpg",
+      "https://i.ytimg.com/vi/abc-XYZ/oardefault.jpg",
     );
   });
 
