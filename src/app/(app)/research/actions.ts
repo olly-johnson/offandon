@@ -16,6 +16,7 @@ import {
   removeCompetitor,
   removeFromVault,
   saveToVault,
+  setCompetitorMediaAnalysisFailure,
   updateCompetitorSyncState,
 } from "@/engines/competitor";
 import { inngest, INNGEST_EVENTS } from "@/lib/shared/inngest/client";
@@ -161,6 +162,25 @@ export async function analyzeCompetitorMediaAction(formData: FormData): Promise<
       user_id: user.id,
       media_id: mediaId,
     });
+    return;
+  }
+
+  // Some platforms (YouTube Shorts today) don't ship a directly-
+  // downloadable media URL through the scraper, only the watch
+  // page. Deepgram would 4xx on an HTML body. Stamp a friendly
+  // failure reason here so the UI shows it as "Failed: ..." instead
+  // of burning a Deepgram call.
+  if (!media.media_url) {
+    log.info("analyzeCompetitorMediaAction: media_url null, marking unsupported", {
+      user_id: user.id,
+      media_id: mediaId,
+    });
+    await setCompetitorMediaAnalysisFailure(admin, {
+      mediaId,
+      reason:
+        "Direct media URL not available for this platform yet. Transcription needs a video extractor.",
+    });
+    revalidatePath(`/research/${media.competitor_id}`);
     return;
   }
 

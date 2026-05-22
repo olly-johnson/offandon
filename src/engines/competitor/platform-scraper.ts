@@ -109,11 +109,12 @@ function buildInstagramInput(args: ScrapeRequestArgs): Record<string, unknown> {
 function buildTiktokInput(args: ScrapeRequestArgs): Record<string, unknown> {
   // clockworks~tiktok-scraper: `profiles` accepts bare handles; the
   // actor resolves them to https://tiktok.com/@handle internally.
+  // We deliberately omit the shouldDownload* flags: leaving them at
+  // default lets the actor populate videoMeta.downloadAddr in the
+  // dataset, which is the directly-fetchable URL Deepgram needs.
   return {
     profiles: [args.username],
     resultsPerPage: args.resultsLimit,
-    shouldDownloadVideos: false,
-    shouldDownloadCovers: false,
   };
 }
 
@@ -188,12 +189,18 @@ function parseYoutubeItem(item: unknown): CompetitorReel | null {
     stringOrNull(obj.videoUrl) ??
     `https://www.youtube.com/shorts/${id}`;
 
+  // media_url stays null on YT: the scraper returns the watch-page
+  // URL (an HTML document), not a directly-downloadable mp4. The
+  // auto-analyser short-circuits null media_url so we don't burn
+  // Deepgram calls on web pages it can't transcribe. Real YT
+  // analysis needs an actor that extracts the underlying media (yt-
+  // dlp-style), which is a separate integration.
   return {
     id,
     media_type: "REELS",
     caption: stringOrNull(obj.title) ?? stringOrNull(obj.description),
     permalink,
-    media_url: stringOrNull(obj.url) ?? stringOrNull(obj.videoUrl),
+    media_url: null,
     thumbnail_url:
       stringOrNull(obj.thumbnailUrl) ??
       stringOrNull(obj.thumbnail) ??

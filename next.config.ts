@@ -13,6 +13,18 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.fbcdn.net" },
       // Supabase Storage public bucket for suggested-creator avatars.
       { protocol: "https", hostname: "*.supabase.co" },
+      // TikTok CDN domains. The actor returns covers via various
+      // regional subdomains (p16-sign, p77-sign, etc.) so we allow
+      // the broad family rather than enumerating each one.
+      { protocol: "https", hostname: "*.tiktokcdn.com" },
+      { protocol: "https", hostname: "*.tiktokcdn-us.com" },
+      { protocol: "https", hostname: "*.tiktokcdn-eu.com" },
+      // YouTube thumbnail hosts. ytimg covers video thumbnails;
+      // ggpht is used for channel + profile imagery.
+      { protocol: "https", hostname: "*.ytimg.com" },
+      { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "*.ggpht.com" },
+      { protocol: "https", hostname: "yt3.ggpht.com" },
     ],
   },
 };

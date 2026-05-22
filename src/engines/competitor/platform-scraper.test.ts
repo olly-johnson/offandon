@@ -127,7 +127,7 @@ describe("parseScrapeItem", () => {
     expect(out).toBeNull();
   });
 
-  it("youtube_shorts: parses common youtube-scraper shape", () => {
+  it("youtube_shorts: parses common youtube-scraper shape, media_url stays null", () => {
     const out = parseScrapeItem("youtube_shorts", {
       id: "abc-XYZ",
       title: "Why ASML is the most important company",
@@ -145,6 +145,9 @@ describe("parseScrapeItem", () => {
     expect(out?.view_count).toBe(3_200_000);
     expect(out?.like_count).toBe(169_000);
     expect(out?.duration_seconds).toBe(58);
+    // media_url stays null: YT watch URLs aren't directly transcribable,
+    // so the auto-analyser must skip these rather than crash on HTML.
+    expect(out?.media_url).toBeNull();
   });
 
   it("youtube_shorts: tolerates videoId / publishedAt aliases", () => {

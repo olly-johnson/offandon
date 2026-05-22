@@ -65,7 +65,7 @@ describe("listCompetitors", () => {
 
 describe("addCompetitor", () => {
   function buildSupabase(opts: {
-    existing: Array<{ username: string }>;
+    existing: Array<{ username: string; platform?: string }>;
     insertResponse?:
       | { data: { id: string }; error: null }
       | { data: null; error: { code: string; message: string } };
