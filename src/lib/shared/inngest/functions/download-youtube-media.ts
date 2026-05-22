@@ -31,7 +31,12 @@ export const downloadYoutubeMedia = inngest.createFunction(
     id: "download-youtube-media",
     name: "YouTube: resolve mp4 URL + queue analysis",
     retries: 2,
-    concurrency: { limit: 4 },
+    // Concurrency capped at 2 so we never burn more than 4 GB of
+    // Apify's 8 GB free-tier concurrent-memory budget on YT
+    // downloads alone (each run is 2048 MB after the memory
+    // override in youtube-downloader.ts). Leaves headroom for the
+    // IG / TT scrapes running in parallel.
+    concurrency: { limit: 2 },
     triggers: [{ event: INNGEST_EVENTS.YoutubeMediaDownloadRequested }],
   },
   async ({ event, step }) => {

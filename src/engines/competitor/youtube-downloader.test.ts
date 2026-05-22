@@ -32,6 +32,9 @@ describe("ApifyYoutubeDownloader.fetchMediaUrl", () => {
     expect(calledUrl).toContain(
       "/v2/acts/streamers~youtube-video-downloader/run-sync-get-dataset-items",
     );
+    // Memory override keeps us inside Apify's free-tier 8 GB
+    // concurrent-memory budget. Default actor memory is 4 GB.
+    expect(calledUrl).toContain("memory=2048");
     expect(init.method).toBe("POST");
     const body = JSON.parse(String(init.body));
     // videos is an array of { url } objects, not bare strings.

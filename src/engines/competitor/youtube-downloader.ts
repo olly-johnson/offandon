@@ -21,6 +21,18 @@ const APIFY_API_BASE = "https://api.apify.com/v2";
 const DEFAULT_ACTOR_ID = "streamers~youtube-video-downloader";
 
 /**
+ * Per-run memory cap, in megabytes. The downloader actor defaults
+ * to 4096 MB which eats half of the free-tier 8 GB concurrent-run
+ * budget per call. mp3 extraction is light - 2048 MB has run fine
+ * in practice and lets four scrapes run side by side without
+ * tripping Apify's actor-memory-limit-exceeded 402.
+ *
+ * Override via APIFY_YOUTUBE_DOWNLOADER_MEMORY_MB if the actor
+ * starts OOMing on longer videos.
+ */
+const DEFAULT_MEMORY_MB = 2048;
+
+/**
  * Output format. mp3 is audio-only, which is all Deepgram needs;
  * skipping the video stream brings the per-reel download from
  * ~2-3 MB (mp4 at 360p) to ~300-500 KB. Same transcript quality,
@@ -76,7 +88,8 @@ export class ApifyYoutubeDownloader {
    *   - storeInKVStore: true       persist output, return stable URL
    */
   async fetchMediaUrl(watchUrl: string): Promise<string | null> {
-    const endpoint = `${APIFY_API_BASE}/acts/${this.actorId}/run-sync-get-dataset-items`;
+    const memoryMb = resolveMemoryMb();
+    const endpoint = `${APIFY_API_BASE}/acts/${this.actorId}/run-sync-get-dataset-items?memory=${memoryMb}`;
     const res = await this.fetchImpl(endpoint, {
       method: "POST",
       headers: {
@@ -136,6 +149,15 @@ export function parseDownloaderItem(item: unknown): string | null {
   }
 
   return null;
+}
+
+function resolveMemoryMb(): number {
+  const fromEnv = process.env.APIFY_YOUTUBE_DOWNLOADER_MEMORY_MB;
+  if (fromEnv && fromEnv.trim() !== "") {
+    const parsed = Number.parseInt(fromEnv, 10);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return DEFAULT_MEMORY_MB;
 }
 
 function stringOrNull(v: unknown): string | null {
