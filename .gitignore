@@ -63,3 +63,14 @@ next-env.d.ts
 /members/
 
 certificates
+
+# supabase CLI scratch + operator-only region-migration helpers. None of
+# these are part of the app build or migration pipeline; they were used
+# once during the Ireland -> Singapore move and don't belong in the
+# repo. Underscore-prefixed migration files are NOT picked up by
+# `supabase db push`, so leaving them on disk locally is harmless.
+/supabase/.temp/
+/supabase/migrations/_combined_singapore.sql
+/supabase/migrations/_public_data.sql
+/scripts/migrate-singapore.mjs
+/scripts/verify-singapore.mjs
