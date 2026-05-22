@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -29,6 +28,7 @@ import {
   saveCompetitorToVaultAction,
   type VaultActionState,
 } from "../../actions";
+import { ReelThumbnail } from "../../reel-thumbnail";
 import { useCompetitorAnalysisRealtime } from "../use-competitor-analysis-realtime";
 import { useCompetitorMediaRealtime } from "../../use-competitor-media-realtime";
 
@@ -183,7 +183,7 @@ function Thumbnail({
       style={{ background: "var(--oo-bg-elevated)" }}
     >
       {media.thumbnail_url ? (
-        <Image
+        <ReelThumbnail
           src={media.thumbnail_url}
           alt=""
           fill

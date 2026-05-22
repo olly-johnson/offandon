@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -16,6 +15,7 @@ import type { CompetitorMediaRow } from "@/engines/competitor";
 import type { MediaAnalysis } from "@/engines/research";
 
 import { analyzeCompetitorMediaAction } from "../actions";
+import { ReelThumbnail } from "../reel-thumbnail";
 import { useCompetitorMediaRealtime } from "../use-competitor-media-realtime";
 import { useCompetitorAnalysisRealtime } from "./use-competitor-analysis-realtime";
 
@@ -91,7 +91,7 @@ function ReelCard({
           style={{ background: "var(--oo-bg-hover)" }}
         >
           {reel.thumbnail_url ? (
-            <Image
+            <ReelThumbnail
               src={reel.thumbnail_url}
               alt=""
               fill

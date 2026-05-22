@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -20,6 +19,7 @@ import {
   type AddCompetitorState,
 } from "./actions";
 import { PlatformGlyph, platformBrandColor, platformLabel } from "./platform-icons";
+import { ReelThumbnail } from "./reel-thumbnail";
 import { SuggestedCreatorsGrid } from "./suggested-creators-grid";
 import { useCompetitorRealtime } from "./use-competitor-realtime";
 import { useCompetitorMediaRealtime } from "./use-competitor-media-realtime";
@@ -456,7 +456,7 @@ function ReelThumb({
       }
     >
       {reel.thumbnail_url ? (
-        <Image
+        <ReelThumbnail
           src={reel.thumbnail_url}
           alt=""
           fill

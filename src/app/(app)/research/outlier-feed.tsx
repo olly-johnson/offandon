@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Eye, MessageCircle, Heart, TrendingUp } from "lucide-react";
 
@@ -12,6 +11,7 @@ import type {
 } from "@/engines/competitor/outlier-feed";
 
 import { PlatformGlyph, platformBrandColor } from "./platform-icons";
+import { ReelThumbnail } from "./reel-thumbnail";
 
 interface OutlierFeedProps {
   items: OutlierFeedItem[];
@@ -269,7 +269,7 @@ function OutlierTile({ item }: { item: OutlierFeedItem }) {
         style={{ background: "var(--oo-bg-hover)" }}
       >
         {item.thumbnail_url ? (
-          <Image
+          <ReelThumbnail
             src={item.thumbnail_url}
             alt=""
             fill
