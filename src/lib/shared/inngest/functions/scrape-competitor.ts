@@ -236,12 +236,21 @@ export const competitorScrapeCompleted = inngest.createFunction(
     // even without an analysis row. 30 matches DEFAULT_RESULTS_PER_RUN
     // so a single sync covers the whole page of reels Apify returned.
     //
+    // Per-platform filtering:
+    //   IG / TT: list scraper returns a usable media_url, so we filter
+    //     to ones with a URL and skip the ones without (image-only).
+    //   YT: list scraper never returns media_url (HTML watch pages
+    //     only); the downloader actor populates it asynchronously, so
+    //     we keep YT reels in the candidate set regardless of url.
+    //
     // Apify returns most-recent-first; sort defensively in case that
-    // ever changes upstream. Reels without a media_url get skipped
-    // (no audio to feed Deepgram).
+    // ever changes upstream.
     const AUTO_ANALYZE_LATEST = 30;
     const latestTopN = reels
-      .filter((r) => r.media_url != null)
+      .filter(
+        (r) =>
+          platform === "youtube_shorts" || r.media_url != null,
+      )
       .slice()
       .sort((a, b) => {
         const ta = a.posted_at ? Date.parse(a.posted_at) : 0;
@@ -284,10 +293,18 @@ export const competitorScrapeCompleted = inngest.createFunction(
           mediaIds: analyzeCandidates.map((r) => r.id),
         });
       });
-      await step.run("emit-analyze-events", async () => {
+      await step.run("emit-fanout-events", async () => {
+        // YT goes through the download-first pipeline so the analyser
+        // gets a fetch-stable mp4 URL. Other platforms fan out
+        // straight to analysis since their media_url is already
+        // populated by the list scraper.
+        const eventName =
+          platform === "youtube_shorts"
+            ? INNGEST_EVENTS.YoutubeMediaDownloadRequested
+            : INNGEST_EVENTS.CompetitorMediaAnalyzeRequested;
         await inngest.send(
           analyzeCandidates.map((r) => ({
-            name: INNGEST_EVENTS.CompetitorMediaAnalyzeRequested,
+            name: eventName,
             data: {
               user_id,
               competitor_id,

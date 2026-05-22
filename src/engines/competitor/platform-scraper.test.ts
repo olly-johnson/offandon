@@ -179,6 +179,12 @@ describe("parseScrapeItem", () => {
     // media_url stays null: YT watch URLs aren't directly transcribable,
     // so the auto-analyser must skip these rather than crash on HTML.
     expect(out?.media_url).toBeNull();
+    // Thumbnail is constructed from the video id so we get the
+    // max-res copy even when the list scraper returned a low-res
+    // hqdefault.
+    expect(out?.thumbnail_url).toBe(
+      "https://i.ytimg.com/vi/abc-XYZ/maxresdefault.jpg",
+    );
   });
 
   it("youtube_shorts: tolerates videoId / publishedAt aliases", () => {

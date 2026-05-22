@@ -3,6 +3,7 @@ import { serve } from "inngest/next";
 import { inngest } from "@/lib/shared/inngest/client";
 import { analyzeCompetitorMedia } from "@/lib/shared/inngest/functions/analyze-competitor-media";
 import { analyzeMedia } from "@/lib/shared/inngest/functions/analyze-media";
+import { downloadYoutubeMedia } from "@/lib/shared/inngest/functions/download-youtube-media";
 import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts";
 import { refreshSuggestedAvatars } from "@/lib/shared/inngest/functions/refresh-suggested-avatars";
 import { refreshVoiceDna } from "@/lib/shared/inngest/functions/refresh-voice-dna";
@@ -36,6 +37,7 @@ export const { GET, POST, PUT } = serve({
     competitorScrapeCompleted,
     syncAllCompetitorsNightly,
     analyzeCompetitorMedia,
+    downloadYoutubeMedia,
     refreshSuggestedAvatars,
   ],
 });

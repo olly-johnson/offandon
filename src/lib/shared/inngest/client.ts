@@ -27,6 +27,8 @@ export const INNGEST_EVENTS = {
   CompetitorScrapeRequested: "competitor/scrape.requested",
   CompetitorScrapeCompleted: "competitor/scrape.completed",
   CompetitorMediaAnalyzeRequested: "competitor/media.analyze.requested",
+  YoutubeMediaDownloadRequested:
+    "competitor/youtube-media.download.requested",
   SuggestedAvatarsRefreshRequested:
     "research/suggested-avatars.refresh.requested",
 } as const;
@@ -104,4 +106,18 @@ export interface CompetitorMediaAnalyzeRequestedData {
   competitor_id: string;
   media_id: string;
   force?: boolean;
+}
+
+/**
+ * Payload shape for competitor/youtube-media.download.requested. The
+ * list scraper (streamers~youtube-scraper) returns watch-page URLs;
+ * this worker resolves each one to a stable mp4 URL via the YT
+ * downloader actor, writes it back to competitor_media.media_url,
+ * and then emits the regular analyse event so the rest of the chain
+ * is platform-agnostic.
+ */
+export interface YoutubeMediaDownloadRequestedData {
+  user_id: string;
+  competitor_id: string;
+  media_id: string;
 }

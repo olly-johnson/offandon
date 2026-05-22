@@ -215,22 +215,27 @@ function parseYoutubeItem(item: unknown): CompetitorReel | null {
     stringOrNull(obj.videoUrl) ??
     `https://www.youtube.com/shorts/${id}`;
 
-  // media_url stays null on YT: the scraper returns the watch-page
-  // URL (an HTML document), not a directly-downloadable mp4. The
-  // auto-analyser short-circuits null media_url so we don't burn
-  // Deepgram calls on web pages it can't transcribe. Real YT
-  // analysis needs an actor that extracts the underlying media (yt-
-  // dlp-style), which is a separate integration.
+  // media_url stays null on YT here. The list-scraper returns the
+  // watch-page URL (an HTML document), not a directly-downloadable
+  // mp4. A second Apify run via the youtube-video-downloader actor
+  // populates media_url asynchronously; see download-youtube-media
+  // Inngest function. Until that lands the reel sits with media_url
+  // null, surfaces in the outlier feed by view count, and the
+  // drill-in's analyse button is gated behind the "media url
+  // populated" check.
   return {
     id,
     media_type: "REELS",
     caption: stringOrNull(obj.title) ?? stringOrNull(obj.description),
     permalink,
     media_url: null,
-    thumbnail_url:
-      stringOrNull(obj.thumbnailUrl) ??
-      stringOrNull(obj.thumbnail) ??
-      pickThumbnail(obj.thumbnails),
+    // Prefer the predictable max-res URL built from the video id.
+    // The list-scraper sometimes returns hqdefault.jpg (480x360) or
+    // the static "default.jpg" (120x90) which look blurry on the
+    // 80px wide tiles. maxresdefault always exists for shorts
+    // uploaded in the last few years; older ones 404 cleanly and
+    // Next/Image's fallback paint takes over.
+    thumbnail_url: `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`,
     posted_at:
       stringOrNull(obj.date) ??
       stringOrNull(obj.publishedAt) ??
@@ -240,18 +245,6 @@ function parseYoutubeItem(item: unknown): CompetitorReel | null {
     view_count: numberOrNull(obj.viewCount ?? obj.views),
     duration_seconds: numberOrNull(obj.duration),
   };
-}
-
-function pickThumbnail(v: unknown): string | null {
-  // Some YT scrapers return thumbnails as an array of { url, width }
-  // objects ordered low-to-high; we want the largest/last one.
-  if (!Array.isArray(v) || v.length === 0) return null;
-  const last = v[v.length - 1];
-  if (last && typeof last === "object") {
-    const url = (last as Record<string, unknown>).url;
-    return stringOrNull(url);
-  }
-  return null;
 }
 
 function stringOrNull(v: unknown): string | null {
