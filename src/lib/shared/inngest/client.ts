@@ -27,6 +27,8 @@ export const INNGEST_EVENTS = {
   CompetitorScrapeRequested: "competitor/scrape.requested",
   CompetitorScrapeCompleted: "competitor/scrape.completed",
   CompetitorMediaAnalyzeRequested: "competitor/media.analyze.requested",
+  SuggestedAvatarsRefreshRequested:
+    "research/suggested-avatars.refresh.requested",
 } as const;
 
 /**

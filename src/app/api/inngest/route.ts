@@ -4,6 +4,7 @@ import { inngest } from "@/lib/shared/inngest/client";
 import { analyzeCompetitorMedia } from "@/lib/shared/inngest/functions/analyze-competitor-media";
 import { analyzeMedia } from "@/lib/shared/inngest/functions/analyze-media";
 import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts";
+import { refreshSuggestedAvatars } from "@/lib/shared/inngest/functions/refresh-suggested-avatars";
 import { refreshVoiceDna } from "@/lib/shared/inngest/functions/refresh-voice-dna";
 import {
   competitorScrapeCompleted,
@@ -35,5 +36,6 @@ export const { GET, POST, PUT } = serve({
     competitorScrapeCompleted,
     syncAllCompetitorsNightly,
     analyzeCompetitorMedia,
+    refreshSuggestedAvatars,
   ],
 });
