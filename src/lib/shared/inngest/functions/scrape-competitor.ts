@@ -62,7 +62,7 @@ export const competitorScrapeRequested = inngest.createFunction(
     const competitor = await step.run("load-competitor", async () => {
       const { data: row, error } = await supabase
         .from("competitor_accounts")
-        .select("id, user_id, username")
+        .select("id, user_id, username, platform")
         .eq("id", competitor_id)
         .eq("user_id", user_id)
         .single();
@@ -89,6 +89,10 @@ export const competitorScrapeRequested = inngest.createFunction(
         const scraper = ApifyCompetitorScraper.fromEnv();
         return scraper.startReelScrape({
           username: competitor.username,
+          platform: competitor.platform as
+            | "instagram"
+            | "tiktok"
+            | "youtube_shorts",
           resultsLimit: DEFAULT_RESULTS_PER_RUN,
           webhookUrl,
           runMetadata: {
@@ -173,9 +177,28 @@ export const competitorScrapeCompleted = inngest.createFunction(
       return { succeeded: false, status };
     }
 
+    // Look up the platform so we can route to the right parser.
+    // Cheap point-read; competitor_accounts is small + indexed.
+    const platform = await step.run("load-platform", async () => {
+      const { data, error } = await supabase
+        .from("competitor_accounts")
+        .select("platform")
+        .eq("id", competitor_id)
+        .eq("user_id", user_id)
+        .single();
+      if (error || !data) {
+        log.warn("load-platform fell back to instagram", {
+          competitor_id,
+          message: error?.message,
+        });
+        return "instagram" as const;
+      }
+      return data.platform as "instagram" | "tiktok" | "youtube_shorts";
+    });
+
     const reels = await step.run("fetch-dataset", async () => {
       const scraper = ApifyCompetitorScraper.fromEnv();
-      const items = await scraper.fetchDatasetItems(dataset_id);
+      const items = await scraper.fetchDatasetItems(dataset_id, platform);
       return items;
     });
 

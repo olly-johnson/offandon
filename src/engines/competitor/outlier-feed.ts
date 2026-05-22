@@ -165,20 +165,17 @@ export async function getOutlierFeed(
 
   const { data: competitors, error: cErr } = await supabase
     .from("competitor_accounts")
-    .select("id, username")
+    .select("id, username, platform")
     .eq("user_id", userId);
   if (cErr) {
     log.error("competitor_accounts fetch failed", { user_id: userId, message: cErr.message });
     throw new Error(`getOutlierFeed: ${cErr.message}`);
   }
   if (!competitors || competitors.length === 0) return [];
-  // All tracked accounts are Instagram today. When the platform
-  // column lands on competitor_accounts, drop the hardcode and read
-  // c.platform from the row instead.
   const enriched: OutlierFeedCompetitor[] = competitors.map((c) => ({
     id: c.id as string,
     username: c.username as string,
-    platform: "instagram",
+    platform: (c.platform ?? "instagram") as SuggestedPlatform,
   }));
 
   const { data: media, error: mErr } = await supabase

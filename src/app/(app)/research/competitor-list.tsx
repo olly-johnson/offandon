@@ -19,11 +19,13 @@ import {
   syncCompetitorAction,
   type AddCompetitorState,
 } from "./actions";
+import { PlatformGlyph, platformBrandColor, platformLabel } from "./platform-icons";
 import { SuggestedCreatorsGrid } from "./suggested-creators-grid";
 import { useCompetitorRealtime } from "./use-competitor-realtime";
 import { useCompetitorMediaRealtime } from "./use-competitor-media-realtime";
 import type {
   CompetitorMediaRow,
+  CompetitorPlatform,
   CompetitorRow,
 } from "@/engines/competitor";
 import type { MediaAnalysis } from "@/engines/research";
@@ -49,11 +51,18 @@ export function CompetitorList({
   useCompetitorMediaRealtime(userId);
   const atCap = competitors.length >= limit;
   // Lifted from AddCompetitorForm so the suggested-creators grid can
-  // pre-fill the input on chip click.
+  // pre-fill the input on chip click. Platform is also lifted so a
+  // suggested TT/YT chip click sets the right scrape destination.
   const [handle, setHandle] = useState("");
+  const [platform, setPlatform] = useState<CompetitorPlatform>("instagram");
   const trackedHandles = new Set(
-    competitors.map((c) => c.username.toLowerCase()),
+    competitors.map((c) => `${c.platform}:${c.username.toLowerCase()}`),
   );
+
+  function onPick(h: string, p: CompetitorPlatform) {
+    setHandle(h);
+    setPlatform(p);
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -62,12 +71,15 @@ export function CompetitorList({
           atCap={atCap}
           handle={handle}
           setHandle={setHandle}
+          platform={platform}
+          setPlatform={setPlatform}
         />
         <SuggestedCreatorsGrid
           trackedHandles={trackedHandles}
           currentHandle={handle}
+          currentPlatform={platform}
           atCap={atCap}
-          onPick={setHandle}
+          onPick={onPick}
         />
       </div>
 
@@ -98,14 +110,24 @@ export function CompetitorList({
   );
 }
 
+const PLATFORM_PICKER_OPTIONS: { value: CompetitorPlatform; label: string }[] = [
+  { value: "instagram", label: "Instagram" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube_shorts", label: "YouTube Shorts" },
+];
+
 function AddCompetitorForm({
   atCap,
   handle,
   setHandle,
+  platform,
+  setPlatform,
 }: {
   atCap: boolean;
   handle: string;
   setHandle: (h: string) => void;
+  platform: CompetitorPlatform;
+  setPlatform: (p: CompetitorPlatform) => void;
 }) {
   const [state, formAction, pending] = useActionState<
     AddCompetitorState,
@@ -121,6 +143,12 @@ function AddCompetitorForm({
   return (
     <form action={formAction} className="flex flex-col gap-2">
       <div className="flex items-stretch gap-2">
+        <PlatformPicker
+          value={platform}
+          onChange={setPlatform}
+          disabled={atCap || pending}
+        />
+        <input type="hidden" name="platform" value={platform} />
         <input
           name="handle"
           value={handle}
@@ -159,6 +187,54 @@ function AddCompetitorForm({
         </p>
       ) : null}
     </form>
+  );
+}
+
+function PlatformPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: CompetitorPlatform;
+  onChange: (p: CompetitorPlatform) => void;
+  disabled: boolean;
+}) {
+  const current = PLATFORM_PICKER_OPTIONS.find((o) => o.value === value)!;
+  return (
+    <label
+      className="relative inline-flex items-center"
+      title={`Tracking on ${current.label}`}
+    >
+      <span
+        className="inline-flex items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold"
+        style={{
+          background: "var(--oo-bg-elevated)",
+          border: "1px solid var(--oo-border-subtle)",
+          color: "var(--oo-text-primary)",
+          height: "100%",
+        }}
+      >
+        <PlatformGlyph
+          platform={value}
+          className="size-3"
+          style={{ color: platformBrandColor(value) }}
+        />
+        {platformLabel(value)}
+      </span>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value as CompetitorPlatform)}
+        className="absolute inset-0 cursor-pointer opacity-0"
+        aria-label="Track on platform"
+      >
+        {PLATFORM_PICKER_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -223,6 +299,11 @@ function CompetitorRowItem({
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col">
           <div className="flex items-center gap-1.5">
+            <PlatformGlyph
+              platform={row.platform}
+              className="size-3"
+              style={{ color: platformBrandColor(row.platform) }}
+            />
             <Link
               href={`/research/${row.id}`}
               className="text-sm font-semibold hover:underline"
@@ -231,10 +312,10 @@ function CompetitorRowItem({
               @{row.username}
             </Link>
             <a
-              href={`https://instagram.com/${row.username}`}
+              href={publicProfileUrl(row)}
               target="_blank"
               rel="noreferrer noopener"
-              aria-label={`Open @${row.username} on Instagram`}
+              aria-label={`Open @${row.username} on ${platformLabel(row.platform)}`}
               className="opacity-50 hover:opacity-100"
               style={{ color: "var(--oo-text-dim)" }}
             >
@@ -388,6 +469,13 @@ function ReelThumb({
       </div>
     </Link>
   );
+}
+
+function publicProfileUrl(row: CompetitorRow): string {
+  if (row.platform === "tiktok") return `https://www.tiktok.com/@${row.username}`;
+  if (row.platform === "youtube_shorts")
+    return `https://www.youtube.com/@${row.username}`;
+  return `https://instagram.com/${row.username}`;
 }
 
 function EmptyState() {

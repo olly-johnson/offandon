@@ -10,25 +10,31 @@ import {
 } from "./platform-icons";
 import {
   SUGGESTED_CREATORS,
-  SUPPORTED_TRACKING_PLATFORMS,
   suggestedAvatarUrl,
   type SuggestedCreator,
+  type SuggestedPlatform,
 } from "./suggested-creators";
 
 interface SuggestedCreatorsGridProps {
-  /** Lowercase handles the user is already tracking; chips render disabled. */
+  /**
+   * Already-tracked handles keyed as "platform:handle" lowercase, so
+   * the same handle on different platforms doesn't double-disable.
+   */
   trackedHandles: Set<string>;
-  /** Currently-typed handle in the add form. Chip glows when it matches. */
+  /** Currently-typed handle in the add form. */
   currentHandle: string;
+  /** Currently-selected platform; chip glows when both handle + platform match. */
+  currentPlatform: SuggestedPlatform;
   /** Disabled because the user is at the tracking cap. */
   atCap: boolean;
-  /** Click handler for IG chips: fills the add-form input with this handle. */
-  onPick: (handle: string) => void;
+  /** Click handler: fills the add-form input + platform with the chip's values. */
+  onPick: (handle: string, platform: SuggestedPlatform) => void;
 }
 
 export function SuggestedCreatorsGrid({
   trackedHandles,
   currentHandle,
+  currentPlatform,
   atCap,
   onPick,
 }: SuggestedCreatorsGridProps) {
@@ -40,18 +46,18 @@ export function SuggestedCreatorsGrid({
       aria-label="Suggested creators"
     >
       {SUGGESTED_CREATORS.map((c) => {
-        const supported = SUPPORTED_TRACKING_PLATFORMS.has(c.platform);
-        const tracked = supported && trackedHandles.has(c.handle.toLowerCase());
-        const isTyped = supported && typed === c.handle.toLowerCase();
+        const key = `${c.platform}:${c.handle.toLowerCase()}`;
+        const tracked = trackedHandles.has(key);
+        const isTyped =
+          typed === c.handle.toLowerCase() && currentPlatform === c.platform;
         return (
           <SuggestedChip
-            key={`${c.platform}:${c.handle}`}
+            key={key}
             creator={c}
-            supported={supported}
             tracked={tracked}
             highlighted={isTyped}
-            disabled={!supported || tracked || (atCap && !isTyped)}
-            onClick={() => supported && onPick(c.handle)}
+            disabled={tracked || (atCap && !isTyped)}
+            onClick={() => onPick(c.handle, c.platform)}
           />
         );
       })}
@@ -61,26 +67,22 @@ export function SuggestedCreatorsGrid({
 
 function SuggestedChip({
   creator,
-  supported,
   tracked,
   highlighted,
   disabled,
   onClick,
 }: {
   creator: SuggestedCreator;
-  supported: boolean;
   tracked: boolean;
   highlighted: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
-  const tooltip = !supported
-    ? `${platformLabel(creator.platform)} tracking is coming soon`
-    : tracked
-      ? `@${creator.handle} - already tracked`
-      : creator.bio
-        ? `@${creator.handle} - ${creator.bio}`
-        : `@${creator.handle}`;
+  const tooltip = tracked
+    ? `@${creator.handle} on ${platformLabel(creator.platform)} - already tracked`
+    : creator.bio
+      ? `@${creator.handle} (${platformLabel(creator.platform)}) - ${creator.bio}`
+      : `@${creator.handle} (${platformLabel(creator.platform)})`;
 
   return (
     <button
@@ -117,13 +119,11 @@ function SuggestedChip({
             className="size-2.5"
             style={{ color: platformBrandColor(creator.platform) }}
           />
-          {!supported
-            ? "Coming soon"
-            : tracked
-              ? "Already tracking"
-              : creator.platform === "youtube_shorts"
-                ? `${formatCount(creator.follower_count)} subscribers`
-                : `${formatCount(creator.follower_count)} followers`}
+          {tracked
+            ? "Already tracking"
+            : creator.platform === "youtube_shorts"
+              ? `${formatCount(creator.follower_count)} subscribers`
+              : `${formatCount(creator.follower_count)} followers`}
         </span>
       </span>
     </button>

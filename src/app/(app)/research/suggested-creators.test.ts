@@ -55,10 +55,10 @@ describe("SUGGESTED_CREATORS", () => {
 });
 
 describe("SUPPORTED_TRACKING_PLATFORMS", () => {
-  it("currently lists only instagram (TT/YT scrapers not yet built)", () => {
+  it("lists all three platforms now that TT + YT scrapers are wired", () => {
     expect(SUPPORTED_TRACKING_PLATFORMS.has("instagram")).toBe(true);
-    expect(SUPPORTED_TRACKING_PLATFORMS.has("tiktok")).toBe(false);
-    expect(SUPPORTED_TRACKING_PLATFORMS.has("youtube_shorts")).toBe(false);
+    expect(SUPPORTED_TRACKING_PLATFORMS.has("tiktok")).toBe(true);
+    expect(SUPPORTED_TRACKING_PLATFORMS.has("youtube_shorts")).toBe(true);
   });
 });
 

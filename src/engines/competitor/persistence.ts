@@ -8,6 +8,24 @@ const log = createLogger("competitor.persistence");
 export type CompetitorSupabaseClient = SupabaseClient<Database>;
 
 /**
+ * Source platform for a tracked competitor. Determines which Apify
+ * actor handles the scrape and which parser ingests the dataset.
+ * Kept narrow at the application layer; the DB CHECK constraint
+ * enforces the same domain.
+ */
+export type CompetitorPlatform = "instagram" | "tiktok" | "youtube_shorts";
+
+export const COMPETITOR_PLATFORMS: ReadonlySet<CompetitorPlatform> = new Set([
+  "instagram",
+  "tiktok",
+  "youtube_shorts",
+]);
+
+export function isCompetitorPlatform(v: unknown): v is CompetitorPlatform {
+  return typeof v === "string" && COMPETITOR_PLATFORMS.has(v as CompetitorPlatform);
+}
+
+/**
  * Hard cap on tracked competitor accounts per user. Surfaced in the UI
  * as "n/5" and enforced server-side in addCompetitor. Not enforced at
  * the DB layer (would need a trigger); RLS still prevents anyone
@@ -41,6 +59,7 @@ export class CompetitorLimitError extends Error {
 export interface CompetitorRow {
   id: string;
   username: string;
+  platform: CompetitorPlatform;
   display_name: string | null;
   note: string | null;
   added_at: string;
@@ -74,7 +93,7 @@ export async function getCompetitorForUser(
   const { data, error } = await supabase
     .from("competitor_accounts")
     .select(
-      "id, username, display_name, note, added_at, last_synced_at, last_sync_error, sync_pending",
+      "id, username, platform, display_name, note, added_at, last_synced_at, last_sync_error, sync_pending",
     )
     .eq("id", args.id)
     .eq("user_id", args.userId)
@@ -99,7 +118,7 @@ export async function listCompetitors(
   const { data, error } = await supabase
     .from("competitor_accounts")
     .select(
-      "id, username, display_name, note, added_at, last_synced_at, last_sync_error, sync_pending",
+      "id, username, platform, display_name, note, added_at, last_synced_at, last_sync_error, sync_pending",
     )
     .eq("user_id", userId)
     .order("added_at", { ascending: true });
@@ -118,16 +137,29 @@ export async function listCompetitors(
 export interface AddCompetitorResult {
   id: string;
   username: string;
+  platform: CompetitorPlatform;
 }
 
 export async function addCompetitor(
   supabase: CompetitorSupabaseClient,
-  args: { userId: string; rawHandle: string; now?: Date },
+  args: {
+    userId: string;
+    rawHandle: string;
+    platform?: CompetitorPlatform;
+    now?: Date;
+  },
 ): Promise<AddCompetitorResult> {
   const username = normaliseHandle(args.rawHandle);
+  const platform: CompetitorPlatform = args.platform ?? "instagram";
   const existing = await listCompetitors(supabase, args.userId);
 
-  if (existing.some((row) => row.username === username)) {
+  // Uniqueness is per (platform, username) so the same handle can
+  // be tracked on IG and TT without colliding.
+  if (
+    existing.some(
+      (row) => row.username === username && row.platform === platform,
+    )
+  ) {
     throw new DuplicateCompetitorError(username);
   }
   if (existing.length >= COMPETITOR_LIMIT_PER_USER) {
@@ -144,6 +176,7 @@ export async function addCompetitor(
     .insert({
       user_id: args.userId,
       username,
+      platform,
       added_at: stamp,
       sync_pending: true,
     })
@@ -164,7 +197,7 @@ export async function addCompetitor(
   if (!data?.id) {
     throw new Error("addCompetitor: insert succeeded but returned no id");
   }
-  return { id: data.id, username };
+  return { id: data.id, username, platform };
 }
 
 export async function removeCompetitor(

@@ -62,12 +62,8 @@ const VIEWS_OPTIONS: NumericOption[] = [
 const PLATFORM_OPTIONS: StringOption<OutlierFeedPlatform>[] = [
   { value: "all", label: "All platforms" },
   { value: "instagram", label: "Instagram" },
-  { value: "tiktok", label: "TikTok (soon)", disabled: true },
-  {
-    value: "youtube_shorts",
-    label: "YouTube Shorts (soon)",
-    disabled: true,
-  },
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube_shorts", label: "YouTube Shorts" },
 ];
 
 export function OutlierFeed({ items, hasCompetitors, filters }: OutlierFeedProps) {

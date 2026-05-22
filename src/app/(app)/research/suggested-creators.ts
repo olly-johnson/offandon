@@ -89,7 +89,7 @@ export const SUGGESTED_CREATORS: SuggestedCreator[] = [
 ];
 
 export const SUPPORTED_TRACKING_PLATFORMS: ReadonlySet<SuggestedPlatform> =
-  new Set(["instagram"]);
+  new Set(["instagram", "tiktok", "youtube_shorts"]);
 
 /**
  * Returns the Supabase Storage URL for a creator's cached avatar.

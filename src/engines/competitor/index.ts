@@ -1,15 +1,18 @@
 export {
   addCompetitor,
   COMPETITOR_LIMIT_PER_USER,
+  COMPETITOR_PLATFORMS,
   CompetitorLimitError,
   DuplicateCompetitorError,
   getCompetitorForUser,
   InvalidCompetitorHandleError,
+  isCompetitorPlatform,
   listCompetitors,
   normaliseHandle,
   removeCompetitor,
 } from "./persistence";
 export type {
+  CompetitorPlatform,
   CompetitorRow,
   CompetitorSupabaseClient,
 } from "./persistence";

@@ -101,10 +101,15 @@ describe("addCompetitor", () => {
       rawHandle: "@OllyJ",
       now: NOW,
     });
-    expect(result).toEqual({ id: "new-id", username: "ollyj" });
+    expect(result).toEqual({
+      id: "new-id",
+      username: "ollyj",
+      platform: "instagram",
+    });
     expect(insert).toHaveBeenCalledWith({
       user_id: "user-1",
       username: "ollyj",
+      platform: "instagram",
       added_at: NOW.toISOString(),
       sync_pending: true,
     });
@@ -112,7 +117,7 @@ describe("addCompetitor", () => {
 
   it("throws DuplicateCompetitorError when the handle is already tracked", async () => {
     const { supabase } = buildSupabase({
-      existing: [{ username: "ollyj" }],
+      existing: [{ username: "ollyj", platform: "instagram" }],
     });
     await expect(
       addCompetitor(supabase, { userId: "user-1", rawHandle: "@OllyJ" }),

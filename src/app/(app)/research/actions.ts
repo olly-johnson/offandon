@@ -11,6 +11,7 @@ import {
   getCompetitorForUser,
   getCompetitorMediaForUser,
   InvalidCompetitorHandleError,
+  isCompetitorPlatform,
   markCompetitorMediaAnalysisPending,
   removeCompetitor,
   removeFromVault,
@@ -37,10 +38,16 @@ export async function addCompetitorAction(
   if (!user) redirect("/signin");
 
   const raw = (form.get("handle") ?? "").toString();
+  const platformRaw = (form.get("platform") ?? "instagram").toString();
+  const platform = isCompetitorPlatform(platformRaw) ? platformRaw : "instagram";
 
   let added;
   try {
-    added = await addCompetitor(supabase, { userId: user.id, rawHandle: raw });
+    added = await addCompetitor(supabase, {
+      userId: user.id,
+      rawHandle: raw,
+      platform,
+    });
   } catch (err) {
     if (
       err instanceof InvalidCompetitorHandleError ||

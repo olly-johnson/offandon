@@ -189,13 +189,28 @@ export class ApifyCompetitorScraper {
     return new ApifyCompetitorScraper({ ...cfg, fetchImpl });
   }
 
+  /**
+   * Start an Apify scrape run for any tracked competitor platform.
+   * Dispatches to the platform-specific actor + input shape via
+   * buildScrapeRequest, but the API call + correlation handling is
+   * identical across platforms.
+   *
+   * Note: this.actorId is now ignored when platform is provided; the
+   * actor id comes from env/default via buildScrapeRequest. Callers
+   * that still pass no platform fall back to IG (existing behaviour).
+   */
   async startReelScrape(args: {
     username: string;
     resultsLimit: number;
     webhookUrl: string;
     runMetadata: ReelScraperRunMetadata;
+    platform?: import("./persistence").CompetitorPlatform;
   }): Promise<ReelScraperStartResult> {
-    const run = buildReelScraperInput({
+    const { buildScrapeRequest, buildScrapeUrl } = await import(
+      "./platform-scraper"
+    );
+    const request = buildScrapeRequest({
+      platform: args.platform ?? "instagram",
       username: args.username,
       resultsLimit: args.resultsLimit,
       webhookUrl: args.webhookUrl,
@@ -203,15 +218,14 @@ export class ApifyCompetitorScraper {
       runMetadata: args.runMetadata,
     });
 
-    const webhooksParam = encodeWebhooksParam(run.webhooks);
-    const url = `${APIFY_API_BASE}/acts/${this.actorId}/runs?webhooks=${webhooksParam}`;
+    const url = buildScrapeUrl(APIFY_API_BASE, request);
     const res = await this.fetchImpl(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(run.input),
+      body: JSON.stringify(request.input),
     });
 
     if (!res.ok) {
@@ -226,15 +240,21 @@ export class ApifyCompetitorScraper {
     if (!id || !defaultDatasetId) {
       throw new Error(`Apify start run returned no id/dataset (${res.status})`);
     }
-    log.info("apify reel scrape started", {
+    log.info("apify scrape started", {
+      platform: args.platform ?? "instagram",
       username: args.username,
+      actor_id: request.actorId,
       actor_run_id: id,
       dataset_id: defaultDatasetId,
     });
     return { actorRunId: id, defaultDatasetId };
   }
 
-  async fetchDatasetItems(datasetId: string): Promise<CompetitorReel[]> {
+  async fetchDatasetItems(
+    datasetId: string,
+    platform: import("./persistence").CompetitorPlatform = "instagram",
+  ): Promise<CompetitorReel[]> {
+    const { parseScrapeItem } = await import("./platform-scraper");
     const url = `${APIFY_API_BASE}/datasets/${datasetId}/items?clean=true&format=json`;
     const res = await this.fetchImpl(url, {
       method: "GET",
@@ -251,7 +271,7 @@ export class ApifyCompetitorScraper {
 
     const out: CompetitorReel[] = [];
     for (const item of raw) {
-      const parsed = parseReelItem(item);
+      const parsed = parseScrapeItem(platform, item);
       if (parsed) out.push(parsed);
     }
     return out;

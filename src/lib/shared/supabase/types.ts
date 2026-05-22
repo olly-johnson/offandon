@@ -609,6 +609,7 @@ export type Database = {
           id: string;
           user_id: string;
           username: string;
+          platform: "instagram" | "tiktok" | "youtube_shorts";
           display_name: string | null;
           note: string | null;
           added_at: string;
@@ -620,6 +621,7 @@ export type Database = {
           id?: string;
           user_id: string;
           username: string;
+          platform?: "instagram" | "tiktok" | "youtube_shorts";
           display_name?: string | null;
           note?: string | null;
           added_at?: string;
@@ -631,6 +633,7 @@ export type Database = {
           id?: string;
           user_id?: string;
           username?: string;
+          platform?: "instagram" | "tiktok" | "youtube_shorts";
           display_name?: string | null;
           note?: string | null;
           added_at?: string;
