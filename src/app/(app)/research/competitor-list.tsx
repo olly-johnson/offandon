@@ -365,7 +365,37 @@ function CompetitorRowItem({
           reels={reels}
           analysesByMediaId={analysesByMediaId}
         />
+      ) : inFlight ? (
+        // First sync in progress and we don't have reels yet. Show
+        // skeleton tiles so the row doesn't look frozen during the
+        // ~30-90s Apify scrape window.
+        <SkeletonReelStrip />
       ) : null}
+    </div>
+  );
+}
+
+function SkeletonReelStrip() {
+  return (
+    <div
+      className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
+      aria-label="Sync in progress"
+    >
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          key={i}
+          className="relative h-28 w-20 shrink-0 animate-pulse overflow-hidden rounded-lg"
+          style={{ background: "var(--oo-bg-hover)" }}
+        >
+          <div className="absolute inset-x-0 bottom-0 flex items-center gap-1 px-1 py-1 text-[9px]">
+            <Loader2
+              className="oo-spin size-2.5"
+              style={{ color: "var(--oo-text-dim)" }}
+            />
+            <span style={{ color: "var(--oo-text-dim)" }}>Fetching</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

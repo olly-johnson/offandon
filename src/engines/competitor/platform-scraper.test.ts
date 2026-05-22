@@ -127,6 +127,37 @@ describe("parseScrapeItem", () => {
     expect(out).toBeNull();
   });
 
+  it("tiktok: prefers mediaUrls[0] (Apify KVS) for media_url", () => {
+    const out = parseScrapeItem("tiktok", {
+      id: "abc",
+      text: "x",
+      mediaUrls: ["https://kvs.apify.com/abc.mp4"],
+      videoUrl: "https://short-lived.tiktokcdn.com/abc.mp4",
+      videoMeta: { downloadAddr: "https://also-short.tiktokcdn.com/abc.mp4" },
+      playCount: 100,
+    });
+    expect(out?.media_url).toBe("https://kvs.apify.com/abc.mp4");
+  });
+
+  it("tiktok: falls back through videoUrl, videoMeta.downloadAddr in order", () => {
+    const outNoKvs = parseScrapeItem("tiktok", {
+      id: "abc",
+      text: "x",
+      videoUrl: "https://example.com/no-watermark.mp4",
+      videoMeta: { downloadAddr: "https://example.com/download.mp4" },
+      playCount: 100,
+    });
+    expect(outNoKvs?.media_url).toBe("https://example.com/no-watermark.mp4");
+
+    const outOnlyMeta = parseScrapeItem("tiktok", {
+      id: "abc",
+      text: "x",
+      videoMeta: { downloadAddr: "https://example.com/download.mp4" },
+      playCount: 100,
+    });
+    expect(outOnlyMeta?.media_url).toBe("https://example.com/download.mp4");
+  });
+
   it("youtube_shorts: parses common youtube-scraper shape, media_url stays null", () => {
     const out = parseScrapeItem("youtube_shorts", {
       id: "abc-XYZ",

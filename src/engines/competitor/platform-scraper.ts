@@ -109,12 +109,18 @@ function buildInstagramInput(args: ScrapeRequestArgs): Record<string, unknown> {
 function buildTiktokInput(args: ScrapeRequestArgs): Record<string, unknown> {
   // clockworks~tiktok-scraper: `profiles` accepts bare handles; the
   // actor resolves them to https://tiktok.com/@handle internally.
-  // We deliberately omit the shouldDownload* flags: leaving them at
-  // default lets the actor populate videoMeta.downloadAddr in the
-  // dataset, which is the directly-fetchable URL Deepgram needs.
+  //
+  // shouldDownloadVideos=true forces the actor to upload each mp4
+  // to Apify's key-value store and expose a fetch-stable URL on
+  // `mediaUrls[0]`. Costs more per run but it's the only reliable
+  // way to hand Deepgram a URL that's still alive 5 minutes later:
+  // TikTok's own CDN URLs are short-lived signed links that expire
+  // before the analyser is done queuing.
   return {
     profiles: [args.username],
     resultsPerPage: args.resultsLimit,
+    shouldDownloadVideos: true,
+    shouldDownloadCovers: false,
   };
 }
 
@@ -157,15 +163,24 @@ function parseTiktokItem(item: unknown): CompetitorReel | null {
   if (!id) return null;
 
   const videoMeta = (obj.videoMeta ?? {}) as Record<string, unknown>;
+  // TT video URL lives under different keys depending on actor
+  // version + the shouldDownloadVideos flag. Try the Apify KVS path
+  // first (most stable), then the actor's own URL fields, then the
+  // raw TT CDN URLs (short-lived but better than nothing).
+  const mediaUrl =
+    pickFirstUrl(obj.mediaUrls) ??
+    stringOrNull(obj.videoUrl) ??
+    stringOrNull(obj.videoUrlNoWaterMark) ??
+    stringOrNull(videoMeta.downloadAddr) ??
+    stringOrNull(videoMeta.playAddr) ??
+    stringOrNull(obj.mediaUrl);
+
   return {
     id,
     media_type: "REELS",
     caption: stringOrNull(obj.text),
     permalink: stringOrNull(obj.webVideoUrl),
-    media_url:
-      stringOrNull(videoMeta.downloadAddr) ??
-      stringOrNull(videoMeta.playAddr) ??
-      stringOrNull(obj.mediaUrl),
+    media_url: mediaUrl,
     thumbnail_url:
       stringOrNull(videoMeta.coverUrl) ??
       stringOrNull(videoMeta.originalCoverUrl) ??
@@ -176,6 +191,17 @@ function parseTiktokItem(item: unknown): CompetitorReel | null {
     view_count: numberOrNull(obj.playCount),
     duration_seconds: numberOrNull(videoMeta.duration ?? obj.duration),
   };
+}
+
+function pickFirstUrl(v: unknown): string | null {
+  if (!Array.isArray(v) || v.length === 0) return null;
+  const first = v[0];
+  if (typeof first === "string") return stringOrNull(first);
+  if (first && typeof first === "object") {
+    const url = (first as Record<string, unknown>).url;
+    return stringOrNull(url);
+  }
+  return null;
 }
 
 function parseYoutubeItem(item: unknown): CompetitorReel | null {
