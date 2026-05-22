@@ -190,25 +190,33 @@ export const competitorScrapeCompleted = inngest.createFunction(
     });
 
     await step.run("mark-synced", async () => {
+      // Apify counts the run as "succeeded" even when the dataset is
+      // empty (private profile, no video posts in recent history, or
+      // the actor's reel filter dropped everything). Surface that as
+      // a soft error message instead of silent "Last sync: today"
+      // so the operator knows why no reels appeared.
+      const softError =
+        reels.length === 0
+          ? "Apify run succeeded but returned 0 reels. Profile may be private, image-only, or rate-limited."
+          : null;
       await updateCompetitorSyncState(supabase, {
         competitorId: competitor_id,
         userId: user_id,
         lastSyncedAt: now.toISOString(),
-        lastSyncError: null,
+        lastSyncError: softError,
         syncPending: false,
       });
     });
 
-    // Auto-fan-out only the latest N reels — the rest stay in
-    // competitor_media for the drill-in page, which exposes a manual
-    // "Analyze" button per reel. Keeps the cost of a nightly cron
-    // sweep bounded (5 reels × Deepgram+Sonnet ≈ $0.05/competitor)
-    // while still letting users drill deeper on demand.
+    // Auto-fan-out the latest N reels for analysis. The rest sit in
+    // competitor_media and surface in the outlier feed by view count
+    // even without an analysis row. 30 matches DEFAULT_RESULTS_PER_RUN
+    // so a single sync covers the whole page of reels Apify returned.
     //
     // Apify returns most-recent-first; sort defensively in case that
     // ever changes upstream. Reels without a media_url get skipped
     // (no audio to feed Deepgram).
-    const AUTO_ANALYZE_LATEST = 5;
+    const AUTO_ANALYZE_LATEST = 30;
     const latestTopN = reels
       .filter((r) => r.media_url != null)
       .slice()

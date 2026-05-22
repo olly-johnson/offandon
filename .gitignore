@@ -54,4 +54,12 @@ next-env.d.ts
 # user_memories, user_methodology) and is reachable via the app's RLS policies.
 /clients/
 
+# per-member onboarding artifacts (mirror of the old monitor_drive_submissions.py
+# output: config.json + voice_profile.md + brand_foundation.md + expertise.md +
+# story_bank.md + quality_learnings.md per member). Contains real client names,
+# stories, and identifying info. The structured equivalent will live in Supabase
+# once Phase 2 of the onboarding pipeline (brand_foundation/story_bank/expertise
+# tables) lands.
+/members/
+
 certificates

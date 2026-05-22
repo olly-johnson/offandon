@@ -40,7 +40,7 @@ export function VaultPanel({ items }: VaultPanelProps) {
         </p>
       </header>
 
-      <div className="grid gap-3 md:grid-cols-[1.4fr_1fr]">
+      <div className="flex flex-col gap-3">
         <VaultCard items={items} />
         <ScriptStudioCard hasItems={items.length > 0} />
       </div>
@@ -168,45 +168,44 @@ function VaultRow({ item }: { item: VaultListRow }) {
 function ScriptStudioCard({ hasItems }: { hasItems: boolean }) {
   return (
     <div
-      className="flex flex-col gap-3 rounded-xl p-4"
+      className="flex flex-wrap items-center justify-between gap-3 rounded-xl p-4"
       style={{
         background: "var(--oo-bg-elevated)",
         border: "1px solid var(--oo-border-subtle)",
       }}
     >
-      <div className="flex items-center gap-1.5">
-        <FileText
-          className="size-3.5"
-          style={{ color: "var(--oo-gold)" }}
-        />
-        <h3
-          className="text-sm font-semibold"
-          style={{ color: "var(--oo-text-primary)" }}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-center gap-1.5">
+          <FileText
+            className="size-3.5"
+            style={{ color: "var(--oo-gold)" }}
+          />
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--oo-text-primary)" }}
+          >
+            Script Studio
+          </h3>
+        </div>
+        <p
+          className="text-xs leading-relaxed"
+          style={{ color: "var(--oo-text-secondary)" }}
         >
-          Script Studio
-        </h3>
+          Generate scripts that pull from your vault as references. The studio
+          blends your Voice DNA with the saved hooks and structures so the
+          output sounds like you, not the source creator.
+          {!hasItems
+            ? " Works without vault items, but sharper with concrete references."
+            : ""}
+        </p>
       </div>
-      <p
-        className="text-xs leading-relaxed"
-        style={{ color: "var(--oo-text-secondary)" }}
-      >
-        Generate scripts that pull from your vault as references. The studio
-        blends your Voice DNA with the saved hooks and structures so the
-        output sounds like you, not the source creator.
-      </p>
       <Link
         href="/scripts"
-        className="gold-btn inline-flex w-fit items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs"
+        className="gold-btn inline-flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-xs"
       >
         Open Script Studio
         <ArrowRight className="size-3" />
       </Link>
-      {!hasItems ? (
-        <p className="text-[10px]" style={{ color: "var(--oo-text-dim)" }}>
-          Tip: the studio works without vault items but the output is sharper
-          when you give it concrete references.
-        </p>
-      ) : null}
     </div>
   );
 }

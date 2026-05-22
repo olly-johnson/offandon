@@ -223,13 +223,12 @@ function CompetitorRowItem({
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col">
           <div className="flex items-center gap-1.5">
-            <Link
-              href={`/research/${row.id}`}
-              className="text-sm font-semibold hover:underline"
+            <span
+              className="text-sm font-semibold"
               style={{ color: "var(--oo-text-primary)" }}
             >
               @{row.username}
-            </Link>
+            </span>
             <a
               href={`https://instagram.com/${row.username}`}
               target="_blank"
@@ -299,26 +298,28 @@ function ReelStrip({
   analysesByMediaId: Record<string, MediaAnalysis>;
 }) {
   return (
-    <Link
-      href={`/research/${competitorId}`}
+    <div
       className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
-      aria-label="Open competitor drill-in"
+      aria-label="Recent reels"
     >
       {reels.map((reel) => (
         <ReelThumb
           key={reel.id}
+          competitorId={competitorId}
           reel={reel}
           analysis={analysesByMediaId[reel.id] ?? null}
         />
       ))}
-    </Link>
+    </div>
   );
 }
 
 function ReelThumb({
+  competitorId,
   reel,
   analysis,
 }: {
+  competitorId: string;
   reel: CompetitorMediaRow;
   analysis: MediaAnalysis | null;
 }) {
@@ -331,7 +332,8 @@ function ReelThumb({
         : "idle";
 
   return (
-    <div
+    <Link
+      href={`/research/${competitorId}/${reel.id}`}
       className="relative h-28 w-20 shrink-0 overflow-hidden rounded-lg"
       style={{ background: "var(--oo-bg-hover)" }}
       title={
@@ -383,7 +385,7 @@ function ReelThumb({
           <span style={{ opacity: 0.7 }}>Tap to analyse</span>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
 

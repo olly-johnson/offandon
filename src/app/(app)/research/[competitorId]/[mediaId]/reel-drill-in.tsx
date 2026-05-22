@@ -75,12 +75,12 @@ export function ReelDrillIn({
   return (
     <div className="flex flex-col gap-5">
       <Link
-        href={`/research/${competitor.id}`}
+        href="/research"
         className="inline-flex items-center gap-1 text-xs hover:underline"
         style={{ color: "var(--oo-text-dim)" }}
       >
         <ArrowLeft className="size-3" />
-        Back to @{competitor.username}
+        Back to research
       </Link>
 
       <ChannelPill competitor={competitor} />
@@ -140,13 +140,16 @@ export function ReelDrillIn({
 
 function ChannelPill({ competitor }: { competitor: CompetitorRow }) {
   return (
-    <Link
-      href={`/research/${competitor.id}`}
-      className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5"
+    <a
+      href={`https://instagram.com/${competitor.username}`}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 hover:opacity-90"
       style={{
         background: "var(--oo-bg-elevated)",
         border: "1px solid var(--oo-border-subtle)",
       }}
+      title={`Open @${competitor.username} on Instagram`}
     >
       <span
         className="flex size-6 items-center justify-center rounded-full text-[10px] font-semibold"
@@ -163,7 +166,7 @@ function ChannelPill({ competitor }: { competitor: CompetitorRow }) {
       >
         @{competitor.username}
       </span>
-    </Link>
+    </a>
   );
 }
 
