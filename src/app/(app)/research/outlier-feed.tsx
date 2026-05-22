@@ -6,7 +6,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Eye, MessageCircle, Heart, TrendingUp } from "lucide-react";
 
-import type { OutlierFeedItem } from "@/engines/competitor/outlier-feed";
+import type {
+  OutlierFeedItem,
+  OutlierFeedPlatform,
+} from "@/engines/competitor/outlier-feed";
 
 import { PlatformGlyph, platformBrandColor } from "./platform-icons";
 
@@ -18,21 +21,53 @@ interface OutlierFeedProps {
   filters: {
     minOutlierRatio: number;
     windowDays: number;
+    minViews: number;
+    platform: OutlierFeedPlatform;
   };
 }
 
-const OUTLIER_OPTIONS = [
+interface NumericOption {
+  value: number;
+  label: string;
+}
+
+interface StringOption<T extends string> {
+  value: T;
+  label: string;
+  disabled?: boolean;
+}
+
+const OUTLIER_OPTIONS: NumericOption[] = [
   { value: 2, label: "2x outlier" },
   { value: 3, label: "3x outlier" },
   { value: 5, label: "5x outlier" },
   { value: 10, label: "10x outlier" },
 ];
 
-const WINDOW_OPTIONS = [
+const WINDOW_OPTIONS: NumericOption[] = [
   { value: 30, label: "Last 30 days" },
   { value: 90, label: "Last 3 months" },
   { value: 180, label: "Last 6 months" },
   { value: 365, label: "Last year" },
+];
+
+const VIEWS_OPTIONS: NumericOption[] = [
+  { value: 0, label: "Any views" },
+  { value: 100_000, label: "100K+ views" },
+  { value: 500_000, label: "500K+ views" },
+  { value: 1_000_000, label: "1M+ views" },
+  { value: 10_000_000, label: "10M+ views" },
+];
+
+const PLATFORM_OPTIONS: StringOption<OutlierFeedPlatform>[] = [
+  { value: "all", label: "All platforms" },
+  { value: "instagram", label: "Instagram" },
+  { value: "tiktok", label: "TikTok (soon)", disabled: true },
+  {
+    value: "youtube_shorts",
+    label: "YouTube Shorts (soon)",
+    disabled: true,
+  },
 ];
 
 export function OutlierFeed({ items, hasCompetitors, filters }: OutlierFeedProps) {
@@ -77,14 +112,31 @@ export function OutlierFeed({ items, hasCompetitors, filters }: OutlierFeedProps
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
-        <FilterChip
+        <NumericFilterChip
+          label={labelFor(VIEWS_OPTIONS, filters.minViews)}
+          options={VIEWS_OPTIONS}
+          value={filters.minViews}
+          onChange={(v) => setParam("views", String(v))}
+          pending={pending}
+        />
+        <StringFilterChip
+          label={
+            PLATFORM_OPTIONS.find((p) => p.value === filters.platform)?.label ??
+            PLATFORM_OPTIONS[0].label
+          }
+          options={PLATFORM_OPTIONS}
+          value={filters.platform}
+          onChange={(v) => setParam("platform", v)}
+          pending={pending}
+        />
+        <NumericFilterChip
           label={labelFor(OUTLIER_OPTIONS, filters.minOutlierRatio)}
           options={OUTLIER_OPTIONS}
           value={filters.minOutlierRatio}
           onChange={(v) => setParam("outlier", String(v))}
           pending={pending}
         />
-        <FilterChip
+        <NumericFilterChip
           label={labelFor(WINDOW_OPTIONS, filters.windowDays)}
           options={WINDOW_OPTIONS}
           value={filters.windowDays}
@@ -108,25 +160,18 @@ export function OutlierFeed({ items, hasCompetitors, filters }: OutlierFeedProps
   );
 }
 
-function labelFor<T extends { value: number; label: string }>(
-  options: T[],
-  value: number,
-): string {
+function labelFor(options: NumericOption[], value: number): string {
   return options.find((o) => o.value === value)?.label ?? options[0].label;
 }
 
-function FilterChip({
+function ChipShell({
   label,
-  options,
-  value,
-  onChange,
   pending,
+  children,
 }: {
   label: string;
-  options: { value: number; label: string }[];
-  value: number;
-  onChange: (v: number) => void;
   pending: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <label
@@ -143,6 +188,26 @@ function FilterChip({
       >
         {label}
       </span>
+      {children}
+    </label>
+  );
+}
+
+function NumericFilterChip({
+  label,
+  options,
+  value,
+  onChange,
+  pending,
+}: {
+  label: string;
+  options: NumericOption[];
+  value: number;
+  onChange: (v: number) => void;
+  pending: boolean;
+}) {
+  return (
+    <ChipShell label={label} pending={pending}>
       <select
         value={value}
         disabled={pending}
@@ -156,7 +221,39 @@ function FilterChip({
           </option>
         ))}
       </select>
-    </label>
+    </ChipShell>
+  );
+}
+
+function StringFilterChip<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  pending,
+}: {
+  label: string;
+  options: StringOption<T>[];
+  value: T;
+  onChange: (v: T) => void;
+  pending: boolean;
+}) {
+  return (
+    <ChipShell label={label} pending={pending}>
+      <select
+        value={value}
+        disabled={pending}
+        onChange={(e) => onChange(e.target.value as T)}
+        className="absolute inset-0 cursor-pointer opacity-0"
+        aria-label={label}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value} disabled={o.disabled}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </ChipShell>
   );
 }
 

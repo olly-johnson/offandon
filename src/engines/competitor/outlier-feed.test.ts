@@ -7,8 +7,8 @@ import {
 } from "./outlier-feed";
 
 const COMPETITORS = [
-  { id: "a", username: "channel_a" },
-  { id: "b", username: "channel_b" },
+  { id: "a", username: "channel_a", platform: "instagram" as const },
+  { id: "b", username: "channel_b", platform: "instagram" as const },
 ];
 
 function row(
@@ -41,6 +41,8 @@ const FULL_OPTS: OutlierFeedOptions = {
   windowDays: 365,
   minSampleSize: 5,
   limit: 100,
+  minViews: 0,
+  platform: "all",
   now: new Date("2026-05-22T00:00:00Z"),
 };
 
@@ -184,5 +186,47 @@ describe("computeOutliers", () => {
     const items = reels("orphan", [100, 100, 100, 100, 100, 500]);
     const out = computeOutliers(items, COMPETITORS, FULL_OPTS);
     expect(out).toHaveLength(0);
+  });
+
+  it("filters out reels below the minViews absolute threshold", () => {
+    const items = reels("a", [10, 20, 30, 40, 50, 200, 1500, 60_000]);
+    const out = computeOutliers(items, COMPETITORS, {
+      ...FULL_OPTS,
+      minOutlierRatio: 2,
+      minViews: 1000,
+    });
+    // median = 35, ratios above 2x are 200/35=5.7, 1500/35=42.8, 60000/35=1714
+    // but minViews 1000 filters out 200; leaves 1500 + 60000.
+    expect(out.map((r) => r.id).sort()).toEqual(["a-6", "a-7"]);
+  });
+
+  it("filters out channels not matching the platform option", () => {
+    const competitors = [
+      { id: "ig", username: "ig_channel", platform: "instagram" as const },
+      { id: "tt", username: "tt_channel", platform: "tiktok" as const },
+    ];
+    const items = [
+      ...reels("ig", [100, 200, 300, 400, 500, 5000]),
+      ...reels("tt", [100, 200, 300, 400, 500, 5000]),
+    ];
+    const igOnly = computeOutliers(items, competitors, {
+      ...FULL_OPTS,
+      platform: "instagram",
+    });
+    expect(igOnly.every((r) => r.competitor_id === "ig")).toBe(true);
+    expect(igOnly).toHaveLength(1);
+
+    const ttOnly = computeOutliers(items, competitors, {
+      ...FULL_OPTS,
+      platform: "tiktok",
+    });
+    expect(ttOnly.every((r) => r.competitor_id === "tt")).toBe(true);
+    expect(ttOnly).toHaveLength(1);
+
+    const all = computeOutliers(items, competitors, {
+      ...FULL_OPTS,
+      platform: "all",
+    });
+    expect(all).toHaveLength(2);
   });
 });

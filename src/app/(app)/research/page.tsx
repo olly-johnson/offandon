@@ -11,6 +11,7 @@ import {
   listMediaForCompetitor,
   type CompetitorMediaRow,
 } from "@/engines/competitor";
+import type { OutlierFeedPlatform } from "@/engines/competitor/outlier-feed";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
@@ -21,14 +22,29 @@ const PREVIEW_REELS_PER_COMPETITOR = 5;
 
 const ALLOWED_OUTLIER_RATIOS = new Set([2, 3, 5, 10]);
 const ALLOWED_WINDOW_DAYS = new Set([30, 90, 180, 365]);
+const ALLOWED_MIN_VIEWS = new Set([0, 100_000, 500_000, 1_000_000, 10_000_000]);
+const ALLOWED_PLATFORMS = new Set<OutlierFeedPlatform>([
+  "all",
+  "instagram",
+  "tiktok",
+  "youtube_shorts",
+]);
+
+function firstParam(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+): string | undefined {
+  const v = params[key];
+  return Array.isArray(v) ? v[0] : v;
+}
 
 function parseFilters(params: Record<string, string | string[] | undefined>) {
-  const outlierRaw = Number(
-    Array.isArray(params.outlier) ? params.outlier[0] : params.outlier,
-  );
-  const windowRaw = Number(
-    Array.isArray(params.window) ? params.window[0] : params.window,
-  );
+  const outlierRaw = Number(firstParam(params, "outlier"));
+  const windowRaw = Number(firstParam(params, "window"));
+  const viewsRaw = Number(firstParam(params, "views"));
+  const platformRaw = firstParam(params, "platform") as
+    | OutlierFeedPlatform
+    | undefined;
   return {
     minOutlierRatio: ALLOWED_OUTLIER_RATIOS.has(outlierRaw)
       ? outlierRaw
@@ -36,6 +52,13 @@ function parseFilters(params: Record<string, string | string[] | undefined>) {
     windowDays: ALLOWED_WINDOW_DAYS.has(windowRaw)
       ? windowRaw
       : DEFAULT_OUTLIER_FEED_OPTIONS.windowDays,
+    minViews: ALLOWED_MIN_VIEWS.has(viewsRaw)
+      ? viewsRaw
+      : DEFAULT_OUTLIER_FEED_OPTIONS.minViews,
+    platform:
+      platformRaw && ALLOWED_PLATFORMS.has(platformRaw)
+        ? platformRaw
+        : DEFAULT_OUTLIER_FEED_OPTIONS.platform,
   };
 }
 

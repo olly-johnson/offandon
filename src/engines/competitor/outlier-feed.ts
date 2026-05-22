@@ -18,9 +18,12 @@
  *   Supabase wrapper just shapes the query.
  */
 
+import type { SuggestedPlatform } from "@/app/(app)/research/suggested-creators";
 import { createLogger } from "@/lib/shared/logger";
 
 import type { CompetitorSupabaseClient } from "./persistence";
+
+export type OutlierFeedPlatform = SuggestedPlatform | "all";
 
 const log = createLogger("competitor.outlier-feed");
 
@@ -39,6 +42,8 @@ export interface OutlierFeedRow {
 export interface OutlierFeedCompetitor {
   id: string;
   username: string;
+  /** Which platform this channel lives on. All current rows are 'instagram' until TT/YT tracking lands. */
+  platform: SuggestedPlatform;
 }
 
 export interface OutlierFeedOptions {
@@ -50,6 +55,10 @@ export interface OutlierFeedOptions {
   minSampleSize: number;
   /** Cap how many results we return. */
   limit: number;
+  /** Drop reels whose absolute view_count is below this. 0 disables. */
+  minViews: number;
+  /** Limit to a single platform or "all" for no filter. */
+  platform: OutlierFeedPlatform;
   /** Injected for deterministic windowDays cutoffs in tests. */
   now?: Date;
 }
@@ -74,6 +83,8 @@ export const DEFAULT_OUTLIER_FEED_OPTIONS: OutlierFeedOptions = {
   windowDays: 90,
   minSampleSize: 5,
   limit: 40,
+  minViews: 0,
+  platform: "all",
 };
 
 export function computeOutliers(
@@ -83,7 +94,13 @@ export function computeOutliers(
 ): OutlierFeedItem[] {
   const now = opts.now ?? new Date();
   const cutoff = new Date(now.getTime() - opts.windowDays * 86_400_000);
-  const usernameById = new Map(competitors.map((c) => [c.id, c.username]));
+  // Pre-filter the competitor set by the platform option so the
+  // grouping loop never even sees off-platform channels. "all"
+  // keeps everything.
+  const eligible = competitors.filter(
+    (c) => opts.platform === "all" || c.platform === opts.platform,
+  );
+  const usernameById = new Map(eligible.map((c) => [c.id, c.username]));
 
   // Group all reels per competitor (full history) to compute medians.
   const byCompetitor = new Map<string, OutlierFeedRow[]>();
@@ -109,6 +126,7 @@ export function computeOutliers(
 
     for (const r of list) {
       if (!isFiniteNumber(r.view_count)) continue;
+      if (r.view_count < opts.minViews) continue;
       if (r.posted_at && new Date(r.posted_at) < cutoff) continue;
       const ratio = r.view_count / median;
       if (ratio < opts.minOutlierRatio) continue;
@@ -154,6 +172,14 @@ export async function getOutlierFeed(
     throw new Error(`getOutlierFeed: ${cErr.message}`);
   }
   if (!competitors || competitors.length === 0) return [];
+  // All tracked accounts are Instagram today. When the platform
+  // column lands on competitor_accounts, drop the hardcode and read
+  // c.platform from the row instead.
+  const enriched: OutlierFeedCompetitor[] = competitors.map((c) => ({
+    id: c.id as string,
+    username: c.username as string,
+    platform: "instagram",
+  }));
 
   const { data: media, error: mErr } = await supabase
     .from("competitor_media")
@@ -168,7 +194,7 @@ export async function getOutlierFeed(
 
   const items = computeOutliers(
     (media ?? []) as OutlierFeedRow[],
-    competitors as OutlierFeedCompetitor[],
+    enriched,
     merged,
   );
   log.debug("outlier feed computed", {
