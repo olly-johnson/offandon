@@ -18,7 +18,15 @@ import { createLogger } from "@/lib/shared/logger";
 const log = createLogger("competitor.youtube-downloader");
 
 const APIFY_API_BASE = "https://api.apify.com/v2";
-const DEFAULT_ACTOR_ID = "apify~youtube-video-downloader";
+const DEFAULT_ACTOR_ID = "streamers~youtube-video-downloader";
+
+/**
+ * Quality cap on the mp4 download. Deepgram only needs the audio
+ * track, so the lowest stable quality is fine and meaningfully
+ * cheaper: the downloader bills per MB transferred. 480p shorts
+ * land around ~3-5 MB ($0.02-0.03 each) vs ~10-15 MB at 720p.
+ */
+const DEFAULT_QUALITY = "480p";
 
 export interface ApifyYoutubeDownloaderOptions {
   apiKey: string;
@@ -52,6 +60,13 @@ export class ApifyYoutubeDownloader {
    * downloader actor's run-sync-get-dataset-items endpoint. Returns
    * null when the actor's dataset is empty (typical for private,
    * age-gated, or pulled videos).
+   *
+   * Input shape targets streamers~youtube-video-downloader (the
+   * Apify-maintained actor): `videos` is the URL list, and
+   * `preferredQuality` caps download size. Other downloader actors
+   * tend to accept the same `videos` key but some still use
+   * `videoUrls` - we send the URL on both for compat; actors with
+   * strict JSON-schema validation ignore the duplicate.
    */
   async fetchMediaUrl(watchUrl: string): Promise<string | null> {
     const endpoint = `${APIFY_API_BASE}/acts/${this.actorId}/run-sync-get-dataset-items`;
@@ -61,7 +76,11 @@ export class ApifyYoutubeDownloader {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ videoUrls: [watchUrl] }),
+      body: JSON.stringify({
+        videos: [watchUrl],
+        videoUrls: [watchUrl],
+        preferredQuality: DEFAULT_QUALITY,
+      }),
     });
 
     if (!res.ok) {

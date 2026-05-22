@@ -18,7 +18,7 @@ describe("ApifyYoutubeDownloader.fetchMediaUrl", () => {
     );
     const downloader = new ApifyYoutubeDownloader({
       apiKey: "k",
-      actorId: "apify~youtube-video-downloader",
+      actorId: "streamers~youtube-video-downloader",
       fetchImpl,
     });
 
@@ -30,12 +30,18 @@ describe("ApifyYoutubeDownloader.fetchMediaUrl", () => {
     const [calledUrl, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>)
       .mock.calls[0] as [string, RequestInit];
     expect(calledUrl).toContain(
-      "/v2/acts/apify~youtube-video-downloader/run-sync-get-dataset-items",
+      "/v2/acts/streamers~youtube-video-downloader/run-sync-get-dataset-items",
     );
     expect(init.method).toBe("POST");
-    expect(JSON.parse(String(init.body))).toMatchObject({
-      videoUrls: ["https://www.youtube.com/shorts/abc"],
-    });
+    const body = JSON.parse(String(init.body));
+    // `videos` is the documented streamers-actor input field; we
+    // also send `videoUrls` for other downloader actors that use
+    // that key. Both should carry the watch URL.
+    expect(body.videos).toEqual(["https://www.youtube.com/shorts/abc"]);
+    expect(body.videoUrls).toEqual(["https://www.youtube.com/shorts/abc"]);
+    // 480p quality cap to keep the per-MB download bill down -
+    // Deepgram only needs the audio.
+    expect(body.preferredQuality).toBe("480p");
   });
 
   it("returns null when the dataset is empty (private / age-gated / pulled)", async () => {
@@ -44,7 +50,7 @@ describe("ApifyYoutubeDownloader.fetchMediaUrl", () => {
     );
     const d = new ApifyYoutubeDownloader({
       apiKey: "k",
-      actorId: "apify~youtube-video-downloader",
+      actorId: "streamers~youtube-video-downloader",
       fetchImpl,
     });
     expect(
@@ -58,7 +64,7 @@ describe("ApifyYoutubeDownloader.fetchMediaUrl", () => {
     );
     const d = new ApifyYoutubeDownloader({
       apiKey: "k",
-      actorId: "apify~youtube-video-downloader",
+      actorId: "streamers~youtube-video-downloader",
       fetchImpl,
     });
     await expect(
