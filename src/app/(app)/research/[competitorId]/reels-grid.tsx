@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {
   AlertTriangle,
   ExternalLink,
@@ -82,8 +83,14 @@ function ReelCard({
       }}
     >
       <div className="flex items-start gap-3">
-        {reel.thumbnail_url ? (
-          <div className="relative h-32 w-24 shrink-0 overflow-hidden rounded-lg">
+        <Link
+          href={`/research/${reel.competitor_id}/${reel.id}`}
+          className="relative h-32 w-24 shrink-0 overflow-hidden rounded-lg"
+          aria-label="Open reel drill-in"
+          title="Open drill-in"
+          style={{ background: "var(--oo-bg-hover)" }}
+        >
+          {reel.thumbnail_url ? (
             <Image
               src={reel.thumbnail_url}
               alt=""
@@ -91,15 +98,12 @@ function ReelCard({
               sizes="96px"
               className="object-cover"
             />
-          </div>
-        ) : (
-          <div
-            className="flex h-32 w-24 shrink-0 items-center justify-center rounded-lg"
-            style={{ background: "var(--oo-bg-hover)" }}
-          >
-            <Play className="size-6" style={{ color: "var(--oo-text-dim)" }} />
-          </div>
-        )}
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <Play className="size-6" style={{ color: "var(--oo-text-dim)" }} />
+            </div>
+          )}
+        </Link>
 
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p

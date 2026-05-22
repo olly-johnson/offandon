@@ -260,7 +260,7 @@ function StringFilterChip<T extends string>({
 function OutlierTile({ item }: { item: OutlierFeedItem }) {
   return (
     <Link
-      href={`/research/${item.competitor_id}`}
+      href={`/research/${item.competitor_id}/${item.id}`}
       className="flex flex-col gap-2 rounded-xl p-2 transition hover:opacity-90"
       style={{
         background: "var(--oo-bg-elevated)",
