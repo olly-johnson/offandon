@@ -329,10 +329,10 @@ function ReelThumb({
         }}
       >
         {state === "analyzed" ? (
-          <span className="tabular-nums">
+          <span className="tabular-nums" title="Library-relative reach percentile (0-100)">
             {analysis?.performance_score !== null &&
             analysis?.performance_score !== undefined
-              ? `${analysis.performance_score}/10`
+              ? `Reach ${analysis.performance_score}%`
               : "Analysed"}
           </span>
         ) : state === "pending" ? (

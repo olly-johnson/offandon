@@ -54,7 +54,7 @@ const VALID_ANALYSIS = JSON.stringify({
   hook: "Three things broke me in Mexico.",
   structure: "Three-act with a list-of-three hook into rock-bottom arc.",
   pillar_match: "Identity",
-  performance_score: 9,
+  performance_score: 92,
   what_worked: "Hook fronts a number before any context, forcing curiosity.",
   what_to_repeat: "Open with a numbered list before naming the topic.",
 });
@@ -74,7 +74,7 @@ describe("MediaAnalyzer.analyze", () => {
     expect(out.transcript).toContain("Three things broke me");
     expect(out.hook).toBe("Three things broke me in Mexico.");
     expect(out.pillar_match).toBe("Identity");
-    expect(out.performance_score).toBe(9);
+    expect(out.performance_score).toBe(92);
   });
 
   it("passes voice_dna pillars + library stats into the user prompt", async () => {
@@ -131,7 +131,7 @@ describe("parseAnalysisJson", () => {
   it("parses a clean JSON object", () => {
     const out = parseAnalysisJson(VALID_ANALYSIS);
     expect(out.hook).toBe("Three things broke me in Mexico.");
-    expect(out.performance_score).toBe(9);
+    expect(out.performance_score).toBe(92);
   });
 
   it("tolerates a markdown-fenced wrapper", () => {
@@ -163,21 +163,21 @@ describe("parseAnalysisJson", () => {
 
   it("accepts performance_score as a numeric string", () => {
     const out = parseAnalysisJson(
-      JSON.stringify({ hook: "x", performance_score: "7" }),
+      JSON.stringify({ hook: "x", performance_score: "73" }),
     );
-    expect(out.performance_score).toBe(7);
+    expect(out.performance_score).toBe(73);
   });
 
   it("rounds non-integer performance_score", () => {
     const out = parseAnalysisJson(
-      JSON.stringify({ hook: "x", performance_score: 6.4 }),
+      JSON.stringify({ hook: "x", performance_score: 64.4 }),
     );
-    expect(out.performance_score).toBe(6);
+    expect(out.performance_score).toBe(64);
   });
 
-  it("rejects performance_score outside 0-10 range", () => {
+  it("rejects performance_score outside 0-100 range", () => {
     const high = parseAnalysisJson(
-      JSON.stringify({ hook: "x", performance_score: 11 }),
+      JSON.stringify({ hook: "x", performance_score: 101 }),
     );
     expect(high.performance_score).toBeNull();
     const low = parseAnalysisJson(
@@ -204,7 +204,7 @@ describe("parseAnalysisJson", () => {
       hook: "Three things — really three — broke me.",
       structure: "Drug PSA framework — hostile aside up front.",
       pillar_match: "Identity",
-      performance_score: 7,
+      performance_score: 70,
       what_worked: "Hook fronts a number — then the hostile aside.",
       what_to_repeat: "Open with a numbered list, then add the aside.",
     });

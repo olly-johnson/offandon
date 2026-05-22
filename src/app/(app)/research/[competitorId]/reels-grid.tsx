@@ -26,9 +26,9 @@ interface ReelsGridProps {
 }
 
 function performanceBadgeColor(score: number): string {
-  if (score >= 8) return "var(--oo-tof)";
-  if (score >= 6) return "var(--oo-tof)";
-  if (score >= 4) return "var(--oo-text-dim)";
+  if (score >= 80) return "var(--oo-tof)";
+  if (score >= 60) return "var(--oo-tof)";
+  if (score >= 40) return "var(--oo-text-dim)";
   return "var(--oo-bof)";
 }
 
@@ -226,9 +226,9 @@ function AnalysisFields({ analysis }: { analysis: MediaAnalysis }) {
           <span
             className="rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums"
             style={{ color, border: `1px solid ${color}` }}
-            title="Library-relative engagement score (0-10)"
+            title="Reach: library-relative percentile (100 = top of this creator's library by views, 0 = bottom). Not a quality rating."
           >
-            {score}/10
+            Reach {score}%
           </span>
           {analysis.pillar_match ? (
             <span

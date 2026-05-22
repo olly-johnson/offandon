@@ -449,24 +449,24 @@ function PerformanceBadge({ score }: { score: number | null }) {
     <span
       className="inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums"
       style={{ background: style.bg, color: style.fg }}
-      title="Library-relative engagement score (0-10)"
+      title="Reach: library-relative percentile (100 = top of your library by views, 0 = bottom). Not a quality rating."
     >
-      {score}/10
+      Reach {score}%
     </span>
   );
 }
 
 function performanceBadgeStyle(score: number): { bg: string; fg: string } {
-  if (score >= 8) {
+  if (score >= 80) {
     return { bg: "rgba(22,163,74,0.12)", fg: "var(--oo-tof)" };
   }
-  if (score >= 6) {
+  if (score >= 60) {
     return { bg: "rgba(22,163,74,0.06)", fg: "var(--oo-tof)" };
   }
-  if (score >= 4) {
+  if (score >= 40) {
     return { bg: "var(--oo-bg-elevated)", fg: "var(--oo-text-secondary)" };
   }
-  if (score >= 2) {
+  if (score >= 20) {
     return { bg: "rgba(192,57,43,0.06)", fg: "var(--oo-bof)" };
   }
   return { bg: "rgba(192,57,43,0.12)", fg: "var(--oo-bof)" };

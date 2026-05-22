@@ -9,15 +9,15 @@
  */
 
 /**
- * 0-10 integer where 10 = top of this library's engagement
- * distribution and 0 = bottom. Replaces the legacy bucket
- * PerformanceLabel ("top"/"above_median"/...); same library-relative
- * semantic, finer grain, renders cleaner as a badge.
+ * 0-100 integer reach percentile within this creator's own library.
+ * 100 = top of distribution by reach, 0 = bottom. Labelled "Reach" in
+ * the UI to make explicit that this is engagement-relative, not a
+ * judgment on content quality.
  */
 export type PerformanceScore = number;
 
 export const PERFORMANCE_SCORE_MIN = 0;
-export const PERFORMANCE_SCORE_MAX = 10;
+export const PERFORMANCE_SCORE_MAX = 100;
 
 /**
  * Aggregate library stats. Computed at analysis time from the user's
