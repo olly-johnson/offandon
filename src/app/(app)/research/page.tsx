@@ -68,8 +68,14 @@ export default async function ResearchPage() {
       <Topbar title="Research" />
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto flex max-w-3xl flex-col">
-          <header className="mb-6 flex items-baseline justify-between gap-4">
-            <div>
+          <header className="mb-6 flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-1.5">
+              <span
+                className="text-[10px] font-semibold uppercase tracking-[0.18em]"
+                style={{ color: "var(--oo-gold)" }}
+              >
+                Step 1
+              </span>
               <h2
                 className="text-2xl font-bold"
                 style={{
@@ -77,16 +83,16 @@ export default async function ResearchPage() {
                   letterSpacing: "-0.03em",
                 }}
               >
-                Tracked competitors
+                Customise Your Feed
               </h2>
               <p
-                className="mt-1 text-sm leading-relaxed"
+                className="text-sm leading-relaxed"
                 style={{ color: "var(--oo-text-secondary)" }}
               >
-                Pin up to {COMPETITOR_LIMIT_PER_USER} Instagram accounts. Research
-                will pull their videos, transcribe them, and surface the hooks,
-                formats, and topics that are working. Findings feed back into
-                your methodology so chat and scripts can use them.
+                Discover successful channels from Instagram. Pin up to{" "}
+                {COMPETITOR_LIMIT_PER_USER} and we will transcribe their videos,
+                surface the hooks and formats that are working, and feed them
+                back into your methodology.
               </p>
             </div>
             <span

@@ -19,6 +19,7 @@ import {
   syncCompetitorAction,
   type AddCompetitorState,
 } from "./actions";
+import { SuggestedCreatorsGrid } from "./suggested-creators-grid";
 import { useCompetitorRealtime } from "./use-competitor-realtime";
 import { useCompetitorMediaRealtime } from "./use-competitor-media-realtime";
 import type {
@@ -47,32 +48,65 @@ export function CompetitorList({
   useCompetitorRealtime(userId);
   useCompetitorMediaRealtime(userId);
   const atCap = competitors.length >= limit;
+  // Lifted from AddCompetitorForm so the suggested-creators grid can
+  // pre-fill the input on chip click.
+  const [handle, setHandle] = useState("");
+  const trackedHandles = new Set(
+    competitors.map((c) => c.username.toLowerCase()),
+  );
 
   return (
-    <div className="flex flex-col gap-4">
-      <AddCompetitorForm atCap={atCap} />
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <AddCompetitorForm
+          atCap={atCap}
+          handle={handle}
+          setHandle={setHandle}
+        />
+        <SuggestedCreatorsGrid
+          trackedHandles={trackedHandles}
+          currentHandle={handle}
+          atCap={atCap}
+          onPick={setHandle}
+        />
+      </div>
 
-      {competitors.length === 0 ? (
-        <EmptyState />
+      {competitors.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <h3
+            className="text-[11px] font-semibold uppercase tracking-wider"
+            style={{ color: "var(--oo-text-dim)" }}
+          >
+            Your watchlist
+          </h3>
+          <ul className="flex flex-col gap-3">
+            {competitors.map((c) => (
+              <li key={c.id}>
+                <CompetitorRowItem
+                  row={c}
+                  reels={reelsByCompetitor[c.id] ?? []}
+                  analysesByMediaId={analysesByMediaId}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {competitors.map((c) => (
-            <li key={c.id}>
-              <CompetitorRowItem
-                row={c}
-                reels={reelsByCompetitor[c.id] ?? []}
-                analysesByMediaId={analysesByMediaId}
-              />
-            </li>
-          ))}
-        </ul>
+        <EmptyState />
       )}
     </div>
   );
 }
 
-function AddCompetitorForm({ atCap }: { atCap: boolean }) {
-  const [handle, setHandle] = useState("");
+function AddCompetitorForm({
+  atCap,
+  handle,
+  setHandle,
+}: {
+  atCap: boolean;
+  handle: string;
+  setHandle: (h: string) => void;
+}) {
   const [state, formAction, pending] = useActionState<
     AddCompetitorState,
     FormData
