@@ -39,9 +39,9 @@ describe("ApifyYoutubeDownloader.fetchMediaUrl", () => {
     // that key. Both should carry the watch URL.
     expect(body.videos).toEqual(["https://www.youtube.com/shorts/abc"]);
     expect(body.videoUrls).toEqual(["https://www.youtube.com/shorts/abc"]);
-    // 480p quality cap to keep the per-MB download bill down -
-    // Deepgram only needs the audio.
-    expect(body.preferredQuality).toBe("480p");
+    // 360p quality cap: lowest tier where YT reliably muxes audio
+    // with video, so Deepgram gets a non-silent file at minimum cost.
+    expect(body.preferredQuality).toBe("360p");
   });
 
   it("returns null when the dataset is empty (private / age-gated / pulled)", async () => {

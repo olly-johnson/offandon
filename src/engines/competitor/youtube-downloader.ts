@@ -23,10 +23,14 @@ const DEFAULT_ACTOR_ID = "streamers~youtube-video-downloader";
 /**
  * Quality cap on the mp4 download. Deepgram only needs the audio
  * track, so the lowest stable quality is fine and meaningfully
- * cheaper: the downloader bills per MB transferred. 480p shorts
- * land around ~3-5 MB ($0.02-0.03 each) vs ~10-15 MB at 720p.
+ * cheaper: the downloader bills per MB transferred. 360p shorts
+ * land around ~2-3 MB ($0.012-0.018 each) vs ~3-5 MB at 480p.
+ *
+ * We deliberately don't go to 144p: YouTube serves audio + video as
+ * separate streams at that tier and some downloader actors return a
+ * silent file. 360p is the lowest where audio is reliably muxed in.
  */
-const DEFAULT_QUALITY = "480p";
+const DEFAULT_QUALITY = "360p";
 
 export interface ApifyYoutubeDownloaderOptions {
   apiKey: string;
