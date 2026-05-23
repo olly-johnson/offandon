@@ -586,6 +586,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      instagram_follower_history: {
+        Row: {
+          user_id: string;
+          captured_on: string;
+          followers_count: number;
+          captured_at: string;
+        };
+        Insert: {
+          user_id: string;
+          captured_on: string;
+          followers_count: number;
+          captured_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          captured_on?: string;
+          followers_count?: number;
+          captured_at?: string;
+        };
+        Relationships: [];
+      };
       instagram_media_analysis: {
         Row: {
           media_id: string;

@@ -1,17 +1,19 @@
 import type { DashboardMetrics } from "@/lib/shared/dashboard-metrics";
 
-function fmt(n: number | null, opts?: { suffix?: string; decimals?: number }): string {
+function fmt(n: number | null, opts?: { suffix?: string; decimals?: number; signed?: boolean }): string {
   if (n === null || n === undefined) return "N/A";
   const decimals = opts?.decimals ?? 0;
-  const value = decimals > 0 ? n.toFixed(decimals) : Math.round(n).toLocaleString();
-  return `${value}${opts?.suffix ?? ""}`;
+  const abs = Math.abs(n);
+  const body = decimals > 0 ? abs.toFixed(decimals) : Math.round(abs).toLocaleString();
+  const sign = opts?.signed ? (n > 0 ? "+" : n < 0 ? "-" : "") : n < 0 ? "-" : "";
+  return `${sign}${body}${opts?.suffix ?? ""}`;
 }
 
 export function MetricsStrip({ metrics }: { metrics: DashboardMetrics }) {
   const cells: Array<{ label: string; value: string }> = [
     { label: "Followers", value: fmt(metrics.followers) },
     { label: "Reach", value: fmt(metrics.reach) },
-    { label: "New Followers", value: fmt(metrics.newFollowers) },
+    { label: "New Followers", value: fmt(metrics.newFollowers, { signed: true }) },
     { label: "Engagement", value: fmt(metrics.engagement) },
     { label: "Eng. Rate", value: fmt(metrics.engagementRate, { suffix: "%", decimals: 1 }) },
     { label: "Video Views", value: fmt(metrics.videoViews) },

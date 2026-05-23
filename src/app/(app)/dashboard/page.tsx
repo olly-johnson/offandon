@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Topbar } from "@/components/app-shell/topbar";
 import {
   getConnection,
+  listFollowerHistory,
   listMediaForUser,
   type MediaRow,
 } from "@/engines/instagram/persistence";
@@ -61,10 +62,12 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
-  const [snapshot, igConnection, igMedia, profileRow] = await Promise.all([
+  const now = new Date();
+  const [snapshot, igConnection, igMedia, followerHistory, profileRow] = await Promise.all([
     loadDashboard(user.id),
     getConnection(supabase, user.id),
     listMediaForUser(supabase, user.id, 100),
+    listFollowerHistory(supabase, user.id, { sinceDays: 30, now }),
     supabase
       .from("profiles")
       .select("display_name")
@@ -73,11 +76,11 @@ export default async function DashboardPage() {
       .then((r) => r.data),
   ]);
 
-  const now = new Date();
   const dashboardRows: DashboardMediaRow[] = igMedia.map(stripMedia);
   const metrics = computeAccountMetrics(dashboardRows, {
     followers: igConnection?.followers_count ?? null,
     now,
+    followerHistory,
   });
   const engagementSeries = buildEngagementSeries(dashboardRows, now, 30);
   const topContent = buildTopContent(dashboardRows, { now, limit: 10 });

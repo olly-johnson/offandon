@@ -195,6 +195,68 @@ export async function upsertMedia(
   }
 }
 
+export interface FollowerHistoryRow {
+  captured_on: string;
+  followers_count: number;
+}
+
+/**
+ * Record one follower-count snapshot for today (UTC). Composite primary
+ * key on (user_id, captured_on) means a same-day re-sync overwrites
+ * rather than appending, keeping the table bounded at ~1 row/day/user.
+ * No-ops when followersCount is null (IG sync returned a missing value).
+ */
+export async function recordFollowerSnapshot(
+  supabase: InstagramSupabaseClient,
+  args: { userId: string; followersCount: number | null; now?: Date },
+): Promise<void> {
+  if (args.followersCount === null) return;
+  const now = args.now ?? new Date();
+  const capturedOn = now.toISOString().slice(0, 10);
+  const { error } = await supabase
+    .from("instagram_follower_history")
+    .upsert(
+      {
+        user_id: args.userId,
+        captured_on: capturedOn,
+        followers_count: args.followersCount,
+        captured_at: now.toISOString(),
+      },
+      { onConflict: "user_id,captured_on" },
+    );
+  if (error) {
+    log.error("instagram_follower_history upsert failed", {
+      user_id: args.userId,
+      message: error.message,
+    });
+    throw new Error(`recordFollowerSnapshot: ${error.message}`);
+  }
+}
+
+/**
+ * Return the daily follower snapshots within the last `sinceDays`
+ * window, oldest first. The dashboard's "New Followers" cell uses
+ * (last - first) to render the delta over the period.
+ */
+export async function listFollowerHistory(
+  supabase: InstagramSupabaseClient,
+  userId: string,
+  opts: { sinceDays: number; now?: Date },
+): Promise<FollowerHistoryRow[]> {
+  const now = opts.now ?? new Date();
+  const cutoffMs = now.getTime() - opts.sinceDays * 24 * 60 * 60 * 1000;
+  const cutoff = new Date(cutoffMs).toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("instagram_follower_history")
+    .select("captured_on, followers_count")
+    .eq("user_id", userId)
+    .order("captured_on", { ascending: true })
+    .gte("captured_on", cutoff);
+
+  if (error) throw new Error(`listFollowerHistory: ${error.message}`);
+  return (data ?? []) as FollowerHistoryRow[];
+}
+
 export async function listMediaForUser(
   supabase: InstagramSupabaseClient,
   userId: string,

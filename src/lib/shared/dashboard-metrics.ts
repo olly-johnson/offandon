@@ -58,6 +58,24 @@ export function buildEngagementSeries(
     .sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
+export interface FollowerHistoryPoint {
+  captured_on: string;
+  followers_count: number;
+}
+
+/**
+ * New Followers over the window = last snapshot - first snapshot.
+ * Returns null when fewer than 2 snapshots exist (one data point can't
+ * yield a delta). Negative deltas are returned as-is so the UI can show
+ * a -- sign instead of silently flooring to zero.
+ */
+export function computeNewFollowers(history: FollowerHistoryPoint[]): number | null {
+  if (history.length < 2) return null;
+  const first = history[0].followers_count;
+  const last = history[history.length - 1].followers_count;
+  return last - first;
+}
+
 export interface DashboardMetrics {
   followers: number | null;
   reach: number | null;
@@ -76,7 +94,12 @@ export interface DashboardMetrics {
  */
 export function computeAccountMetrics(
   rows: DashboardMediaRow[],
-  opts: { followers: number | null; now: Date; days?: number },
+  opts: {
+    followers: number | null;
+    now: Date;
+    days?: number;
+    followerHistory?: FollowerHistoryPoint[];
+  },
 ): DashboardMetrics {
   const days = opts.days ?? 30;
   const recent = rows.filter((r) => withinWindow(r.posted_at, opts.now, days));
@@ -114,9 +137,9 @@ export function computeAccountMetrics(
   return {
     followers: opts.followers,
     reach,
-    // We don't track follower delta yet (BO-TODO); leave null so the
-    // UI shows the same "N/A" placeholder as the mockup.
-    newFollowers: null,
+    newFollowers: opts.followerHistory
+      ? computeNewFollowers(opts.followerHistory)
+      : null,
     engagement,
     engagementRate,
     videoViews,

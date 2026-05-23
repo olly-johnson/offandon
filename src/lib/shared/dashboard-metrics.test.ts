@@ -4,6 +4,7 @@ import {
   buildEngagementSeries,
   buildTopContent,
   computeAccountMetrics,
+  computeNewFollowers,
   type DashboardMediaRow,
 } from "./dashboard-metrics";
 
@@ -150,6 +151,53 @@ describe("computeAccountMetrics", () => {
     const m = computeAccountMetrics(rows, { followers: 0, now });
     expect(m.engagement).toBeNull();
     expect(m.reach).toBeNull();
+  });
+});
+
+describe("computeNewFollowers", () => {
+  it("returns last - first within the window", () => {
+    const series = [
+      { captured_on: "2026-04-12", followers_count: 16_900 },
+      { captured_on: "2026-04-20", followers_count: 16_950 },
+      { captured_on: "2026-05-11", followers_count: 17_060 },
+    ];
+    expect(computeNewFollowers(series)).toBe(160);
+  });
+
+  it("returns null when there are fewer than 2 snapshots", () => {
+    expect(computeNewFollowers([])).toBeNull();
+    expect(
+      computeNewFollowers([{ captured_on: "2026-05-11", followers_count: 17_000 }]),
+    ).toBeNull();
+  });
+
+  it("returns the delta even when it is negative", () => {
+    const series = [
+      { captured_on: "2026-04-12", followers_count: 17_100 },
+      { captured_on: "2026-05-11", followers_count: 17_060 },
+    ];
+    expect(computeNewFollowers(series)).toBe(-40);
+  });
+});
+
+describe("computeAccountMetrics with follower history", () => {
+  const now = new Date("2026-03-30T12:00:00Z");
+
+  it("derives newFollowers from the supplied history series", () => {
+    const m = computeAccountMetrics([], {
+      followers: 17_060,
+      now,
+      followerHistory: [
+        { captured_on: "2026-03-01", followers_count: 16_900 },
+        { captured_on: "2026-03-29", followers_count: 17_060 },
+      ],
+    });
+    expect(m.newFollowers).toBe(160);
+  });
+
+  it("leaves newFollowers null when no history is supplied", () => {
+    const m = computeAccountMetrics([], { followers: 17_060, now });
+    expect(m.newFollowers).toBeNull();
   });
 });
 

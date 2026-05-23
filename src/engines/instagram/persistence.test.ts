@@ -4,7 +4,9 @@ import {
   deleteConnection,
   getConnection,
   isConnectionFresh,
+  listFollowerHistory,
   listMediaForUser,
+  recordFollowerSnapshot,
   upsertConnection,
   upsertMedia,
   type InstagramSupabaseClient,
@@ -199,6 +201,68 @@ describe("upsertMedia", () => {
       ],
       { onConflict: "id" },
     );
+  });
+});
+
+describe("recordFollowerSnapshot", () => {
+  it("upserts (user_id, captured_on) with the supplied count and timestamp", async () => {
+    const upsert = vi.fn().mockResolvedValue({ error: null });
+    const from = vi.fn().mockReturnValue({ upsert });
+    const supabase = { from } as unknown as InstagramSupabaseClient;
+
+    await recordFollowerSnapshot(supabase, {
+      userId: "user-1",
+      followersCount: 17_060,
+      now: NOW,
+    });
+
+    expect(from).toHaveBeenCalledWith("instagram_follower_history");
+    expect(upsert).toHaveBeenCalledWith(
+      {
+        user_id: "user-1",
+        captured_on: "2026-05-11",
+        followers_count: 17_060,
+        captured_at: NOW.toISOString(),
+      },
+      { onConflict: "user_id,captured_on" },
+    );
+  });
+
+  it("no-ops when followersCount is null", async () => {
+    const upsert = vi.fn();
+    const from = vi.fn().mockReturnValue({ upsert });
+    const supabase = { from } as unknown as InstagramSupabaseClient;
+
+    await recordFollowerSnapshot(supabase, {
+      userId: "user-1",
+      followersCount: null,
+      now: NOW,
+    });
+
+    expect(from).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("listFollowerHistory", () => {
+  it("queries by user_id, orders captured_on ascending, returns rows", async () => {
+    const rows = [
+      { captured_on: "2026-04-12", followers_count: 16_900 },
+      { captured_on: "2026-05-11", followers_count: 17_060 },
+    ];
+    const gte = vi.fn().mockResolvedValue({ data: rows, error: null });
+    const order = vi.fn().mockReturnValue({ gte });
+    const eq = vi.fn().mockReturnValue({ order });
+    const select = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ select });
+    const supabase = { from } as unknown as InstagramSupabaseClient;
+
+    const out = await listFollowerHistory(supabase, "user-1", { sinceDays: 30, now: NOW });
+    expect(out).toEqual(rows);
+    expect(from).toHaveBeenCalledWith("instagram_follower_history");
+    expect(eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(order).toHaveBeenCalledWith("captured_on", { ascending: true });
+    expect(gte).toHaveBeenCalledWith("captured_on", "2026-04-11");
   });
 });
 
