@@ -20,7 +20,7 @@ export function StoryBankCard() {
   return (
     <div className="oo-card-static p-6">
       <div className="bd-card-title">Story Bank</div>
-      <div className="bd-serif" style={{ fontSize: 22, color: "var(--oo-text-primary)" }}>
+      <div className="bd-display" style={{ fontSize: 22, color: "var(--oo-text-primary)" }}>
         0{" "}
         <span style={{ fontSize: 13, color: "var(--oo-text-dim)", fontWeight: 400 }}>
           of 0 stories used

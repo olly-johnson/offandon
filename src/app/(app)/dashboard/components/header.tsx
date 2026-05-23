@@ -17,10 +17,10 @@ export function DashboardHeader({ displayName, handle, windowLabel }: DashboardH
           style={{
             background: "var(--oo-gold-dim)",
             border: "2px solid var(--oo-gold)",
-            fontFamily: "var(--font-newsreader), Georgia, serif",
             fontSize: "22px",
-            fontWeight: 600,
+            fontWeight: 700,
             color: "var(--oo-gold)",
+            letterSpacing: "-0.02em",
           }}
         >
           {initial}
@@ -33,8 +33,8 @@ export function DashboardHeader({ displayName, handle, windowLabel }: DashboardH
             Brand Dashboard
           </div>
           <h1
-            className="bd-serif"
-            style={{ fontSize: "28px", color: "var(--oo-text-primary)" }}
+            className="bd-display"
+            style={{ fontSize: "26px", color: "var(--oo-text-primary)" }}
           >
             {displayName}
           </h1>
