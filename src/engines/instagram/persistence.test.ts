@@ -244,6 +244,54 @@ describe("recordFollowerSnapshot", () => {
   });
 });
 
+describe("listFollowerHistory tolerates missing table", () => {
+  it("returns [] when PostgREST reports PGRST205 (schema cache miss)", async () => {
+    const gte = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "PGRST205", message: "Could not find the table" },
+    });
+    const order = vi.fn().mockReturnValue({ gte });
+    const eq = vi.fn().mockReturnValue({ order });
+    const select = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ select });
+    const supabase = { from } as unknown as InstagramSupabaseClient;
+
+    const out = await listFollowerHistory(supabase, "user-1", { sinceDays: 30, now: NOW });
+    expect(out).toEqual([]);
+  });
+
+  it("returns [] when Postgres reports 42P01 (undefined_table)", async () => {
+    const gte = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "42P01", message: "relation does not exist" },
+    });
+    const order = vi.fn().mockReturnValue({ gte });
+    const eq = vi.fn().mockReturnValue({ order });
+    const select = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ select });
+    const supabase = { from } as unknown as InstagramSupabaseClient;
+
+    const out = await listFollowerHistory(supabase, "user-1", { sinceDays: 30, now: NOW });
+    expect(out).toEqual([]);
+  });
+
+  it("still throws on unknown errors", async () => {
+    const gte = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "OTHER", message: "boom" },
+    });
+    const order = vi.fn().mockReturnValue({ gte });
+    const eq = vi.fn().mockReturnValue({ order });
+    const select = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ select });
+    const supabase = { from } as unknown as InstagramSupabaseClient;
+
+    await expect(
+      listFollowerHistory(supabase, "user-1", { sinceDays: 30, now: NOW }),
+    ).rejects.toThrow(/boom/);
+  });
+});
+
 describe("listFollowerHistory", () => {
   it("queries by user_id, orders captured_on ascending, returns rows", async () => {
     const rows = [

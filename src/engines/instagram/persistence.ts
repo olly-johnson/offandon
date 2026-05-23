@@ -225,6 +225,16 @@ export async function recordFollowerSnapshot(
       { onConflict: "user_id,captured_on" },
     );
   if (error) {
+    // Same migration-not-applied tolerance as listFollowerHistory.
+    // Better to silently skip the snapshot than fail the whole IG sync
+    // for a user whose followers/media still synced fine.
+    if (error.code === "PGRST205" || error.code === "42P01") {
+      log.warn("instagram_follower_history not present, skipping snapshot", {
+        user_id: args.userId,
+        code: error.code,
+      });
+      return;
+    }
     log.error("instagram_follower_history upsert failed", {
       user_id: args.userId,
       message: error.message,
@@ -253,7 +263,20 @@ export async function listFollowerHistory(
     .order("captured_on", { ascending: true })
     .gte("captured_on", cutoff);
 
-  if (error) throw new Error(`listFollowerHistory: ${error.message}`);
+  if (error) {
+    // Tolerate the migration not being applied yet: PostgREST reports
+    // PGRST205 (schema cache miss) or surfaces the underlying Postgres
+    // 42P01 (undefined_table). The dashboard treats an empty history
+    // as "no delta available", which is the right UX for a fresh env.
+    if (error.code === "PGRST205" || error.code === "42P01") {
+      log.warn("instagram_follower_history not present, returning []", {
+        user_id: userId,
+        code: error.code,
+      });
+      return [];
+    }
+    throw new Error(`listFollowerHistory: ${error.message}`);
+  }
   return (data ?? []) as FollowerHistoryRow[];
 }
 
