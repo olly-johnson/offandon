@@ -5,17 +5,6 @@
  * the layout is in place when future tickets fill them in.
  */
 
-export function FormulaMatrixCard() {
-  return (
-    <div className="oo-card-static bd-section p-6">
-      <div className="bd-card-title">The Formula Matrix</div>
-      <p style={{ color: "var(--oo-text-dim)", fontSize: 13 }}>
-        Not enough data to build the formula matrix yet.
-      </p>
-    </div>
-  );
-}
-
 export function StoryBankCard() {
   return (
     <div className="oo-card-static p-6">
