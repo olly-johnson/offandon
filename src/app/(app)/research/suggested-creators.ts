@@ -1,8 +1,14 @@
 /**
  * Hand-picked creators surfaced as one-click "track this" chips on
- * the Research page. Mixed across Instagram, TikTok, and YouTube
- * Shorts; tilted toward operator-economy / founder content the Bot
- * OS audience would actually want to study.
+ * the Research page. Mixed across Instagram and TikTok; tilted toward
+ * operator-economy / founder content the Bot OS audience would
+ * actually want to study.
+ *
+ * YouTube Shorts is temporarily disabled on the surface (the analysis
+ * pipeline isn't reliable yet). The backend scrapers, downloader, and
+ * DB domain still understand 'youtube_shorts', so re-enabling is just
+ * a matter of adding the chips back here and to SUPPORTED_TRACKING_-
+ * PLATFORMS plus the two platform pickers.
  *
  * Follower / subscriber counts are an approximate snapshot, not a
  * live read. We don't have a live profile API in the request path,
@@ -67,29 +73,12 @@ export const SUGGESTED_CREATORS: SuggestedCreator[] = [
     follower_count: 340_000,
     bio: "My First Million - founder anecdotes",
   },
-  // YouTube Shorts - creator-economy operators + tech
-  {
-    handle: "aliabdaal",
-    platform: "youtube_shorts",
-    follower_count: 6_100_000,
-    bio: "Productivity + creator-economy operator",
-  },
-  {
-    handle: "mkbhd",
-    platform: "youtube_shorts",
-    follower_count: 19_800_000,
-    bio: "Tech storytelling at scale",
-  },
-  {
-    handle: "thedankoe",
-    platform: "youtube_shorts",
-    follower_count: 240_000,
-    bio: "One-Person Business, modern wisdom",
-  },
 ];
 
+// YouTube Shorts is intentionally absent while its analysis pipeline is
+// disabled. Add "youtube_shorts" back here to re-enable the platform.
 export const SUPPORTED_TRACKING_PLATFORMS: ReadonlySet<SuggestedPlatform> =
-  new Set(["instagram", "tiktok", "youtube_shorts"]);
+  new Set(["instagram", "tiktok"]);
 
 /**
  * Returns the Supabase Storage URL for a creator's cached avatar.

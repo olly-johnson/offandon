@@ -24,6 +24,8 @@ import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
+import { SUPPORTED_TRACKING_PLATFORMS } from "./suggested-creators";
+
 const log = createLogger("research.actions");
 
 export type AddCompetitorState = { error?: string; ok?: boolean };
@@ -40,7 +42,14 @@ export async function addCompetitorAction(
 
   const raw = (form.get("handle") ?? "").toString();
   const platformRaw = (form.get("platform") ?? "instagram").toString();
-  const platform = isCompetitorPlatform(platformRaw) ? platformRaw : "instagram";
+  // Only accept platforms we currently surface for tracking. YouTube
+  // Shorts is a valid CompetitorPlatform in the DB domain but disabled
+  // on the surface, so a stale or crafted post falls back to instagram.
+  const platform =
+    isCompetitorPlatform(platformRaw) &&
+    SUPPORTED_TRACKING_PLATFORMS.has(platformRaw)
+      ? platformRaw
+      : "instagram";
 
   let added;
   try {

@@ -26,11 +26,12 @@ const PREVIEW_REELS_PER_COMPETITOR = 5;
 const ALLOWED_OUTLIER_RATIOS = new Set([2, 3, 5, 10]);
 const ALLOWED_WINDOW_DAYS = new Set([30, 90, 180, 365]);
 const ALLOWED_MIN_VIEWS = new Set([0, 100_000, 500_000, 1_000_000, 10_000_000]);
+// "youtube_shorts" intentionally excluded while YT is disabled; a stale
+// ?platform=youtube_shorts URL falls back to "all".
 const ALLOWED_PLATFORMS = new Set<OutlierFeedPlatform>([
   "all",
   "instagram",
   "tiktok",
-  "youtube_shorts",
 ]);
 
 function firstParam(
@@ -154,8 +155,8 @@ export default async function ResearchPage({ searchParams }: ResearchPageProps) 
                 className="text-sm leading-relaxed"
                 style={{ color: "var(--oo-text-secondary)" }}
               >
-                Discover successful channels from Instagram. Pin up to{" "}
-                {COMPETITOR_LIMIT_PER_USER} and we will transcribe their videos,
+                Discover successful channels from Instagram and TikTok. Pin up
+                to {COMPETITOR_LIMIT_PER_USER} and we will transcribe their videos,
                 surface the hooks and formats that are working, and feed them
                 back into your methodology.
               </p>

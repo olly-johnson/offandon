@@ -59,11 +59,11 @@ const VIEWS_OPTIONS: NumericOption[] = [
   { value: 10_000_000, label: "10M+ views" },
 ];
 
+// YouTube Shorts is omitted while its analysis pipeline is disabled.
 const PLATFORM_OPTIONS: StringOption<OutlierFeedPlatform>[] = [
   { value: "all", label: "All platforms" },
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
-  { value: "youtube_shorts", label: "YouTube Shorts" },
 ];
 
 export function OutlierFeed({ items, hasCompetitors, filters }: OutlierFeedProps) {

@@ -110,10 +110,12 @@ export function CompetitorList({
   );
 }
 
+// YouTube Shorts is temporarily omitted while its analysis pipeline is
+// disabled; the type + backend still support it, so re-add the option
+// here to bring it back.
 const PLATFORM_PICKER_OPTIONS: { value: CompetitorPlatform; label: string }[] = [
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
-  { value: "youtube_shorts", label: "YouTube Shorts" },
 ];
 
 function AddCompetitorForm({

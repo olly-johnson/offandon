@@ -46,19 +46,28 @@ describe("SUGGESTED_CREATORS", () => {
     }
   });
 
-  it("mixes all three platforms in the curated list", () => {
+  it("mixes Instagram and TikTok in the curated list", () => {
     const platforms = new Set(SUGGESTED_CREATORS.map((c) => c.platform));
     expect(platforms.has("instagram")).toBe(true);
     expect(platforms.has("tiktok")).toBe(true);
-    expect(platforms.has("youtube_shorts")).toBe(true);
+  });
+
+  it("surfaces no YouTube Shorts creators while YT is disabled", () => {
+    const hasYouTube = SUGGESTED_CREATORS.some(
+      (c) => c.platform === "youtube_shorts",
+    );
+    expect(hasYouTube).toBe(false);
   });
 });
 
 describe("SUPPORTED_TRACKING_PLATFORMS", () => {
-  it("lists all three platforms now that TT + YT scrapers are wired", () => {
+  it("offers Instagram and TikTok for tracking", () => {
     expect(SUPPORTED_TRACKING_PLATFORMS.has("instagram")).toBe(true);
     expect(SUPPORTED_TRACKING_PLATFORMS.has("tiktok")).toBe(true);
-    expect(SUPPORTED_TRACKING_PLATFORMS.has("youtube_shorts")).toBe(true);
+  });
+
+  it("does not offer YouTube Shorts while YT analysis is disabled", () => {
+    expect(SUPPORTED_TRACKING_PLATFORMS.has("youtube_shorts")).toBe(false);
   });
 });
 
