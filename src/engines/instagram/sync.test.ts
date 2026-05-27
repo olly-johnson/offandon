@@ -39,6 +39,7 @@ const STATS: InstagramAccountStats = {
   followers_count: 200,
   follows_count: 100,
   media_count: 5,
+  profile_picture_url: "https://cdn/avatar.jpg",
 };
 
 const MEDIA: InstagramMediaRecord[] = [
@@ -104,8 +105,18 @@ describe("runInstagramSync", () => {
       (c) => c.table === "instagram_connections",
     )!.payload as Record<string, unknown>;
     expect(connUpsert.followers_count).toBe(200);
+    expect(connUpsert.ig_profile_picture_url).toBe("https://cdn/avatar.jpg");
     expect(connUpsert.last_synced_at).toBe(NOW.toISOString());
     expect(connUpsert.last_sync_error).toBeNull();
+
+    // Daily follower snapshot for the dashboard's New Followers metric.
+    const snapshot = upsertCalls.find(
+      (c) => c.table === "instagram_follower_history",
+    )?.payload as Record<string, unknown> | undefined;
+    expect(snapshot).toBeDefined();
+    expect(snapshot?.user_id).toBe("user-1");
+    expect(snapshot?.captured_on).toBe("2026-05-11");
+    expect(snapshot?.followers_count).toBe(200);
   });
 
   it("records last_sync_error on token failure and does NOT upsert media", async () => {
