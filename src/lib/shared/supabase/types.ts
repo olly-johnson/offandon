@@ -835,6 +835,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      fathom_email_aliases: {
+        Row: {
+          user_id: string;
+          fathom_email: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          fathom_email: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          fathom_email?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       client_document_chunks: {
         Row: {
           id: string;
