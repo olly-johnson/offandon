@@ -407,6 +407,7 @@ export type Database = {
             | "hooks"
             | "single_script"
             | "media_analysis"
+            | "competitor_analysis"
             | "other";
           model: string;
           input_tokens: number;
@@ -428,6 +429,7 @@ export type Database = {
             | "hooks"
             | "single_script"
             | "media_analysis"
+            | "competitor_analysis"
             | "other";
           model: string;
           input_tokens?: number;
@@ -449,6 +451,7 @@ export type Database = {
             | "hooks"
             | "single_script"
             | "media_analysis"
+            | "competitor_analysis"
             | "other";
           model?: string;
           input_tokens?: number;
@@ -487,6 +490,156 @@ export type Database = {
           error?: string | null;
           created_at?: string;
           accepted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      competitor_media_analysis: {
+        Row: {
+          media_id: string;
+          competitor_id: string;
+          user_id: string;
+          transcript: string;
+          hook: string | null;
+          structure: string | null;
+          pillar_match: string | null;
+          performance_label: string | null;
+          performance_score: number | null;
+          what_worked: string | null;
+          what_to_repeat: string | null;
+          llm_model: string;
+          transcript_model: string;
+          analyzed_at: string;
+        };
+        Insert: {
+          media_id: string;
+          competitor_id: string;
+          user_id: string;
+          transcript: string;
+          hook?: string | null;
+          structure?: string | null;
+          pillar_match?: string | null;
+          performance_label?: string | null;
+          performance_score?: number | null;
+          what_worked?: string | null;
+          what_to_repeat?: string | null;
+          llm_model: string;
+          transcript_model: string;
+          analyzed_at?: string;
+        };
+        Update: {
+          media_id?: string;
+          competitor_id?: string;
+          user_id?: string;
+          transcript?: string;
+          hook?: string | null;
+          structure?: string | null;
+          pillar_match?: string | null;
+          performance_label?: string | null;
+          performance_score?: number | null;
+          what_worked?: string | null;
+          what_to_repeat?: string | null;
+          llm_model?: string;
+          transcript_model?: string;
+          analyzed_at?: string;
+        };
+        Relationships: [];
+      };
+      competitor_media: {
+        Row: {
+          id: string;
+          competitor_id: string;
+          user_id: string;
+          media_type: "VIDEO" | "REELS" | "IMAGE" | "CAROUSEL_ALBUM";
+          caption: string | null;
+          permalink: string | null;
+          media_url: string | null;
+          thumbnail_url: string | null;
+          posted_at: string | null;
+          like_count: number | null;
+          comments_count: number | null;
+          view_count: number | null;
+          duration_seconds: number | null;
+          scrape_run_id: string | null;
+          synced_at: string;
+          analysis_failed_reason: string | null;
+          analysis_pending: boolean;
+        };
+        Insert: {
+          id: string;
+          competitor_id: string;
+          user_id: string;
+          media_type: "VIDEO" | "REELS" | "IMAGE" | "CAROUSEL_ALBUM";
+          caption?: string | null;
+          permalink?: string | null;
+          media_url?: string | null;
+          thumbnail_url?: string | null;
+          posted_at?: string | null;
+          like_count?: number | null;
+          comments_count?: number | null;
+          view_count?: number | null;
+          duration_seconds?: number | null;
+          scrape_run_id?: string | null;
+          synced_at?: string;
+          analysis_failed_reason?: string | null;
+          analysis_pending?: boolean;
+        };
+        Update: {
+          id?: string;
+          competitor_id?: string;
+          user_id?: string;
+          media_type?: "VIDEO" | "REELS" | "IMAGE" | "CAROUSEL_ALBUM";
+          caption?: string | null;
+          permalink?: string | null;
+          media_url?: string | null;
+          thumbnail_url?: string | null;
+          posted_at?: string | null;
+          like_count?: number | null;
+          comments_count?: number | null;
+          view_count?: number | null;
+          duration_seconds?: number | null;
+          scrape_run_id?: string | null;
+          synced_at?: string;
+          analysis_failed_reason?: string | null;
+          analysis_pending?: boolean;
+        };
+        Relationships: [];
+      };
+      competitor_accounts: {
+        Row: {
+          id: string;
+          user_id: string;
+          username: string;
+          platform: "instagram" | "tiktok" | "youtube_shorts";
+          display_name: string | null;
+          note: string | null;
+          added_at: string;
+          last_synced_at: string | null;
+          last_sync_error: string | null;
+          sync_pending: boolean;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          username: string;
+          platform?: "instagram" | "tiktok" | "youtube_shorts";
+          display_name?: string | null;
+          note?: string | null;
+          added_at?: string;
+          last_synced_at?: string | null;
+          last_sync_error?: string | null;
+          sync_pending?: boolean;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          username?: string;
+          platform?: "instagram" | "tiktok" | "youtube_shorts";
+          display_name?: string | null;
+          note?: string | null;
+          added_at?: string;
+          last_synced_at?: string | null;
+          last_sync_error?: string | null;
+          sync_pending?: boolean;
         };
         Relationships: [];
       };
@@ -619,6 +772,7 @@ export type Database = {
           structure: string | null;
           pillar_match: string | null;
           performance_label: string | null;
+          performance_score: number | null;
           what_worked: string | null;
           what_to_repeat: string | null;
           llm_model: string;
@@ -633,6 +787,7 @@ export type Database = {
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
+          performance_score?: number | null;
           what_worked?: string | null;
           what_to_repeat?: string | null;
           llm_model: string;
@@ -647,6 +802,7 @@ export type Database = {
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
+          performance_score?: number | null;
           what_worked?: string | null;
           what_to_repeat?: string | null;
           llm_model?: string;

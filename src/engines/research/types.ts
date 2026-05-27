@@ -8,20 +8,16 @@
  * table directly, so the analysis output is for human consumption.
  */
 
-export type PerformanceLabel =
-  | "top"
-  | "above_median"
-  | "median"
-  | "below_median"
-  | "bottom";
+/**
+ * 0-100 integer reach percentile within this creator's own library.
+ * 100 = top of distribution by reach, 0 = bottom. Labelled "Reach" in
+ * the UI to make explicit that this is engagement-relative, not a
+ * judgment on content quality.
+ */
+export type PerformanceScore = number;
 
-export const PERFORMANCE_LABELS: PerformanceLabel[] = [
-  "top",
-  "above_median",
-  "median",
-  "below_median",
-  "bottom",
-];
+export const PERFORMANCE_SCORE_MIN = 0;
+export const PERFORMANCE_SCORE_MAX = 100;
 
 /**
  * Aggregate library stats. Computed at analysis time from the user's
@@ -51,7 +47,7 @@ export interface MediaAnalysis {
   hook: string | null;
   structure: string | null;
   pillar_match: string | null;
-  performance_label: PerformanceLabel | null;
+  performance_score: PerformanceScore | null;
   what_worked: string | null;
   what_to_repeat: string | null;
 }

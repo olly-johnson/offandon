@@ -22,10 +22,13 @@ export type {
   LibraryStats,
   MediaAnalysis,
   MediaAnalysisInput,
-  PerformanceLabel,
+  PerformanceScore,
   TranscriptionResult,
 } from "./types";
-export { PERFORMANCE_LABELS } from "./types";
+export {
+  PERFORMANCE_SCORE_MAX,
+  PERFORMANCE_SCORE_MIN,
+} from "./types";
 export {
   RESEARCH_ANALYSIS_MODEL,
   RESEARCH_ANALYSIS_MAX_TOKENS,

@@ -54,7 +54,7 @@ const VALID_ANALYSIS = JSON.stringify({
   hook: "Three things broke me in Mexico.",
   structure: "Three-act with a list-of-three hook into rock-bottom arc.",
   pillar_match: "Identity",
-  performance_label: "top",
+  performance_score: 92,
   what_worked: "Hook fronts a number before any context, forcing curiosity.",
   what_to_repeat: "Open with a numbered list before naming the topic.",
 });
@@ -74,7 +74,7 @@ describe("MediaAnalyzer.analyze", () => {
     expect(out.transcript).toContain("Three things broke me");
     expect(out.hook).toBe("Three things broke me in Mexico.");
     expect(out.pillar_match).toBe("Identity");
-    expect(out.performance_label).toBe("top");
+    expect(out.performance_score).toBe(92);
   });
 
   it("passes voice_dna pillars + library stats into the user prompt", async () => {
@@ -131,7 +131,7 @@ describe("parseAnalysisJson", () => {
   it("parses a clean JSON object", () => {
     const out = parseAnalysisJson(VALID_ANALYSIS);
     expect(out.hook).toBe("Three things broke me in Mexico.");
-    expect(out.performance_label).toBe("top");
+    expect(out.performance_score).toBe(92);
   });
 
   it("tolerates a markdown-fenced wrapper", () => {
@@ -151,27 +151,69 @@ describe("parseAnalysisJson", () => {
       hook: "Something",
       structure: null,
       pillar_match: null,
-      performance_label: null,
+      performance_score: null,
       what_worked: null,
       what_to_repeat: null,
     });
     const out = parseAnalysisJson(partial);
     expect(out.hook).toBe("Something");
     expect(out.structure).toBeNull();
-    expect(out.performance_label).toBeNull();
+    expect(out.performance_score).toBeNull();
   });
 
-  it("drops invalid performance_label values to null", () => {
+  it("accepts performance_score as a numeric string", () => {
+    const out = parseAnalysisJson(
+      JSON.stringify({ hook: "x", performance_score: "73" }),
+    );
+    expect(out.performance_score).toBe(73);
+  });
+
+  it("rounds non-integer performance_score", () => {
+    const out = parseAnalysisJson(
+      JSON.stringify({ hook: "x", performance_score: 64.4 }),
+    );
+    expect(out.performance_score).toBe(64);
+  });
+
+  it("rejects performance_score outside 0-100 range", () => {
+    const high = parseAnalysisJson(
+      JSON.stringify({ hook: "x", performance_score: 101 }),
+    );
+    expect(high.performance_score).toBeNull();
+    const low = parseAnalysisJson(
+      JSON.stringify({ hook: "x", performance_score: -1 }),
+    );
+    expect(low.performance_score).toBeNull();
+  });
+
+  it("drops non-numeric performance_score values to null", () => {
     const bad = JSON.stringify({
       hook: "x",
       structure: "y",
       pillar_match: "z",
-      performance_label: "amazing",
+      performance_score: "amazing",
       what_worked: "w",
       what_to_repeat: "r",
     });
     const out = parseAnalysisJson(bad);
-    expect(out.performance_label).toBeNull();
+    expect(out.performance_score).toBeNull();
+  });
+
+  it("strips em-dashes from string fields via the ingestion sanitiser", () => {
+    const withDashes = JSON.stringify({
+      hook: "Three things — really three — broke me.",
+      structure: "Drug PSA framework — hostile aside up front.",
+      pillar_match: "Identity",
+      performance_score: 70,
+      what_worked: "Hook fronts a number — then the hostile aside.",
+      what_to_repeat: "Open with a numbered list, then add the aside.",
+    });
+    const out = parseAnalysisJson(withDashes);
+    expect(out.hook).toBe("Three things, really three, broke me.");
+    expect(out.structure).toBe("Drug PSA framework, hostile aside up front.");
+    expect(out.what_worked).toBe(
+      "Hook fronts a number, then the hostile aside.",
+    );
   });
 
   it("throws when input is not parseable as JSON at all", () => {

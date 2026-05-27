@@ -1,3 +1,4 @@
+import { sanitizeString } from "@/engines/ingestion/sanitize";
 import { createLogger, timed } from "@/lib/shared/logger";
 import type { ILLMClient } from "@/engines/voice/voice";
 import type { VoiceDNA } from "@/engines/voice/types";
@@ -7,16 +8,14 @@ import {
   RESEARCH_ANALYSIS_SYSTEM_PROMPT,
 } from "./system-prompt";
 import {
-  PERFORMANCE_LABELS,
+  PERFORMANCE_SCORE_MAX,
+  PERFORMANCE_SCORE_MIN,
   type LibraryStats,
   type MediaAnalysis,
   type MediaAnalysisInput,
-  type PerformanceLabel,
 } from "./types";
 
 const log = createLogger("research.analyzer");
-
-const PERF_SET = new Set<PerformanceLabel>(PERFORMANCE_LABELS);
 
 export interface MediaAnalyzerOptions {
   llm: ILLMClient;
@@ -77,20 +76,44 @@ export function parseAnalysisJson(raw: string): ParsedAnalysis {
   }
   const obj = value as Record<string, unknown>;
 
-  const performance =
-    typeof obj.performance_label === "string" &&
-    PERF_SET.has(obj.performance_label as PerformanceLabel)
-      ? (obj.performance_label as PerformanceLabel)
-      : null;
-
+  // Sanitise every model-emitted string at the parse layer. Sonnet
+  // happily ships em-dashes in research prose despite our broader
+  // anti-em-dash policy; running the same sanitiser the ingestion
+  // pipeline uses (em-dash -> ", ", en-dash between words -> ", ")
+  // means analyses render clean in the UI without each consumer
+  // needing to remember to do it.
   return {
-    hook: stringOrNull(obj.hook),
-    structure: stringOrNull(obj.structure),
-    pillar_match: stringOrNull(obj.pillar_match),
-    performance_label: performance,
-    what_worked: stringOrNull(obj.what_worked),
-    what_to_repeat: stringOrNull(obj.what_to_repeat),
+    hook: cleanOrNull(obj.hook),
+    structure: cleanOrNull(obj.structure),
+    pillar_match: cleanOrNull(obj.pillar_match),
+    performance_score: scoreOrNull(obj.performance_score),
+    what_worked: cleanOrNull(obj.what_worked),
+    what_to_repeat: cleanOrNull(obj.what_to_repeat),
   };
+}
+
+function cleanOrNull(v: unknown): string | null {
+  const s = stringOrNull(v);
+  return s === null ? null : sanitizeString(s);
+}
+
+function scoreOrNull(v: unknown): number | null {
+  // Accept int or numeric string (Sonnet sometimes returns quoted
+  // numbers despite the schema), clamp into 0-10, refuse anything
+  // outside that range or non-finite.
+  let n: number | null = null;
+  if (typeof v === "number" && Number.isFinite(v)) {
+    n = v;
+  } else if (typeof v === "string" && v.trim() !== "") {
+    const parsed = Number.parseFloat(v);
+    if (Number.isFinite(parsed)) n = parsed;
+  }
+  if (n === null) return null;
+  const rounded = Math.round(n);
+  if (rounded < PERFORMANCE_SCORE_MIN || rounded > PERFORMANCE_SCORE_MAX) {
+    return null;
+  }
+  return rounded;
 }
 
 function stringOrNull(v: unknown): string | null {

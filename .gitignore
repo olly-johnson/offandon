@@ -54,4 +54,23 @@ next-env.d.ts
 # user_memories, user_methodology) and is reachable via the app's RLS policies.
 /clients/
 
+# per-member onboarding artifacts (mirror of the old monitor_drive_submissions.py
+# output: config.json + voice_profile.md + brand_foundation.md + expertise.md +
+# story_bank.md + quality_learnings.md per member). Contains real client names,
+# stories, and identifying info. The structured equivalent will live in Supabase
+# once Phase 2 of the onboarding pipeline (brand_foundation/story_bank/expertise
+# tables) lands.
+/members/
+
 certificates
+
+# supabase CLI scratch + operator-only region-migration helpers. None of
+# these are part of the app build or migration pipeline; they were used
+# once during the Ireland -> Singapore move and don't belong in the
+# repo. Underscore-prefixed migration files are NOT picked up by
+# `supabase db push`, so leaving them on disk locally is harmless.
+/supabase/.temp/
+/supabase/migrations/_combined_singapore.sql
+/supabase/migrations/_public_data.sql
+/scripts/migrate-singapore.mjs
+/scripts/verify-singapore.mjs

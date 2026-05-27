@@ -1,9 +1,17 @@
 import { serve } from "inngest/next";
 
 import { inngest } from "@/lib/shared/inngest/client";
+import { analyzeCompetitorMedia } from "@/lib/shared/inngest/functions/analyze-competitor-media";
 import { analyzeMedia } from "@/lib/shared/inngest/functions/analyze-media";
+import { downloadYoutubeMedia } from "@/lib/shared/inngest/functions/download-youtube-media";
 import { generateScripts } from "@/lib/shared/inngest/functions/generate-scripts";
+import { refreshSuggestedAvatars } from "@/lib/shared/inngest/functions/refresh-suggested-avatars";
 import { refreshVoiceDna } from "@/lib/shared/inngest/functions/refresh-voice-dna";
+import {
+  competitorScrapeCompleted,
+  competitorScrapeRequested,
+  syncAllCompetitorsNightly,
+} from "@/lib/shared/inngest/functions/scrape-competitor";
 import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
 import { weeklyCheckinReminder } from "@/lib/shared/inngest/functions/weekly-checkin-reminder";
 import { weeklyCheckinSend } from "@/lib/shared/inngest/functions/weekly-checkin-send";
@@ -25,5 +33,11 @@ export const { GET, POST, PUT } = serve({
     weeklyCheckinSend,
     weeklyCheckinReminder,
     refreshVoiceDna,
+    competitorScrapeRequested,
+    competitorScrapeCompleted,
+    syncAllCompetitorsNightly,
+    analyzeCompetitorMedia,
+    downloadYoutubeMedia,
+    refreshSuggestedAvatars,
   ],
 });

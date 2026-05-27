@@ -27,9 +27,10 @@ Hard rules:
 - Quote verbatim from the transcript for the "hook" field. Do not paraphrase.
 - If the transcript is too short, mumbled, or non-content (e.g. background music only, voiceover ad) to read structure from, set the field to null. Do not fabricate.
 - "pillar_match" must be the exact name of one of the creator's pillars passed in the user message, or null if no pillar fits.
-- "performance_label" must be exactly one of: top, above_median, median, below_median, bottom. Use the library stats passed in the user message: reach >= p80 -> top; reach > median -> above_median; reach == median or no library data -> median; reach < median -> below_median; reach <= p20 -> bottom.
+- "performance_score" is an INTEGER 0-100 representing this video's reach percentile within this creator's own library. Use the library stats passed in the user message: reach >= p80 -> return 80-100 (estimate the band from how far above p80 it is); reach between median and p80 -> 60-79; reach near median -> 45-55; reach between p20 and median -> 20-44; reach <= p20 -> 0-19. Set to null if the library sample is too small (sample_size < 5) or this video has no reach figure to compare. This is a reach signal, NOT a quality judgment; a 10 here just means "underperformed for this creator", not "bad reel".
 - Be specific. "Hook is engaging" is useless. "Hook uses a numbered list opener (3 things) before the topic is named, forcing a curiosity gap" is useful.
 - "what_to_repeat" is one sentence: the single reusable lesson. If you can't isolate one, set to null.
+- Punctuation: never use em-dashes or en-dashes. Use commas, semicolons, or split into two sentences instead.
 
 Schema (top-level keys are required even when value is null):
 
@@ -37,7 +38,7 @@ Schema (top-level keys are required even when value is null):
   "hook": string | null,
   "structure": string | null,
   "pillar_match": string | null,
-  "performance_label": "top" | "above_median" | "median" | "below_median" | "bottom" | null,
+  "performance_score": integer 0-100 | null,
   "what_worked": string | null,
   "what_to_repeat": string | null
 }

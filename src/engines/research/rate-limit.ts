@@ -3,12 +3,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/shared/supabase";
 
 /**
- * Per-user rolling 30-day analysis cap. Whisper / Deepgram spend is
- * bounded by this. Default 100, env-overridable so we can tune
- * post-launch without a deploy. Service-role only (the limit log
- * table has no authenticated grants).
+ * Per-user rolling 30-day analysis cap, shared across the /library and
+ * competitor analysers. Deepgram + Sonnet spend is bounded by this.
+ * Default 400: competitor sync auto-analyses the latest 30 reels per
+ * creator and the watchlist holds up to 5 (150 analyses), so a lower
+ * cap would block the feature's own normal usage. Env-overridable via
+ * RESEARCH_ANALYSIS_MAX_PER_30D so we can tune without a deploy.
+ * Service-role only (the limit log table has no authenticated grants).
  */
-export const RESEARCH_ANALYSIS_DEFAULT_MAX_PER_30D = 100;
+export const RESEARCH_ANALYSIS_DEFAULT_MAX_PER_30D = 400;
 export const RESEARCH_ANALYSIS_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 export class ResearchRateLimitError extends Error {

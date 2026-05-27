@@ -32,7 +32,7 @@ const NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
   { label: "Scripts", href: "/scripts", icon: FileText, enabled: true },
   { label: "Library", href: "/library", icon: Library, enabled: true },
-  { label: "Research", href: "/research", icon: Search, enabled: false },
+  { label: "Research", href: "/research", icon: Search, enabled: true },
   { label: "Brand", href: "/brand", icon: Target, enabled: false, adminOnly: true },
   { label: "Calendar", href: "/calendar", icon: Calendar, enabled: false },
   { label: "Performance", href: "/performance", icon: BarChart2, enabled: false },
