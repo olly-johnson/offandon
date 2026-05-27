@@ -6,6 +6,7 @@ import {
   type IInstagramClient,
 } from "./client";
 import {
+  recordFollowerSnapshot,
   upsertConnection,
   upsertMedia,
   type InstagramSupabaseClient,
@@ -102,6 +103,15 @@ export async function runInstagramSync(args: {
       lastSyncedAt: now.toISOString(),
       lastSyncError: null,
     });
+    // One-per-day follower snapshot. Powers the dashboard's
+    // New Followers (30d) metric, which can't be derived from
+    // instagram_connections.followers_count alone because that column
+    // is mutated in place on every sync.
+    await recordFollowerSnapshot(args.supabase, {
+      userId: args.userId,
+      followersCount: stats.followers_count,
+      now,
+    });
   } catch (err) {
     log.error("instagram sync persist failed", {
       user_id: args.userId,
@@ -161,6 +171,7 @@ async function recordError(
         followers_count: null,
         follows_count: null,
         media_count: null,
+        profile_picture_url: null,
       },
       lastSyncedAt: null,
       lastSyncError: message,

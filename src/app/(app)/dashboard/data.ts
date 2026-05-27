@@ -144,7 +144,7 @@ export function buildSuggestions(snapshot: DashboardSnapshot): DashboardSuggesti
     return [
       {
         kind: "no_data",
-        text: "Generate your first batch to start seeing pillar balance, funnel coverage, and content suggestions.",
+        text: "Generate scripts to start seeing pillar balance, funnel coverage, and content suggestions.",
       },
     ];
   }

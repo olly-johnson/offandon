@@ -22,6 +22,8 @@ export interface InstagramAccountStats {
   followers_count: number | null;
   follows_count: number | null;
   media_count: number | null;
+  /** Short-lived CDN URL for the account avatar. Refreshed each sync. */
+  profile_picture_url: string | null;
 }
 
 /** One row returned by the IG /media endpoint, before we attach insights. */

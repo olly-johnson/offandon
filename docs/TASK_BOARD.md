@@ -22,6 +22,7 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | BO-011 | Dashboard stub (post-onboarding landing) | claude | Done | PR #4 |
 | BO-012 | Admin invite route stub (programmatic invite TODO) | claude | Done | PR #4 |
 | BO-004 | API: Claude 4.6 + anti-slop filter | claude | Done | PR #2 (anti-slop), PR #4 (SDK) |
+| BO-061 | Password reset: "Forgot password?" on /signin → /auth/forgot-password → Supabase recovery email → /auth/reset-password. In-app /settings page with current-password-verified change-password form; sidebar Settings button now links here. `/auth/confirm` routes `type=recovery` to /auth/reset-password by default. | claude | In Progress | feature/password-reset |
 
 ## Phase 2. Content engine
 
@@ -68,6 +69,7 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
 | BO-013 | Programmatic admin invite endpoint (replaces dashboard invite) + admin-only sidebar entry | claude | Done | PR #27 |
+| BO-062 | Brand dashboard redesign (8-metric strip, engagement chart, performance tabs, top content, funnel/story/identity cards) wired to real IG data with N/A placeholders. Follower-history table so New Followers can populate. Insights fix: request `views` not deprecated `plays` (a single bad metric 400s the whole /insights call, which is why reach/views/saves/shares all showed N/A), and log swallowed insights errors instead of silently nulling. Header avatar: store `ig_profile_picture_url` on the connection (fetched from /me, refreshed each sync) and show it in place of the initial, falling back to the initial when null/expired. Chart polish: axis labels rendered as crisp HTML overlay instead of stretched SVG text. | claude | In Progress | feature/dashboard-brand-redesign |
 | BO-014 | Custom email templates (invite, reset, magic link) with branded copy | claude | Partial | PR #29 (invite done; reset + magic-link pending) |
 | BO-015 | Surface `error` query param on /signin (callback failures, expired links) | - | Todo | - |
 | BO-016 | unwrapSupabaseError helper for the empty-error-on-401 wart | - | Todo | - |

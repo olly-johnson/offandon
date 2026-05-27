@@ -652,6 +652,7 @@ export type Database = {
           followers_count: number | null;
           follows_count: number | null;
           media_count: number | null;
+          ig_profile_picture_url: string | null;
           last_synced_at: string | null;
           last_sync_error: string | null;
           created_at: string;
@@ -665,6 +666,7 @@ export type Database = {
           followers_count?: number | null;
           follows_count?: number | null;
           media_count?: number | null;
+          ig_profile_picture_url?: string | null;
           last_synced_at?: string | null;
           last_sync_error?: string | null;
           created_at?: string;
@@ -678,6 +680,7 @@ export type Database = {
           followers_count?: number | null;
           follows_count?: number | null;
           media_count?: number | null;
+          ig_profile_picture_url?: string | null;
           last_synced_at?: string | null;
           last_sync_error?: string | null;
           created_at?: string;
@@ -736,6 +739,27 @@ export type Database = {
           saved?: number | null;
           shares?: number | null;
           synced_at?: string;
+        };
+        Relationships: [];
+      };
+      instagram_follower_history: {
+        Row: {
+          user_id: string;
+          captured_on: string;
+          followers_count: number;
+          captured_at: string;
+        };
+        Insert: {
+          user_id: string;
+          captured_on: string;
+          followers_count: number;
+          captured_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          captured_on?: string;
+          followers_count?: number;
+          captured_at?: string;
         };
         Relationships: [];
       };
