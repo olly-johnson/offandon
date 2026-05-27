@@ -9,6 +9,7 @@
 ## 🎯 Skill-to-Surface Mapping
 1. **Chat Skill:** Consumes Voice DNA + Social Context. Surface: `/chat`.
 2. **Analyst Skill:** Consumes Social Engine data. Surface: `/dashboard`.
+   - **Formula Matrix:** pure aggregation in `src/lib/shared/formula-matrix.ts`, fed by `src/app/(app)/dashboard/formula-matrix-data.ts`. Ranks format / topic / hook across the creator's own analysed library (`instagram_media_analysis`) plus tracked competitors (`competitor_media_analysis`), blending reach percentile with a per-channel trending-outlier ratio, then combines the winner of each dimension into one suggested video.
 3. **Script Writing Skill:** Consumes Voice DNA + Content Engine. Surface: `/scripts`.
 
 ## ✍️ The Humanization Manifesto (Anti-Slop Rules)
