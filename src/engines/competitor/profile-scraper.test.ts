@@ -126,3 +126,99 @@ describe("ApifyProfileScraper.fetchInstagramAvatarUrl", () => {
     );
   });
 });
+
+const TT_AVATAR = "https://p16-sign-va.tiktokcdn.com/avatar.jpeg?x-expires=1";
+
+describe("ApifyProfileScraper.fetchTiktokAvatarUrl", () => {
+  function ttScraper(fetchImpl: typeof fetch) {
+    return new ApifyProfileScraper({
+      apiKey: "k",
+      instagramActorId: "apify~instagram-profile-scraper",
+      tiktokActorId: "clockworks~tiktok-scraper",
+      fetchImpl,
+    });
+  }
+
+  it("posts to the TikTok actor with a single-result profile probe", async () => {
+    const fetchImpl = makeFetch(async () =>
+      new Response(JSON.stringify([{ authorMeta: { avatar: TT_AVATAR } }]), {
+        status: 200,
+      }),
+    );
+    const url = await ttScraper(fetchImpl).fetchTiktokAvatarUrl("@GaryVee");
+
+    expect(url).toBe(TT_AVATAR);
+    const calls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    const [calledUrl, init] = calls[0] as [string, RequestInit];
+    expect(calledUrl).toContain(
+      "/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items",
+    );
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({
+      profiles: ["garyvee"],
+      resultsPerPage: 1,
+      shouldDownloadVideos: false,
+      shouldDownloadCovers: false,
+    });
+  });
+
+  it("falls back through avatar size variants", async () => {
+    const fetchImpl = makeFetch(async () =>
+      new Response(
+        JSON.stringify([{ authorMeta: { avatarMedium: "https://tt/med.jpg" } }]),
+        { status: 200 },
+      ),
+    );
+    expect(await ttScraper(fetchImpl).fetchTiktokAvatarUrl("x")).toBe(
+      "https://tt/med.jpg",
+    );
+  });
+
+  it("returns null on an empty dataset", async () => {
+    const fetchImpl = makeFetch(async () =>
+      new Response(JSON.stringify([]), { status: 200 }),
+    );
+    expect(await ttScraper(fetchImpl).fetchTiktokAvatarUrl("ghost")).toBeNull();
+  });
+
+  it("returns null when the item carries no author avatar", async () => {
+    const fetchImpl = makeFetch(async () =>
+      new Response(JSON.stringify([{ id: "1", authorMeta: {} }]), { status: 200 }),
+    );
+    expect(await ttScraper(fetchImpl).fetchTiktokAvatarUrl("x")).toBeNull();
+  });
+
+  it("throws on non-2xx", async () => {
+    const fetchImpl = makeFetch(async () =>
+      new Response("rate limited", { status: 429 }),
+    );
+    await expect(
+      ttScraper(fetchImpl).fetchTiktokAvatarUrl("anyone"),
+    ).rejects.toThrow(/429/);
+  });
+});
+
+describe("ApifyProfileScraper.fetchAvatarUrl routing", () => {
+  it("routes instagram + tiktok and returns null for unsupported platforms", async () => {
+    const fetchImpl = makeFetch(async (url) => {
+      if (url.includes("instagram-profile-scraper")) {
+        return new Response(JSON.stringify([{ profilePicUrlHD: IG_PROFILE_HD }]), {
+          status: 200,
+        });
+      }
+      return new Response(JSON.stringify([{ authorMeta: { avatar: TT_AVATAR } }]), {
+        status: 200,
+      });
+    });
+    const scraper = new ApifyProfileScraper({
+      apiKey: "k",
+      instagramActorId: "apify~instagram-profile-scraper",
+      tiktokActorId: "clockworks~tiktok-scraper",
+      fetchImpl,
+    });
+
+    expect(await scraper.fetchAvatarUrl("instagram", "hormozi")).toBe(IG_PROFILE_HD);
+    expect(await scraper.fetchAvatarUrl("tiktok", "garyvee")).toBe(TT_AVATAR);
+    expect(await scraper.fetchAvatarUrl("youtube_shorts", "mkbhd")).toBeNull();
+  });
+});

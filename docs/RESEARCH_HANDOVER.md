@@ -124,8 +124,13 @@ Also requires `APIFY_API_KEY`, `APIFY_WEBHOOK_SECRET`, `DEEPGRAM_API_KEY`,
 2. **mp3-converter actor swap** — if the streamers downloader stays flaky, a
    dedicated YT-mp3 actor may be faster/cheaper. Swap via
    `APIFY_YOUTUBE_DOWNLOADER_ACTOR_ID`; the parser tolerates common field names.
-3. **TT/YT avatars + follower counts** — the suggested-avatar refresh + profile
-   sync are Instagram-only. The chips for TT/YT fall back to gradient initials.
+3. **Suggested-creator avatars** — Instagram + TikTok now resolve via
+   `ApifyProfileScraper.fetchAvatarUrl` (TikTok probes the clockworks actor for
+   one result and reads `authorMeta.avatar`). The weekly cron refreshes them, or
+   run `npm run avatars:refresh` on demand (optional `--platform=` / `--handle=`
+   filters). YouTube chips still fall back to gradient initials (surface
+   disabled). Follower counts are still the hardcoded snapshot in
+   `SUGGESTED_CREATORS`, not synced live.
 4. **Cost model** (rough, post-cold-start): ~$1.50/creator/month steady state.
    25 creators ≈ $80/mo all-in; 50 creators ≈ $130/mo. Sonnet is ~60% of
    variable cost — consider Haiku for old-reel batch jobs.
