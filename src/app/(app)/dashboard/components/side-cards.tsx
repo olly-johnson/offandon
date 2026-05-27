@@ -20,23 +20,11 @@ export function StoryBankCard() {
   return (
     <div className="oo-card-static p-6">
       <div className="bd-card-title">Story Bank</div>
-      <div className="bd-display" style={{ fontSize: 22, color: "var(--oo-text-primary)" }}>
-        0{" "}
-        <span style={{ fontSize: 13, color: "var(--oo-text-dim)", fontWeight: 400 }}>
-          of 0 stories used
-        </span>
-      </div>
-      <div className="bd-progress-track">
-        <div className="bd-progress-fill" style={{ width: "0%" }} />
-      </div>
-      <p
-        className="mt-3"
-        style={{ fontSize: 12, color: "var(--oo-text-dim)", lineHeight: 1.6 }}
-      >
-        Best performing:{" "}
-        <strong style={{ color: "var(--oo-text-secondary)" }}>
-          Story tracking starts when scripts include ABS codes
-        </strong>
+      <p style={{ color: "var(--oo-text-secondary)", fontSize: 13, lineHeight: 1.7 }}>
+        Story usage tracking is coming soon. It will show how many of your story
+        bank stories appear across your scripts, and which one performs best.
+        Seed your stories in onboarding or the Brand section so they are ready
+        when this goes live.
       </p>
     </div>
   );
