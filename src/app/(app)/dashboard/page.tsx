@@ -17,15 +17,16 @@ import {
 } from "@/lib/shared/dashboard-metrics";
 
 import { buildSuggestions, loadDashboard } from "./data";
+import { loadFormulaMatrix } from "./formula-matrix-data";
 import { DashboardHeader } from "./components/header";
 import { MetricsStrip } from "./components/metrics-strip";
 import { EngagementChart } from "./components/engagement-chart";
 import { PerformanceTabs } from "./components/performance-tabs";
 import { TopContentTable } from "./components/top-content-table";
 import { FunnelBalanceCard } from "./components/funnel-balance-card";
+import { FormulaMatrixCard } from "./components/formula-matrix-card";
 import {
   CompetitorsCard,
-  FormulaMatrixCard,
   IdentityDepthCard,
   StoryBankCard,
 } from "./components/side-cards";
@@ -63,11 +64,13 @@ export default async function DashboardPage() {
   if (!user) redirect("/signin");
 
   const now = new Date();
-  const [snapshot, igConnection, igMedia, followerHistory, profileRow] = await Promise.all([
+  const [snapshot, igConnection, igMedia, followerHistory, formulaMatrix, profileRow] =
+    await Promise.all([
     loadDashboard(user.id),
     getConnection(supabase, user.id),
     listMediaForUser(supabase, user.id, 100),
     listFollowerHistory(supabase, user.id, { sinceDays: 30, now }),
+    loadFormulaMatrix(user.id),
     supabase
       .from("profiles")
       .select("display_name")
@@ -138,7 +141,7 @@ export default async function DashboardPage() {
             <PerformanceTabs format={formatRows} funnel={funnelRows} pillar={pillarRows} />
           </div>
 
-          <FormulaMatrixCard />
+          <FormulaMatrixCard matrix={formulaMatrix} />
 
           <div className="oo-card-static bd-section p-6">
             <div className="bd-card-title">Top Performing Content</div>
