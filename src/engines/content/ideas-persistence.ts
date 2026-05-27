@@ -7,7 +7,7 @@ const log = createLogger("content.ideas-persistence");
 
 export type ContentSupabaseClient = SupabaseClient<Database>;
 
-export type IdeaSource = "chat" | "manual";
+export type IdeaSource = "chat" | "manual" | "research";
 
 export interface SaveIdeaArgs {
   userId: string;

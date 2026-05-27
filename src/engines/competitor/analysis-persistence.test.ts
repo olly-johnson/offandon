@@ -11,6 +11,7 @@ import {
 const ANALYSIS: MediaAnalysis = {
   transcript: "hello",
   hook: "Three things I learned",
+  hook_type: "CURIOSITY",
   structure: "List of three",
   pillar_match: "Operator Frameworks",
   performance_score: 90,

@@ -20,6 +20,33 @@ export const PERFORMANCE_SCORE_MIN = 0;
 export const PERFORMANCE_SCORE_MAX = 100;
 
 /**
+ * Hook archetype the analyzer classifies each reel's opener into. Mirrors
+ * the content engine's hook taxonomy so the two surfaces speak the same
+ * language. Powers the "type of hooks that are working" dimension of the
+ * research trends surface.
+ */
+export type HookType =
+  | "STORYTELLING"
+  | "CONFRONTATIONAL"
+  | "VULNERABILITY"
+  | "CURIOSITY"
+  | "PROOF"
+  | "EDUCATIONAL";
+
+export const RESEARCH_HOOK_TYPES: readonly HookType[] = [
+  "STORYTELLING",
+  "CONFRONTATIONAL",
+  "VULNERABILITY",
+  "CURIOSITY",
+  "PROOF",
+  "EDUCATIONAL",
+];
+
+export function isHookType(v: unknown): v is HookType {
+  return typeof v === "string" && (RESEARCH_HOOK_TYPES as readonly string[]).includes(v);
+}
+
+/**
  * Aggregate library stats. Computed at analysis time from the user's
  * own media rows. Used by the analyzer to label this video's
  * performance relative to the rest of the creator's library.
@@ -45,6 +72,8 @@ export interface MediaAnalysis {
   /** Verbatim Deepgram transcript. Required; no analysis lands without it. */
   transcript: string;
   hook: string | null;
+  /** Archetype of the hook, classified by the analyzer. Null when no clean hook read. */
+  hook_type: HookType | null;
   structure: string | null;
   pillar_match: string | null;
   performance_score: PerformanceScore | null;

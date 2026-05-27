@@ -18,6 +18,7 @@ export {
   ResearchRateLimitError,
 } from "./rate-limit";
 export type {
+  HookType,
   ITranscriptionClient,
   LibraryStats,
   MediaAnalysis,
@@ -26,8 +27,10 @@ export type {
   TranscriptionResult,
 } from "./types";
 export {
+  isHookType,
   PERFORMANCE_SCORE_MAX,
   PERFORMANCE_SCORE_MIN,
+  RESEARCH_HOOK_TYPES,
 } from "./types";
 export {
   RESEARCH_ANALYSIS_MODEL,

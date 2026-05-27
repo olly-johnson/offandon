@@ -19,6 +19,17 @@ import {
   setCompetitorMediaAnalysisFailure,
   updateCompetitorSyncState,
 } from "@/engines/competitor";
+import { OutlierIdeaGenerator } from "@/engines/content";
+import { saveIdea } from "@/engines/content/ideas-persistence";
+import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
+import {
+  listRulesForSlicePrompt,
+  loadMethodologySlice,
+} from "@/engines/master-bot/persistence";
+import { getUserMethodology } from "@/engines/methodology/persistence";
+import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
+import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
+import { SlopError } from "@/lib/shared/anti-slop";
 import { inngest, INNGEST_EVENTS } from "@/lib/shared/inngest/client";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
@@ -311,6 +322,125 @@ export async function removeFromVaultAction(form: FormData): Promise<void> {
   }
 
   revalidatePath("/research");
+}
+
+/**
+ * Step 4 / "Make my version": turn one saved outlier reel into 3 ideas
+ * in the creator's own voice, about their own stories, mirroring the
+ * outlier's hook/topic/structure pattern (never its content). The ideas
+ * land in the Ideas Bank (source='research') so the user can develop
+ * them into scripts in the existing /scripts flow. Runs inline like the
+ * Script Wizard generators.
+ */
+export type GenerateIdeasState = { ok?: boolean; count?: number; error?: string };
+
+const OUTLIER_IDEAS_PER_REEL = 3;
+
+export async function generateIdeasFromOutlierAction(
+  _prev: GenerateIdeasState,
+  form: FormData,
+): Promise<GenerateIdeasState> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/signin");
+
+  const mediaId = (form.get("media_id") ?? "").toString();
+  if (!mediaId) return { error: "Missing media id." };
+
+  const dna = await getCurrentVoiceDNA(supabase, user.id);
+  if (!dna) {
+    return { error: "Complete onboarding first so we can write in your voice." };
+  }
+
+  const media = await getCompetitorMediaForUser(supabase, {
+    userId: user.id,
+    mediaId,
+  });
+  if (!media) return { error: "Reel not found." };
+
+  const analysis = await getAnalysisForCompetitorMedia(supabase, mediaId);
+  if (!analysis) {
+    return { error: "Analyse this reel first, then generate ideas." };
+  }
+
+  const competitor = await getCompetitorForUser(supabase, {
+    userId: user.id,
+    id: media.competitor_id,
+  });
+
+  const admin = createSupabaseAdminClient();
+  const [userMethodology, house, scriptsSlice, operatorRules] = await Promise.all([
+    getUserMethodology(supabase, user.id),
+    loadMethodologySlice(admin, "house"),
+    loadMethodologySlice(admin, "scripts"),
+    listRulesForSlicePrompt(admin, "scripts"),
+  ]);
+
+  let ideaSet;
+  try {
+    const generator = new OutlierIdeaGenerator({
+      llm: new AnthropicLLMClient({
+        onUsage: buildUsageRecorder({ userId: user.id, surface: "script" }),
+      }),
+    });
+    ideaSet = await generator.generate({
+      voiceDna: dna,
+      outlier: {
+        source_username: competitor?.username ?? "a competitor",
+        hook: analysis.hook,
+        structure: analysis.structure,
+        caption: media.caption,
+        transcript: analysis.transcript,
+        pillar_match: analysis.pillar_match,
+      },
+      count: OUTLIER_IDEAS_PER_REEL,
+      userMethodology,
+      methodologyContext: { house, scripts: scriptsSlice, operatorRules },
+    });
+  } catch (err) {
+    log.error("generateIdeasFromOutlierAction generation failed", {
+      user_id: user.id,
+      media_id: mediaId,
+      slop: err instanceof SlopError,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return {
+      error:
+        err instanceof SlopError
+          ? "The generated ideas failed the slop validator. Try again."
+          : "Could not generate ideas. Try again.",
+    };
+  }
+
+  try {
+    for (const idea of ideaSet.ideas) {
+      await saveIdea(admin, {
+        userId: user.id,
+        content: idea.content,
+        source: "research",
+        pillar: idea.pillar,
+      });
+    }
+  } catch (err) {
+    log.error("generateIdeasFromOutlierAction save failed", {
+      user_id: user.id,
+      media_id: mediaId,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return { error: "Generated ideas but could not save them. Try again." };
+  }
+
+  log.info("outlier ideas generated", {
+    user_id: user.id,
+    media_id: mediaId,
+    count: ideaSet.ideas.length,
+  });
+  // The Ideas Bank lives under /scripts; refresh both surfaces.
+  revalidatePath("/scripts");
+  revalidatePath("/research");
+  return { ok: true, count: ideaSet.ideas.length };
 }
 
 export async function removeCompetitorAction(formData: FormData): Promise<void> {
