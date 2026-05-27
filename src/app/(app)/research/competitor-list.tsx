@@ -21,6 +21,12 @@ import {
 import { PlatformGlyph, platformBrandColor, platformLabel } from "./platform-icons";
 import { ReelThumbnail } from "./reel-thumbnail";
 import { SuggestedCreatorsGrid } from "./suggested-creators-grid";
+import {
+  buildOptimisticRow,
+  competitorKey,
+  isOptimisticId,
+  mergeWatchlist,
+} from "./watchlist";
 import { useCompetitorRealtime } from "./use-competitor-realtime";
 import { useCompetitorMediaRealtime } from "./use-competitor-media-realtime";
 import type {
@@ -62,18 +68,44 @@ export function CompetitorList({
   );
   const [, startRemove] = useTransition();
 
+  // Optimistic adds. Pressing "Track" drops a placeholder card on the
+  // watchlist instantly, before the server insert + initial scrape
+  // round-trip. mergeWatchlist dedupes by (platform, handle) so the
+  // placeholder is replaced by the real row the moment it arrives via
+  // revalidation, with no flicker. Stale entries are harmless: once a
+  // matching server row exists, the placeholder is filtered out every
+  // render. A rejected add is rolled back in the form action below.
+  const [optimisticAdds, setOptimisticAdds] = useState<CompetitorRow[]>([]);
+
   const visibleCompetitors = useMemo(
-    () => competitors.filter((c) => !removedIds.has(c.id)),
-    [competitors, removedIds],
+    () => mergeWatchlist(competitors, optimisticAdds, removedIds),
+    [competitors, optimisticAdds, removedIds],
   );
 
   function onRemove(id: string) {
     setRemovedIds((prev) => new Set(prev).add(id));
+    // Optimistic placeholders never hit the DB, so there's nothing to
+    // delete server-side; hiding them via removedIds is enough.
+    if (isOptimisticId(id)) return;
     startRemove(async () => {
       const fd = new FormData();
       fd.set("id", id);
       await removeCompetitorAction(fd);
     });
+  }
+
+  function onOptimisticAdd(rawHandle: string, p: CompetitorPlatform) {
+    const row = buildOptimisticRow(p, rawHandle);
+    if (!row) return;
+    setOptimisticAdds((prev) =>
+      prev.some((a) => a.id === row.id) ? prev : [...prev, row],
+    );
+  }
+
+  function onOptimisticAddFailed(rawHandle: string, p: CompetitorPlatform) {
+    const row = buildOptimisticRow(p, rawHandle);
+    if (!row) return;
+    setOptimisticAdds((prev) => prev.filter((a) => a.id !== row.id));
   }
 
   const atCap = visibleCompetitors.length >= limit;
@@ -83,7 +115,7 @@ export function CompetitorList({
   const [handle, setHandle] = useState("");
   const [platform, setPlatform] = useState<CompetitorPlatform>("instagram");
   const trackedHandles = new Set(
-    visibleCompetitors.map((c) => `${c.platform}:${c.username.toLowerCase()}`),
+    visibleCompetitors.map((c) => competitorKey(c.platform, c.username)),
   );
 
   function onPick(h: string, p: CompetitorPlatform) {
@@ -100,6 +132,8 @@ export function CompetitorList({
           setHandle={setHandle}
           platform={platform}
           setPlatform={setPlatform}
+          onOptimisticAdd={onOptimisticAdd}
+          onOptimisticAddFailed={onOptimisticAddFailed}
         />
         <SuggestedCreatorsGrid
           trackedHandles={trackedHandles}
@@ -152,19 +186,34 @@ function AddCompetitorForm({
   setHandle,
   platform,
   setPlatform,
+  onOptimisticAdd,
+  onOptimisticAddFailed,
 }: {
   atCap: boolean;
   handle: string;
   setHandle: (h: string) => void;
   platform: CompetitorPlatform;
   setPlatform: (p: CompetitorPlatform) => void;
+  onOptimisticAdd: (handle: string, platform: CompetitorPlatform) => void;
+  onOptimisticAddFailed: (handle: string, platform: CompetitorPlatform) => void;
 }) {
   const [state, formAction, pending] = useActionState<
     AddCompetitorState,
     FormData
   >(async (prev, fd) => {
+    const handleVal = (fd.get("handle") ?? "").toString();
+    const platformVal = ((fd.get("platform") ?? "instagram").toString() ||
+      "instagram") as CompetitorPlatform;
+    // Drop the placeholder card before awaiting the server so it shows
+    // up the instant the form is submitted. Cleared on the next render
+    // when the real row lands; rolled back if the server rejects it.
+    onOptimisticAdd(handleVal, platformVal);
     const next = await addCompetitorAction(prev, fd);
-    if (next.ok) setHandle("");
+    if (next.ok) {
+      setHandle("");
+    } else {
+      onOptimisticAddFailed(handleVal, platformVal);
+    }
     return next;
   }, {});
 
@@ -319,6 +368,9 @@ function CompetitorRowItem({
   onRemove: (id: string) => void;
 }) {
   const inFlight = row.sync_pending;
+  // Placeholder rows aren't persisted yet: no detail page to link to,
+  // and nothing to sync / remove server-side until the insert lands.
+  const optimistic = isOptimisticId(row.id);
 
   return (
     <div
@@ -336,13 +388,22 @@ function CompetitorRowItem({
               className="size-3"
               style={{ color: platformBrandColor(row.platform) }}
             />
-            <Link
-              href={`/research/${row.id}`}
-              className="text-sm font-semibold hover:underline"
-              style={{ color: "var(--oo-text-primary)" }}
-            >
-              @{row.username}
-            </Link>
+            {optimistic ? (
+              <span
+                className="text-sm font-semibold"
+                style={{ color: "var(--oo-text-primary)" }}
+              >
+                @{row.username}
+              </span>
+            ) : (
+              <Link
+                href={`/research/${row.id}`}
+                className="text-sm font-semibold hover:underline"
+                style={{ color: "var(--oo-text-primary)" }}
+              >
+                @{row.username}
+              </Link>
+            )}
             <a
               href={publicProfileUrl(row)}
               target="_blank"
@@ -360,33 +421,35 @@ function CompetitorRowItem({
             lastSyncError={row.last_sync_error}
           />
         </div>
-        <div className="flex items-center gap-1">
-          <form action={syncCompetitorAction}>
-            <input type="hidden" name="id" value={row.id} />
+        {optimistic ? null : (
+          <div className="flex items-center gap-1">
+            <form action={syncCompetitorAction}>
+              <input type="hidden" name="id" value={row.id} />
+              <button
+                type="submit"
+                aria-label={`Sync ${row.username} now`}
+                className="oo-icon-btn rounded-lg p-2 disabled:opacity-40"
+                title={inFlight ? "Sync in progress" : "Sync now"}
+                disabled={inFlight}
+              >
+                {inFlight ? (
+                  <Loader2 className="oo-spin size-4" />
+                ) : (
+                  <RefreshCcw className="size-4" />
+                )}
+              </button>
+            </form>
             <button
-              type="submit"
-              aria-label={`Sync ${row.username} now`}
-              className="oo-icon-btn rounded-lg p-2 disabled:opacity-40"
-              title={inFlight ? "Sync in progress" : "Sync now"}
-              disabled={inFlight}
+              type="button"
+              onClick={() => onRemove(row.id)}
+              aria-label={`Stop tracking ${row.username}`}
+              className="oo-icon-btn rounded-lg p-2"
+              title="Stop tracking"
             >
-              {inFlight ? (
-                <Loader2 className="oo-spin size-4" />
-              ) : (
-                <RefreshCcw className="size-4" />
-              )}
+              <Trash2 className="size-4" />
             </button>
-          </form>
-          <button
-            type="button"
-            onClick={() => onRemove(row.id)}
-            aria-label={`Stop tracking ${row.username}`}
-            className="oo-icon-btn rounded-lg p-2"
-            title="Stop tracking"
-          >
-            <Trash2 className="size-4" />
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {reels.length > 0 ? (
