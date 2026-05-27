@@ -618,7 +618,7 @@ function SaveToVaultButton({
             ? "Already in your research vault"
             : "Save this reel as a reference for script generation"
         }
-        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-default"
+        className="oo-soft-btn flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold"
         style={{
           background: saved
             ? "var(--oo-gold-dim)"

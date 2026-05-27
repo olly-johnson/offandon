@@ -182,7 +182,7 @@ function VaultRow({ item }: { item: VaultListRow }) {
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
+            className="oo-soft-btn inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
             style={{
               background: "var(--oo-bg-elevated)",
               border: "1px solid var(--oo-border-subtle)",
