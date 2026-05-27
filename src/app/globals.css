@@ -305,6 +305,29 @@
     cursor: not-allowed;
   }
 
+  /* Soft action button for custom-styled buttons whose colours are set
+     inline by the caller (Generate 3 ideas, Save to vault). Adds the
+     shared tactile hover (gentle lift + brighten) and the pointer cursor
+     that Tailwind no longer applies to a bare button, so these feel
+     clickable like the gold buttons do. */
+  .oo-soft-btn {
+    cursor: pointer;
+    transition:
+      transform 160ms cubic-bezier(0.4,0,0.2,1),
+      filter 160ms cubic-bezier(0.4,0,0.2,1);
+  }
+  .oo-soft-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.12);
+  }
+  .oo-soft-btn:active:not(:disabled) {
+    transform: translateY(0);
+    filter: brightness(1.05);
+  }
+  .oo-soft-btn:disabled {
+    cursor: default;
+  }
+
   /* Trash button on the Master Bot rules list. Subtle in the resting
      state, lights up red and lifts on hover so the destructive action
      is obvious without being a constant red dot in the sidebar. */
