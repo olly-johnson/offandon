@@ -61,20 +61,10 @@ export function CompetitorsCard() {
   return (
     <div className="oo-card-static p-6">
       <div className="bd-card-title">Competitors</div>
-      <p style={{ color: "var(--oo-text-dim)", fontSize: 13 }}>
-        No competitors added. Use{" "}
-        <code
-          style={{
-            background: "var(--oo-bg-hover)",
-            padding: "1px 6px",
-            borderRadius: 4,
-            fontSize: 11,
-            color: "var(--oo-gold)",
-          }}
-        >
-          /watchlist add @handle
-        </code>{" "}
-        to start tracking.
+      <p style={{ color: "var(--oo-text-dim)", fontSize: 13, lineHeight: 1.7 }}>
+        No competitors added yet. Add competitors in the{" "}
+        <span style={{ color: "var(--oo-gold)" }}>Research</span> section to
+        start tracking them here.
       </p>
     </div>
   );

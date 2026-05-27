@@ -6,7 +6,7 @@ export function RecommendationsCard({ suggestions }: { suggestions: DashboardSug
       <div className="oo-card-static p-6">
         <div className="bd-card-title">Recommendations</div>
         <p style={{ color: "var(--oo-text-dim)", fontSize: 13 }}>
-          Generate your first batch to unlock personalised recommendations.
+          Generate scripts to unlock personalised recommendations.
         </p>
       </div>
     );
