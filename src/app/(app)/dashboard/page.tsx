@@ -16,8 +16,11 @@ import {
   type DashboardMediaRow,
 } from "@/lib/shared/dashboard-metrics";
 
+import { listCompetitors } from "@/engines/competitor";
+
 import { buildSuggestions, loadDashboard } from "./data";
 import { loadFormulaMatrix } from "./formula-matrix-data";
+import { summariseCompetitors } from "./competitors";
 import { DashboardHeader } from "./components/header";
 import { MetricsStrip } from "./components/metrics-strip";
 import { EngagementChart } from "./components/engagement-chart";
@@ -64,13 +67,21 @@ export default async function DashboardPage() {
   if (!user) redirect("/signin");
 
   const now = new Date();
-  const [snapshot, igConnection, igMedia, followerHistory, formulaMatrix, profileRow] =
-    await Promise.all([
+  const [
+    snapshot,
+    igConnection,
+    igMedia,
+    followerHistory,
+    formulaMatrix,
+    competitorRows,
+    profileRow,
+  ] = await Promise.all([
     loadDashboard(user.id),
     getConnection(supabase, user.id),
     listMediaForUser(supabase, user.id, 100),
     listFollowerHistory(supabase, user.id, { sinceDays: 30, now }),
     loadFormulaMatrix(user.id),
+    listCompetitors(supabase, user.id),
     supabase
       .from("profiles")
       .select("display_name")
@@ -88,6 +99,7 @@ export default async function DashboardPage() {
   const engagementSeries = buildEngagementSeries(dashboardRows, now, 30);
   const topContent = buildTopContent(dashboardRows, { now, limit: 10 });
   const suggestions = buildSuggestions(snapshot);
+  const competitors = summariseCompetitors(competitorRows, now);
 
   // Performance breakdown sources:
   //  - Format from IG media types (real signal)
@@ -115,6 +127,7 @@ export default async function DashboardPage() {
     engagement_points: engagementSeries.length,
     top_content: topContent.length,
     suggestion_count: suggestions.length,
+    competitors: competitors.count,
   });
 
   return (
@@ -158,7 +171,7 @@ export default async function DashboardPage() {
 
           <div className="bd-section grid gap-5 md:grid-cols-2">
             <IdentityDepthCard />
-            <CompetitorsCard />
+            <CompetitorsCard competitors={competitors} />
           </div>
 
           <RecommendationsCard suggestions={suggestions} />
