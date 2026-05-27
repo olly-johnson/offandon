@@ -57,6 +57,8 @@ describe("getConnection", () => {
     expect(out).toEqual(row);
     expect(from).toHaveBeenCalledWith("instagram_connections");
     expect(eq).toHaveBeenCalledWith("user_id", "user-1");
+    // the avatar URL must be among the selected columns
+    expect(select.mock.calls[0][0]).toContain("ig_profile_picture_url");
   });
 
   it("returns null when no row exists", async () => {
@@ -85,6 +87,7 @@ describe("upsertConnection", () => {
         followers_count: 100,
         follows_count: 50,
         media_count: 7,
+        profile_picture_url: "https://cdn/avatar.jpg",
       },
       lastSyncedAt: NOW.toISOString(),
     });
@@ -99,6 +102,7 @@ describe("upsertConnection", () => {
         followers_count: 100,
         follows_count: 50,
         media_count: 7,
+        ig_profile_picture_url: "https://cdn/avatar.jpg",
         last_synced_at: NOW.toISOString(),
         last_sync_error: null,
       },
@@ -120,6 +124,7 @@ describe("upsertConnection", () => {
         followers_count: null,
         follows_count: null,
         media_count: null,
+        profile_picture_url: null,
       },
       lastSyncedAt: null,
       lastSyncError: "rate limited",

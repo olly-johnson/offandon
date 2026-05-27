@@ -1,10 +1,18 @@
+import { BrandAvatar } from "./brand-avatar";
+
 interface DashboardHeaderProps {
   displayName: string;
   handle: string | null;
   windowLabel: string;
+  avatarUrl: string | null;
 }
 
-export function DashboardHeader({ displayName, handle, windowLabel }: DashboardHeaderProps) {
+export function DashboardHeader({
+  displayName,
+  handle,
+  windowLabel,
+  avatarUrl,
+}: DashboardHeaderProps) {
   const initial = displayName.trim().charAt(0).toUpperCase() || "?";
   return (
     <div
@@ -12,19 +20,7 @@ export function DashboardHeader({ displayName, handle, windowLabel }: DashboardH
       style={{ borderBottom: "1px solid var(--oo-border)" }}
     >
       <div className="flex items-center gap-5">
-        <div
-          className="flex size-14 items-center justify-center rounded-full"
-          style={{
-            background: "var(--oo-gold-dim)",
-            border: "2px solid var(--oo-gold)",
-            fontSize: "22px",
-            fontWeight: 700,
-            color: "var(--oo-gold)",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          {initial}
-        </div>
+        <BrandAvatar src={avatarUrl} initial={initial} />
         <div>
           <div
             className="mb-1 text-[10px] font-bold uppercase"

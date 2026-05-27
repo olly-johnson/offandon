@@ -123,6 +123,7 @@ export default async function DashboardPage() {
             displayName={displayName}
             handle={handle}
             windowLabel={windowLabel}
+            avatarUrl={igConnection?.ig_profile_picture_url ?? null}
           />
 
           <MetricsStrip metrics={metrics} />

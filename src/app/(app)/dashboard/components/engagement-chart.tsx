@@ -6,10 +6,10 @@ interface Props {
 
 const W = 800;
 const H = 220;
-const PAD_L = 36;
-const PAD_R = 12;
-const PAD_T = 12;
-const PAD_B = 26;
+const PAD_L = 48;
+const PAD_R = 14;
+const PAD_T = 14;
+const PAD_B = 28;
 
 export function EngagementChart({ points }: Props) {
   if (points.length === 0) {
@@ -45,22 +45,34 @@ export function EngagementChart({ points }: Props) {
   // ~8 x labels evenly spaced
   const stride = Math.max(1, Math.ceil(points.length / 8));
 
+  // The SVG stretches to the container width (preserveAspectRatio="none"),
+  // which is fine for the line/area/grid but mangles SVG <text>. So the
+  // geometry stays in the SVG and the axis labels are HTML on top, where
+  // they render crisp in the site font and never get stretched. Because
+  // the SVG maps viewBox x 0..W linearly to 0..100% width and viewBox y
+  // 0..H one-to-one to H px, we can place labels with x as a percentage
+  // and y in pixels.
+  const xLabels = points
+    .map((p, i) => ({ p, i }))
+    .filter(({ i }) => i % stride === 0 || i === points.length - 1);
+
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      width="100%"
-      style={{ height: H, display: "block" }}
-      preserveAspectRatio="none"
-    >
-      <defs>
-        <linearGradient id="bd-eng-area" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="var(--oo-gold)" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="var(--oo-gold)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {ticks.map((t, i) => (
-        <g key={i}>
+    <div className="relative" style={{ width: "100%", height: H }}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        style={{ height: H, display: "block" }}
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="bd-eng-area" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--oo-gold)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="var(--oo-gold)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {ticks.map((t, i) => (
           <line
+            key={i}
             x1={PAD_L}
             x2={W - PAD_R}
             y1={t.y}
@@ -68,52 +80,73 @@ export function EngagementChart({ points }: Props) {
             stroke="var(--oo-border-subtle)"
             strokeWidth={1}
           />
-          <text
-            x={PAD_L - 6}
-            y={t.y + 3}
-            textAnchor="end"
-            fontSize={10}
-            fill="var(--oo-text-dim)"
+        ))}
+
+        <path d={areaD} fill="url(#bd-eng-area)" />
+        <path
+          d={pathD}
+          fill="none"
+          stroke="var(--oo-gold)"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        {points.map((p, i) => (
+          <circle key={p.date} cx={xs(i)} cy={ys(p.engagement)} r={2.5} fill="var(--oo-gold)">
+            <title>{`${p.date}: ${p.engagement.toLocaleString()}`}</title>
+          </circle>
+        ))}
+      </svg>
+
+      {/* Crisp HTML axis labels, positioned over the stretched SVG. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          fontSize: 11,
+          color: "var(--oo-text-dim)",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {ticks.map((t, i) => (
+          <span
+            key={`y-${i}`}
+            style={{
+              position: "absolute",
+              top: t.y,
+              left: 0,
+              width: PAD_L - 8,
+              textAlign: "right",
+              transform: "translateY(-50%)",
+              lineHeight: 1,
+            }}
           >
             {t.label}
-          </text>
-        </g>
-      ))}
-
-      <path d={areaD} fill="url(#bd-eng-area)" />
-      <path
-        d={pathD}
-        fill="none"
-        stroke="var(--oo-gold)"
-        strokeWidth={2}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      {points.map((p, i) => (
-        <circle
-          key={p.date}
-          cx={xs(i)}
-          cy={ys(p.engagement)}
-          r={2.5}
-          fill="var(--oo-gold)"
-        >
-          <title>{`${p.date}: ${p.engagement.toLocaleString()}`}</title>
-        </circle>
-      ))}
-      {points.map((p, i) =>
-        i % stride === 0 || i === points.length - 1 ? (
-          <text
-            key={`x-${p.date}`}
-            x={xs(i)}
-            y={H - 8}
-            textAnchor="middle"
-            fontSize={10}
-            fill="var(--oo-text-dim)"
-          >
-            {p.date.slice(5)}
-          </text>
-        ) : null,
-      )}
-    </svg>
+          </span>
+        ))}
+        {xLabels.map(({ p, i }) => {
+          const isFirst = i === 0;
+          const isLast = i === points.length - 1;
+          return (
+            <span
+              key={`x-${p.date}`}
+              style={{
+                position: "absolute",
+                left: `${(xs(i) / W) * 100}%`,
+                bottom: 4,
+                whiteSpace: "nowrap",
+                transform: isFirst
+                  ? "translateX(0)"
+                  : isLast
+                    ? "translateX(-100%)"
+                    : "translateX(-50%)",
+              }}
+            >
+              {p.date.slice(5)}
+            </span>
+          );
+        })}
+      </div>
+    </div>
   );
 }

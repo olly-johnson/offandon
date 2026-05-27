@@ -80,8 +80,10 @@ export class InstagramClient implements IInstagramClient {
       followers_count?: number;
       follows_count?: number;
       media_count?: number;
+      profile_picture_url?: string;
     }>(token, "/me", {
-      fields: "id,username,followers_count,follows_count,media_count",
+      fields:
+        "id,username,followers_count,follows_count,media_count,profile_picture_url",
     });
     return {
       ig_user_id: data.id,
@@ -89,6 +91,7 @@ export class InstagramClient implements IInstagramClient {
       followers_count: data.followers_count ?? null,
       follows_count: data.follows_count ?? null,
       media_count: data.media_count ?? null,
+      profile_picture_url: data.profile_picture_url ?? null,
     };
   }
 

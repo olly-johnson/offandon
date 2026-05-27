@@ -23,6 +23,42 @@ function calledUrl(fetchImpl: typeof fetch): URL {
   return new URL(calls[0][0] as string);
 }
 
+describe("InstagramClient.fetchSelf", () => {
+  it("requests profile_picture_url and maps it onto the stats", async () => {
+    const fetchImpl = makeFetch({
+      id: "ig-1",
+      username: "alexbenshaw",
+      followers_count: 16_961,
+      follows_count: 312,
+      media_count: 540,
+      profile_picture_url: "https://scontent.cdninstagram.com/pic.jpg",
+    });
+    const client = new InstagramClient({
+      fetchImpl,
+      baseUrl: "https://graph.test",
+    });
+
+    const stats = await client.fetchSelf("tok");
+
+    const fields = calledUrl(fetchImpl).searchParams.get("fields") ?? "";
+    expect(fields).toContain("profile_picture_url");
+    expect(stats.profile_picture_url).toBe(
+      "https://scontent.cdninstagram.com/pic.jpg",
+    );
+  });
+
+  it("maps a missing profile_picture_url to null", async () => {
+    const fetchImpl = makeFetch({ id: "ig-1" });
+    const client = new InstagramClient({
+      fetchImpl,
+      baseUrl: "https://graph.test",
+    });
+
+    const stats = await client.fetchSelf("tok");
+    expect(stats.profile_picture_url).toBeNull();
+  });
+});
+
 describe("InstagramClient.fetchMediaInsights", () => {
   afterEach(() => {
     vi.restoreAllMocks();

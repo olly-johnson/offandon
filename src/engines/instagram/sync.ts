@@ -171,6 +171,7 @@ async function recordError(
         followers_count: null,
         follows_count: null,
         media_count: null,
+        profile_picture_url: null,
       },
       lastSyncedAt: null,
       lastSyncError: message,

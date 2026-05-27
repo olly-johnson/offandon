@@ -24,6 +24,7 @@ export interface ConnectionRow {
   followers_count: number | null;
   follows_count: number | null;
   media_count: number | null;
+  ig_profile_picture_url: string | null;
   last_synced_at: string | null;
   last_sync_error: string | null;
 }
@@ -67,7 +68,7 @@ export async function getConnection(
   const { data, error } = await supabase
     .from("instagram_connections")
     .select(
-      "user_id, access_token, ig_user_id, ig_username, followers_count, follows_count, media_count, last_synced_at, last_sync_error",
+      "user_id, access_token, ig_user_id, ig_username, followers_count, follows_count, media_count, ig_profile_picture_url, last_synced_at, last_sync_error",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -104,6 +105,7 @@ export async function upsertConnection(
         followers_count: args.stats.followers_count,
         follows_count: args.stats.follows_count,
         media_count: args.stats.media_count,
+        ig_profile_picture_url: args.stats.profile_picture_url,
         last_synced_at: args.lastSyncedAt,
         last_sync_error: args.lastSyncError ?? null,
       },

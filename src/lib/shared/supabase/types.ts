@@ -499,6 +499,7 @@ export type Database = {
           followers_count: number | null;
           follows_count: number | null;
           media_count: number | null;
+          ig_profile_picture_url: string | null;
           last_synced_at: string | null;
           last_sync_error: string | null;
           created_at: string;
@@ -512,6 +513,7 @@ export type Database = {
           followers_count?: number | null;
           follows_count?: number | null;
           media_count?: number | null;
+          ig_profile_picture_url?: string | null;
           last_synced_at?: string | null;
           last_sync_error?: string | null;
           created_at?: string;
@@ -525,6 +527,7 @@ export type Database = {
           followers_count?: number | null;
           follows_count?: number | null;
           media_count?: number | null;
+          ig_profile_picture_url?: string | null;
           last_synced_at?: string | null;
           last_sync_error?: string | null;
           created_at?: string;

@@ -39,6 +39,7 @@ const STATS: InstagramAccountStats = {
   followers_count: 200,
   follows_count: 100,
   media_count: 5,
+  profile_picture_url: "https://cdn/avatar.jpg",
 };
 
 const MEDIA: InstagramMediaRecord[] = [
@@ -104,6 +105,7 @@ describe("runInstagramSync", () => {
       (c) => c.table === "instagram_connections",
     )!.payload as Record<string, unknown>;
     expect(connUpsert.followers_count).toBe(200);
+    expect(connUpsert.ig_profile_picture_url).toBe("https://cdn/avatar.jpg");
     expect(connUpsert.last_synced_at).toBe(NOW.toISOString());
     expect(connUpsert.last_sync_error).toBeNull();
 
