@@ -331,7 +331,7 @@ export type Database = {
           user_id: string;
           content: string;
           pillar: string | null;
-          source: "chat" | "manual";
+          source: "chat" | "manual" | "research";
           conversation_id: string | null;
           message_id: string | null;
           created_at: string;
@@ -341,7 +341,7 @@ export type Database = {
           user_id: string;
           content: string;
           pillar?: string | null;
-          source: "chat" | "manual";
+          source: "chat" | "manual" | "research";
           conversation_id?: string | null;
           message_id?: string | null;
           created_at?: string;
@@ -351,7 +351,7 @@ export type Database = {
           user_id?: string;
           content?: string;
           pillar?: string | null;
-          source?: "chat" | "manual";
+          source?: "chat" | "manual" | "research";
           conversation_id?: string | null;
           message_id?: string | null;
           created_at?: string;

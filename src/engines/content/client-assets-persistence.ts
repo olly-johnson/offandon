@@ -67,11 +67,20 @@ export async function loadScriptAssetsContext(
     limit: number,
   ): Promise<ClientAssetRow[]> => {
     if (limit <= 0) return [];
-    const { data, error } = await supabase
+    let query = supabase
       .from("client_assets")
       .select("asset_type, title, body, metadata")
       .eq("user_id", userId)
-      .eq("asset_type", assetType)
+      .eq("asset_type", assetType);
+    if (assetType === "past_script") {
+      // Research-vault saves are stored as past_script rows keyed
+      // source_file='competitor:<id>', but they are competitor reels the
+      // user wants to STUDY, not their own past work. Keep them out of the
+      // weekly script generator so competitor content never leaks into the
+      // creator's voice. They are consumed only by the outlier-idea path.
+      query = query.not("source_file", "ilike", "competitor:%");
+    }
+    const { data, error } = await query
       .order("created_at", { ascending: false })
       .limit(limit);
     if (error) {

@@ -28,13 +28,19 @@ export { HookGenerator, hookTotalScore } from "./hook-generator";
 export type { HookGeneratorOptions } from "./hook-generator";
 export { SingleScriptGenerator } from "./single-script-generator";
 export type { SingleScriptGeneratorOptions } from "./single-script-generator";
+export { OutlierIdeaGenerator } from "./outlier-idea-generator";
+export type { OutlierIdeaGeneratorOptions } from "./outlier-idea-generator";
+export { buildOutlierIdeaSystemPrompt } from "./outlier-idea-system-prompt";
 export type {
   GeneratedBatch,
   GeneratedHook,
   GeneratedHookBatch,
+  GeneratedIdea,
+  GeneratedIdeaSet,
   GeneratedScript,
   GeneratedSingleScript,
   GenerateHooksInput,
+  GenerateOutlierIdeasInput,
   GenerateScriptsInput,
   GenerateSingleScriptInput,
   HookScore,
@@ -42,7 +48,9 @@ export type {
   IHookGenerator,
   IIMFExtractor,
   IMF,
+  IOutlierIdeaGenerator,
   IScriptGenerator,
   ISingleScriptGenerator,
+  OutlierPattern,
   ScriptAngle,
 } from "./types";

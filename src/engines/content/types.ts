@@ -181,6 +181,69 @@ export interface GenerateSingleScriptInput {
   methodologyContext?: ContentMethodologyContext;
 }
 
+/**
+ * A high-performing competitor reel distilled to the pattern we want to
+ * learn from. Fed to the OutlierIdeaGenerator, which mirrors the
+ * *pattern* (hook style, topic angle, structural arc) but never the
+ * competitor's specific content.
+ */
+export interface OutlierPattern {
+  hook: string | null;
+  structure: string | null;
+  /** What the reel was about (its caption). */
+  caption: string | null;
+  /** Verbatim transcript. The generator truncates before sending. */
+  transcript: string | null;
+  /** Pillar the analyzer matched, if any. Advisory only. */
+  pillar_match?: string | null;
+  /** Source creator handle, used only to frame the "do not retell their story" rule. */
+  source_username: string;
+}
+
+/**
+ * One generated idea destined for the Ideas Bank. `content` is a short
+ * concept (1-3 sentences) the creator could film in their own voice
+ * about their own material; pillar/angle mirror the scripts taxonomy so
+ * the idea slots cleanly into the Script Wizard downstream.
+ */
+export interface GeneratedIdea {
+  content: string;
+  /** Must match one of voiceDna.content_pillars[*].name. */
+  pillar: string;
+  angle: ScriptAngle;
+}
+
+export interface GeneratedIdeaSet {
+  ideas: GeneratedIdea[];
+  meta: {
+    requested_count: number;
+    actual_count: number;
+    /** ISO-8601, stamped at generator return time. */
+    generated_at: string;
+  };
+}
+
+export interface GenerateOutlierIdeasInput {
+  voiceDna: VoiceDNA;
+  /** The outlier reel pattern to learn from. */
+  outlier: OutlierPattern;
+  /** How many ideas to ask for. 1..5 supported; default 3. */
+  count?: number;
+  /** Optional per-user methodology overlay (BO-036). */
+  userMethodology?: string | null;
+  /** House methodology overrides (BO-048). */
+  methodologyContext?: ContentMethodologyContext;
+}
+
+export interface IOutlierIdeaGenerator {
+  /**
+   * Turn one outlier reel into `count` original ideas in the creator's
+   * voice about the creator's own stories, mirroring the outlier's
+   * hook/topic/structure pattern. Throws on shape mismatch or SlopError.
+   */
+  generate(input: GenerateOutlierIdeasInput): Promise<GeneratedIdeaSet>;
+}
+
 export interface IIMFExtractor {
   /**
    * Distil a free-text concept into an IMF triple. Used by the wizard's

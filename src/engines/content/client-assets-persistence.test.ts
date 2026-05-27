@@ -15,13 +15,20 @@ interface MockCalls {
   filters: Array<Record<string, string>>;
   orders: Array<{ column: string; ascending: boolean }>;
   limits: number[];
+  nots: Array<{ assetType: string | null; column: string; op: string; pattern: string }>;
 }
 
 function makeClient(
   perTypeRows: Record<string, Array<Record<string, unknown>>>,
   errorOnType?: string,
 ): { client: SupabaseClient<Database>; calls: MockCalls } {
-  const calls: MockCalls = { fromCalls: [], filters: [], orders: [], limits: [] };
+  const calls: MockCalls = {
+    fromCalls: [],
+    filters: [],
+    orders: [],
+    limits: [],
+    nots: [],
+  };
 
   const client = {
     from(table: string) {
@@ -35,6 +42,10 @@ function makeClient(
         eq(column: string, value: string) {
           calls.filters.push({ [column]: value });
           if (column === "asset_type") filterAssetType = value;
+          return builder;
+        },
+        not(column: string, op: string, pattern: string) {
+          calls.nots.push({ assetType: filterAssetType, column, op, pattern });
           return builder;
         },
         order(column: string, opts: { ascending: boolean }) {
@@ -139,6 +150,22 @@ describe("loadScriptAssetsContext", () => {
     });
     // Only one fetch should hit the wire.
     expect(calls.fromCalls.filter((t) => t === "client_assets")).toHaveLength(1);
+  });
+
+  it("excludes saved competitor outliers from past_scripts only", async () => {
+    const { client, calls } = makeClient({});
+    await loadScriptAssetsContext(client, USER_ID);
+    // Exactly one .not() filter, scoped to the past_script fetch, keeping
+    // research-vault saves (source_file 'competitor:%') out of the weekly
+    // generator. The other three asset types are untouched.
+    expect(calls.nots).toEqual([
+      {
+        assetType: "past_script",
+        column: "source_file",
+        op: "ilike",
+        pattern: "competitor:%",
+      },
+    ]);
   });
 
   it("throws on a Supabase error so the caller can surface it", async () => {
