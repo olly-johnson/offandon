@@ -290,10 +290,10 @@ function OutlierTile({ item }: { item: OutlierFeedItem }) {
           className="absolute left-1.5 top-1.5 flex size-5 items-center justify-center rounded-full"
           style={{
             background: "rgba(0,0,0,0.6)",
-            color: platformBrandColor("instagram"),
+            color: platformBrandColor(item.platform),
           }}
         >
-          <PlatformGlyph platform="instagram" className="size-3" />
+          <PlatformGlyph platform={item.platform} className="size-3" />
         </span>
       </div>
 

@@ -182,6 +182,25 @@ describe("computeOutliers", () => {
     expect(out[0].competitor_username).toBe("channel_a");
   });
 
+  it("attaches each result's source platform so the UI can badge it correctly", () => {
+    const competitors = [
+      { id: "ig", username: "ig_channel", platform: "instagram" as const },
+      { id: "tt", username: "tt_channel", platform: "tiktok" as const },
+    ];
+    const items = [
+      ...reels("ig", [100, 200, 300, 400, 500, 5000]),
+      ...reels("tt", [100, 200, 300, 400, 500, 5000]),
+    ];
+    const out = computeOutliers(items, competitors, {
+      ...FULL_OPTS,
+      minOutlierRatio: 2,
+    });
+    expect(out.find((r) => r.competitor_id === "ig")?.platform).toBe(
+      "instagram",
+    );
+    expect(out.find((r) => r.competitor_id === "tt")?.platform).toBe("tiktok");
+  });
+
   it("drops rows whose competitor isn't in the competitors list", () => {
     const items = reels("orphan", [100, 100, 100, 100, 100, 500]);
     const out = computeOutliers(items, COMPETITORS, FULL_OPTS);

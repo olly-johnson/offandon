@@ -28,6 +28,13 @@ export {
 export type { CompetitorMediaRow } from "./media-persistence";
 
 export {
+  cacheReelThumbnails,
+  competitorThumbnailPath,
+  COMPETITOR_THUMBNAILS_BUCKET,
+} from "./thumbnail-cache";
+export type { ThumbnailStorageBucket } from "./thumbnail-cache";
+
+export {
   getAnalysesForCompetitorMediaIds,
   getAnalysisForCompetitorMedia,
   saveCompetitorAnalysis,

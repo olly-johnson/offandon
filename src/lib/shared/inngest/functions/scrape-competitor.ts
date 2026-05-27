@@ -4,6 +4,10 @@ import {
   updateCompetitorSyncState,
   upsertCompetitorMedia,
 } from "@/engines/competitor/media-persistence";
+import {
+  cacheReelThumbnails,
+  COMPETITOR_THUMBNAILS_BUCKET,
+} from "@/engines/competitor/thumbnail-cache";
 import { createLogger } from "@/lib/shared/logger";
 import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 
@@ -202,12 +206,24 @@ export const competitorScrapeCompleted = inngest.createFunction(
       return items;
     });
 
+    // Copy TikTok covers into our own bucket while their signed URLs
+    // are still fresh, rewriting thumbnail_url to a stable public URL.
+    // TikTok's CDN links expire within hours, so without this the tiles
+    // go blank once the signature dies. No-op for IG / YT.
+    const cachedReels = await step.run("cache-thumbnails", async () => {
+      return cacheReelThumbnails({
+        storage: supabase.storage.from(COMPETITOR_THUMBNAILS_BUCKET),
+        platform,
+        reels,
+      });
+    });
+
     await step.run("upsert-media", async () => {
       await upsertCompetitorMedia(supabase, {
         competitorId: competitor_id,
         userId: user_id,
         scrapeRunId: actor_run_id,
-        reels,
+        reels: cachedReels,
         now,
       });
     });

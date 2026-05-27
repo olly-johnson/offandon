@@ -78,6 +78,8 @@ Run these in the Supabase SQL editor before anything works in prod. Files are in
    suggested-creator avatars
 3. `20260523000000_competitor_accounts_platform.sql` — adds `platform` column +
    widens uniqueness to `(user_id, platform, username)`
+4. `20260527000000_competitor_thumbnails_bucket.sql` — public bucket for cached
+   TikTok reel covers (their signed CDN URLs expire within hours)
 
 The hand-rolled types in `src/lib/shared/supabase/types.ts` already include the
 `platform` column, so code compiles against the post-migration schema.

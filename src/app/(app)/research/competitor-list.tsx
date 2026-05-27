@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -49,14 +49,41 @@ export function CompetitorList({
   // and one for competitor_media (preview-strip analysis state).
   useCompetitorRealtime(userId);
   useCompetitorMediaRealtime(userId);
-  const atCap = competitors.length >= limit;
+
+  // Optimistic removals. Deleting via a plain server-action form was
+  // racy: the realtime DELETE event fires router.refresh(), and that
+  // refresh can re-render from an RSC snapshot taken before the delete
+  // committed, re-painting the just-removed row so it took two clicks.
+  // Tracking removed ids client-side hides the row instantly and keeps
+  // it hidden through any in-flight refresh; the server action still
+  // does the real delete, and a failure self-corrects on the next sync.
+  const [removedIds, setRemovedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [, startRemove] = useTransition();
+
+  const visibleCompetitors = useMemo(
+    () => competitors.filter((c) => !removedIds.has(c.id)),
+    [competitors, removedIds],
+  );
+
+  function onRemove(id: string) {
+    setRemovedIds((prev) => new Set(prev).add(id));
+    startRemove(async () => {
+      const fd = new FormData();
+      fd.set("id", id);
+      await removeCompetitorAction(fd);
+    });
+  }
+
+  const atCap = visibleCompetitors.length >= limit;
   // Lifted from AddCompetitorForm so the suggested-creators grid can
   // pre-fill the input on chip click. Platform is also lifted so a
   // suggested TT/YT chip click sets the right scrape destination.
   const [handle, setHandle] = useState("");
   const [platform, setPlatform] = useState<CompetitorPlatform>("instagram");
   const trackedHandles = new Set(
-    competitors.map((c) => `${c.platform}:${c.username.toLowerCase()}`),
+    visibleCompetitors.map((c) => `${c.platform}:${c.username.toLowerCase()}`),
   );
 
   function onPick(h: string, p: CompetitorPlatform) {
@@ -83,7 +110,7 @@ export function CompetitorList({
         />
       </div>
 
-      {competitors.length > 0 ? (
+      {visibleCompetitors.length > 0 ? (
         <div className="flex flex-col gap-2">
           <h3
             className="text-[11px] font-semibold uppercase tracking-wider"
@@ -92,12 +119,13 @@ export function CompetitorList({
             Your watchlist
           </h3>
           <ul className="flex flex-col gap-3">
-            {competitors.map((c) => (
+            {visibleCompetitors.map((c) => (
               <li key={c.id}>
                 <CompetitorRowItem
                   row={c}
                   reels={reelsByCompetitor[c.id] ?? []}
                   analysesByMediaId={analysesByMediaId}
+                  onRemove={onRemove}
                 />
               </li>
             ))}
@@ -283,10 +311,12 @@ function CompetitorRowItem({
   row,
   reels,
   analysesByMediaId,
+  onRemove,
 }: {
   row: CompetitorRow;
   reels: CompetitorMediaRow[];
   analysesByMediaId: Record<string, MediaAnalysis>;
+  onRemove: (id: string) => void;
 }) {
   const inFlight = row.sync_pending;
 
@@ -347,17 +377,15 @@ function CompetitorRowItem({
               )}
             </button>
           </form>
-          <form action={removeCompetitorAction}>
-            <input type="hidden" name="id" value={row.id} />
-            <button
-              type="submit"
-              aria-label={`Stop tracking ${row.username}`}
-              className="oo-icon-btn rounded-lg p-2"
-              title="Stop tracking"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={() => onRemove(row.id)}
+            aria-label={`Stop tracking ${row.username}`}
+            className="oo-icon-btn rounded-lg p-2"
+            title="Stop tracking"
+          >
+            <Trash2 className="size-4" />
+          </button>
         </div>
       </div>
 

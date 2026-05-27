@@ -67,6 +67,8 @@ export interface OutlierFeedItem {
   id: string;
   competitor_id: string;
   competitor_username: string;
+  /** Source platform of the channel, so the tile badges the right glyph. */
+  platform: SuggestedPlatform;
   caption: string | null;
   permalink: string | null;
   thumbnail_url: string | null;
@@ -101,6 +103,7 @@ export function computeOutliers(
     (c) => opts.platform === "all" || c.platform === opts.platform,
   );
   const usernameById = new Map(eligible.map((c) => [c.id, c.username]));
+  const platformById = new Map(eligible.map((c) => [c.id, c.platform]));
 
   // Group all reels per competitor (full history) to compute medians.
   const byCompetitor = new Map<string, OutlierFeedRow[]>();
@@ -135,6 +138,7 @@ export function computeOutliers(
         id: r.id,
         competitor_id: competitorId,
         competitor_username: usernameById.get(competitorId) ?? "",
+        platform: platformById.get(competitorId) ?? "instagram",
         caption: r.caption,
         permalink: r.permalink,
         thumbnail_url: r.thumbnail_url,
