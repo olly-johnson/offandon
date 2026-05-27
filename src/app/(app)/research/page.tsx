@@ -19,6 +19,8 @@ import { createSupabaseAdminClient } from "@/lib/shared/supabase/admin";
 
 import { CompetitorList } from "./competitor-list";
 import { OutlierFeed } from "./outlier-feed";
+import { loadResearchTrends } from "./trends-data";
+import { TrendsSection } from "./trends-section";
 import { VaultPanel } from "./vault-panel";
 
 const PREVIEW_REELS_PER_COMPETITOR = 5;
@@ -94,6 +96,7 @@ export default async function ResearchPage({ searchParams }: ResearchPageProps) 
     user.id,
     20,
   );
+  const trends = await loadResearchTrends(user.id);
 
   // Per-competitor preview strip: 5 most recent reels each + any
   // existing analyses, fetched in parallel so the page render is
@@ -191,6 +194,10 @@ export default async function ResearchPage({ searchParams }: ResearchPageProps) 
 
           <div className="mt-10">
             <VaultPanel items={vaultItems} />
+          </div>
+
+          <div className="mt-10">
+            <TrendsSection trends={trends} />
           </div>
         </div>
       </div>

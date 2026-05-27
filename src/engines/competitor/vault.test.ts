@@ -21,6 +21,7 @@ const MEDIA = {
 const ANALYSIS: MediaAnalysis = {
   transcript: "Three things I learned about hiring this month",
   hook: "Three things I learned about hiring this month",
+  hook_type: "CURIOSITY",
   structure: "List of three with personal anecdote each.",
   pillar_match: "Operator Frameworks",
   performance_score: 92,

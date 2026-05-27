@@ -52,6 +52,7 @@ function makeLLM(out: string): ILLMClient {
 
 const VALID_ANALYSIS = JSON.stringify({
   hook: "Three things broke me in Mexico.",
+  hook_type: "CURIOSITY",
   structure: "Three-act with a list-of-three hook into rock-bottom arc.",
   pillar_match: "Identity",
   performance_score: 92,
@@ -73,6 +74,7 @@ describe("MediaAnalyzer.analyze", () => {
 
     expect(out.transcript).toContain("Three things broke me");
     expect(out.hook).toBe("Three things broke me in Mexico.");
+    expect(out.hook_type).toBe("CURIOSITY");
     expect(out.pillar_match).toBe("Identity");
     expect(out.performance_score).toBe(92);
   });
@@ -166,6 +168,26 @@ describe("parseAnalysisJson", () => {
       JSON.stringify({ hook: "x", performance_score: "73" }),
     );
     expect(out.performance_score).toBe(73);
+  });
+
+  it("keeps a valid hook_type from the taxonomy", () => {
+    const out = parseAnalysisJson(JSON.stringify({ hook: "x", hook_type: "PROOF" }));
+    expect(out.hook_type).toBe("PROOF");
+  });
+
+  it("normalises hook_type case", () => {
+    const out = parseAnalysisJson(JSON.stringify({ hook: "x", hook_type: "curiosity" }));
+    expect(out.hook_type).toBe("CURIOSITY");
+  });
+
+  it("nulls an out-of-taxonomy hook_type", () => {
+    const out = parseAnalysisJson(JSON.stringify({ hook: "x", hook_type: "VIRAL" }));
+    expect(out.hook_type).toBeNull();
+  });
+
+  it("nulls a missing hook_type", () => {
+    const out = parseAnalysisJson(JSON.stringify({ hook: "x" }));
+    expect(out.hook_type).toBeNull();
   });
 
   it("rounds non-integer performance_score", () => {

@@ -8,8 +8,10 @@ import {
   RESEARCH_ANALYSIS_SYSTEM_PROMPT,
 } from "./system-prompt";
 import {
+  isHookType,
   PERFORMANCE_SCORE_MAX,
   PERFORMANCE_SCORE_MIN,
+  type HookType,
   type LibraryStats,
   type MediaAnalysis,
   type MediaAnalysisInput,
@@ -84,12 +86,21 @@ export function parseAnalysisJson(raw: string): ParsedAnalysis {
   // needing to remember to do it.
   return {
     hook: cleanOrNull(obj.hook),
+    hook_type: hookTypeOrNull(obj.hook_type),
     structure: cleanOrNull(obj.structure),
     pillar_match: cleanOrNull(obj.pillar_match),
     performance_score: scoreOrNull(obj.performance_score),
     what_worked: cleanOrNull(obj.what_worked),
     what_to_repeat: cleanOrNull(obj.what_to_repeat),
   };
+}
+
+function hookTypeOrNull(v: unknown): HookType | null {
+  // Model occasionally lowercases or pads the label; normalise then
+  // accept only the known taxonomy, else null (no fabrication).
+  if (typeof v !== "string") return null;
+  const upper = v.trim().toUpperCase();
+  return isHookType(upper) ? upper : null;
 }
 
 function cleanOrNull(v: unknown): string | null {

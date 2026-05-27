@@ -500,6 +500,14 @@ export type Database = {
           user_id: string;
           transcript: string;
           hook: string | null;
+          hook_type:
+            | "STORYTELLING"
+            | "CONFRONTATIONAL"
+            | "VULNERABILITY"
+            | "CURIOSITY"
+            | "PROOF"
+            | "EDUCATIONAL"
+            | null;
           structure: string | null;
           pillar_match: string | null;
           performance_label: string | null;
@@ -516,6 +524,14 @@ export type Database = {
           user_id: string;
           transcript: string;
           hook?: string | null;
+          hook_type?:
+            | "STORYTELLING"
+            | "CONFRONTATIONAL"
+            | "VULNERABILITY"
+            | "CURIOSITY"
+            | "PROOF"
+            | "EDUCATIONAL"
+            | null;
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
@@ -532,6 +548,14 @@ export type Database = {
           user_id?: string;
           transcript?: string;
           hook?: string | null;
+          hook_type?:
+            | "STORYTELLING"
+            | "CONFRONTATIONAL"
+            | "VULNERABILITY"
+            | "CURIOSITY"
+            | "PROOF"
+            | "EDUCATIONAL"
+            | null;
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
@@ -769,6 +793,14 @@ export type Database = {
           user_id: string;
           transcript: string;
           hook: string | null;
+          hook_type:
+            | "STORYTELLING"
+            | "CONFRONTATIONAL"
+            | "VULNERABILITY"
+            | "CURIOSITY"
+            | "PROOF"
+            | "EDUCATIONAL"
+            | null;
           structure: string | null;
           pillar_match: string | null;
           performance_label: string | null;
@@ -784,6 +816,14 @@ export type Database = {
           user_id: string;
           transcript: string;
           hook?: string | null;
+          hook_type?:
+            | "STORYTELLING"
+            | "CONFRONTATIONAL"
+            | "VULNERABILITY"
+            | "CURIOSITY"
+            | "PROOF"
+            | "EDUCATIONAL"
+            | null;
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
@@ -799,6 +839,14 @@ export type Database = {
           user_id?: string;
           transcript?: string;
           hook?: string | null;
+          hook_type?:
+            | "STORYTELLING"
+            | "CONFRONTATIONAL"
+            | "VULNERABILITY"
+            | "CURIOSITY"
+            | "PROOF"
+            | "EDUCATIONAL"
+            | null;
           structure?: string | null;
           pillar_match?: string | null;
           performance_label?: string | null;
