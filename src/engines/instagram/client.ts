@@ -16,6 +16,10 @@
  * impl is overrideable in the constructor for tests.
  */
 
+import { createLogger } from "@/lib/shared/logger";
+
+const log = createLogger("instagram.client");
+
 const API_VERSION = "v23.0";
 const GRAPH_BASE = `https://graph.instagram.com/${API_VERSION}`;
 
@@ -127,12 +131,15 @@ export class InstagramClient implements IInstagramClient {
   ): Promise<InstagramMediaInsights> {
     // IG only supports certain metrics per media_type.
     //   IMAGE / CAROUSEL_ALBUM: reach, saved, shares
-    //   VIDEO / REELS:          reach, plays, saved, shares
-    // Asking for an unsupported metric throws an OAuthException, so we
-    // tailor the metric list per type.
+    //   VIDEO / REELS:          reach, views, saved, shares
+    // The `plays` metric was deprecated (consolidated into `views`) and
+    // is rejected on current API versions. Asking for ANY unsupported
+    // metric makes the whole /insights call 400 with an OAuthException,
+    // which zeroes out every metric, so we keep this list current and
+    // tailor it per type.
     const metrics =
       mediaType === "VIDEO" || mediaType === "REELS"
-        ? "reach,plays,saved,shares"
+        ? "reach,views,saved,shares"
         : "reach,saved,shares";
 
     const empty: InstagramMediaInsights = {
@@ -149,8 +156,18 @@ export class InstagramClient implements IInstagramClient {
       data = await this.get(token, `/${mediaId}/insights`, { metric: metrics });
     } catch (err) {
       // Insights can fail for older posts or unsupported types. Don't
-      // poison the whole sync; return nulls.
-      if (err instanceof InstagramApiError) return empty;
+      // poison the whole sync; return nulls. But log it: a silent
+      // swallow here is exactly what hid the deprecated-`plays` 400 for
+      // weeks, leaving every reach/views/saves/shares cell as N/A.
+      if (err instanceof InstagramApiError) {
+        log.warn("instagram insights request failed, returning nulls", {
+          media_id: mediaId,
+          media_type: mediaType,
+          status: err.status,
+          error: err.message,
+        });
+        return empty;
+      }
       throw err;
     }
 
@@ -161,7 +178,9 @@ export class InstagramClient implements IInstagramClient {
         case "reach":
           out.reach = value;
           break;
-        case "plays":
+        // `views` is the current name for what we still store as `plays`
+        // (the DB column + dashboard "Video Views" cell read `plays`).
+        case "views":
           out.plays = value;
           break;
         case "saved":

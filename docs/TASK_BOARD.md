@@ -69,6 +69,7 @@ Single source of truth for in-flight and completed work. Update when starting a 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
 | BO-013 | Programmatic admin invite endpoint (replaces dashboard invite) + admin-only sidebar entry | claude | Done | PR #27 |
+| BO-062 | Brand dashboard redesign (8-metric strip, engagement chart, performance tabs, top content, funnel/story/identity cards) wired to real IG data with N/A placeholders. Follower-history table so New Followers can populate. Insights fix: request `views` not deprecated `plays` (a single bad metric 400s the whole /insights call, which is why reach/views/saves/shares all showed N/A), and log swallowed insights errors instead of silently nulling. | claude | In Progress | feature/dashboard-brand-redesign |
 | BO-014 | Custom email templates (invite, reset, magic link) with branded copy | claude | Partial | PR #29 (invite done; reset + magic-link pending) |
 | BO-015 | Surface `error` query param on /signin (callback failures, expired links) | - | Todo | - |
 | BO-016 | unwrapSupabaseError helper for the empty-error-on-401 wart | - | Todo | - |
