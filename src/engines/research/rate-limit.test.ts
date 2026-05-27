@@ -19,6 +19,12 @@ function makeClient(result: { count: number | null; error: { message: string } |
   return { client, from, select, eq, gte };
 }
 
+describe("RESEARCH_ANALYSIS_DEFAULT_MAX_PER_30D", () => {
+  it("defaults to 400 so a 5-creator watchlist (30 reels each) plus library fits", () => {
+    expect(RESEARCH_ANALYSIS_DEFAULT_MAX_PER_30D).toBe(400);
+  });
+});
+
 describe("enforceAnalysisRateLimit", () => {
   it("returns the used/limit pair when under cap", async () => {
     const { client, select, eq, gte } = makeClient({ count: 5, error: null });
@@ -31,7 +37,10 @@ describe("enforceAnalysisRateLimit", () => {
   });
 
   it("throws ResearchRateLimitError when used >= limit", async () => {
-    const { client } = makeClient({ count: 100, error: null });
+    const { client } = makeClient({
+      count: RESEARCH_ANALYSIS_DEFAULT_MAX_PER_30D,
+      error: null,
+    });
     await expect(
       enforceAnalysisRateLimit({ supabase: client, userId: "u1" }),
     ).rejects.toBeInstanceOf(ResearchRateLimitError);

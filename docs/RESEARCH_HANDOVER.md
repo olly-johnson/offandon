@@ -115,10 +115,12 @@ Also requires `APIFY_API_KEY`, `APIFY_WEBHOOK_SECRET`, `DEEPGRAM_API_KEY`,
 
 ## Open threads (not started)
 
-1. **No per-user spend cap.** A heavy user clicking "Tap to analyse" on many old
-   reels could run up real API cost. `RESEARCH_ANALYSIS_MAX_PER_30D` exists for
-   the IG-library analyser (BO-043) but is NOT wired into the competitor
-   analyser. Worth porting before real users.
+1. **Per-user spend cap (wired, default 400/30d).** `RESEARCH_ANALYSIS_MAX_PER_30D`
+   is enforced on BOTH the IG-library analyser (BO-043) and the competitor
+   analyser via `enforceAnalysisRateLimit`, sharing one rolling-30-day budget.
+   Default raised from 100 to 400 because competitor sync auto-analyses 30 reels
+   per creator x up to 5 creators (150) plus library use, so 100 blocked normal
+   usage. Override via the env var if the pricing model changes.
 2. **mp3-converter actor swap** — if the streamers downloader stays flaky, a
    dedicated YT-mp3 actor may be faster/cheaper. Swap via
    `APIFY_YOUTUBE_DOWNLOADER_ACTOR_ID`; the parser tolerates common field names.

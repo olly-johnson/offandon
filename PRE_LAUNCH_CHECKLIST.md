@@ -79,7 +79,7 @@ Used for: Instagram video transcription in BO-043 / research analysis. Model: `n
 - [ ] **$200 free credit applied** (standard signup credit, no card needed initially)
 - [ ] Payment method added before credit runs out
 - [ ] `DEEPGRAM_API_KEY` in Vercel env
-- [ ] Rate-limit knob set sensibly — `RESEARCH_ANALYSIS_MAX_PER_30D` defaults to 100/user/30d. Confirm this is the right ceiling for your pricing model
+- [ ] Rate-limit knob set sensibly — `RESEARCH_ANALYSIS_MAX_PER_30D` defaults to 400/user/30d (shared across /library + competitor analysis; covers a full 5-creator watchlist at 30 reels each plus library use). Confirm this is the right ceiling for your pricing model
 
 Expected monthly cost: **~$0.0043/min × ~30 videos × 5 clients ≈ $1–5/mo**.
 
@@ -213,7 +213,7 @@ Full list, grouped by where each is consumed. Every one of these must be set in 
 
 **Feature flags / operational knobs**
 - [ ] `RESEARCH_ANALYSIS_DISABLED` — set to `1` if you want media analysis off at launch
-- [ ] `RESEARCH_ANALYSIS_MAX_PER_30D` — defaults to 100/user/30d; override if your pricing model assumes a different cap
+- [ ] `RESEARCH_ANALYSIS_MAX_PER_30D` — defaults to 400/user/30d; override if your pricing model assumes a different cap
 - [ ] `LOG_LEVEL` — defaults to `info` in production. Set to `debug` only during incident response
 
 **Sentry (if used)**
