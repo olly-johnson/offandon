@@ -51,6 +51,7 @@ export type {
   IOutlierIdeaGenerator,
   IScriptGenerator,
   ISingleScriptGenerator,
+  OnboardingExtras,
   OutlierPattern,
   ScriptAngle,
 } from "./types";

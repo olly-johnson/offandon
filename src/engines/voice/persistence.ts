@@ -61,3 +61,30 @@ export async function getCurrentVoiceDNA(
 
   return data.dna as unknown as VoiceDNA;
 }
+
+/**
+ * Fetch the raw OnboardingAnswers used to generate the active Voice DNA,
+ * or null if none. The distilled VoiceDNA only carries tone / pillars /
+ * audience_persona / prohibited_phrases; downstream prompts that want the
+ * richer ICP axes (thoughts_at_2am, internal_battles, dreams), positioning
+ * (core_philosophy, contrarian_belief, differentiator), story-bank seeds,
+ * or signature phrases need this loader instead.
+ */
+export async function getCurrentOnboardingAnswers(
+  supabase: VoiceSupabaseClient,
+  userId: string,
+): Promise<import("./types").OnboardingAnswers | null> {
+  const { data, error } = await supabase
+    .from("voice_dna")
+    .select("source_answers")
+    .eq("user_id", userId)
+    .is("superseded_at", null)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`getCurrentOnboardingAnswers: ${error.message}`);
+  }
+  if (!data) return null;
+
+  return data.source_answers as unknown as import("./types").OnboardingAnswers;
+}

@@ -20,6 +20,8 @@ import {
   updateCompetitorSyncState,
 } from "@/engines/competitor";
 import { OutlierIdeaGenerator } from "@/engines/content";
+import { loadScriptAssetsContext } from "@/engines/content/client-assets-persistence";
+import type { OnboardingExtras } from "@/engines/content";
 import { saveIdea } from "@/engines/content/ideas-persistence";
 import { buildUsageRecorder } from "@/engines/admin/usage-recorder";
 import {
@@ -28,7 +30,11 @@ import {
 } from "@/engines/master-bot/persistence";
 import { getUserMethodology } from "@/engines/methodology/persistence";
 import { AnthropicLLMClient } from "@/engines/voice/anthropic-client";
-import { getCurrentVoiceDNA } from "@/engines/voice/persistence";
+import {
+  getCurrentOnboardingAnswers,
+  getCurrentVoiceDNA,
+} from "@/engines/voice/persistence";
+import type { OnboardingAnswers } from "@/engines/voice/types";
 import { SlopError } from "@/lib/shared/anti-slop";
 import { inngest, INNGEST_EVENTS } from "@/lib/shared/inngest/client";
 import { createLogger } from "@/lib/shared/logger";
@@ -371,12 +377,27 @@ export async function generateIdeasFromOutlierAction(
   });
 
   const admin = createSupabaseAdminClient();
-  const [userMethodology, house, scriptsSlice, operatorRules] = await Promise.all([
+  const [
+    userMethodology,
+    house,
+    scriptsSlice,
+    operatorRules,
+    clientAssets,
+    onboardingAnswers,
+  ] = await Promise.all([
     getUserMethodology(supabase, user.id),
     loadMethodologySlice(admin, "house"),
     loadMethodologySlice(admin, "scripts"),
     listRulesForSlicePrompt(admin, "scripts"),
+    loadScriptAssetsContext(supabase, user.id),
+    getCurrentOnboardingAnswers(supabase, user.id),
   ]);
+  const onboardingExtras = buildOnboardingExtras(onboardingAnswers);
+  // Corpus retrieval (BO-051): grounds ideas in the creator's recent
+  // Fathom transcripts and weekly check-ins. Skipped when VOYAGE_API_KEY
+  // is unset, and any retrieval failure is non-fatal: an idea generated
+  // without corpus context is still better than one that errored out.
+  const corpusContext = await loadOutlierIdeaCorpus(supabase, user.id, dna);
 
   let ideaSet;
   try {
@@ -398,6 +419,9 @@ export async function generateIdeasFromOutlierAction(
       count: OUTLIER_IDEAS_PER_REEL,
       userMethodology,
       methodologyContext: { house, scripts: scriptsSlice, operatorRules },
+      clientAssets,
+      corpusContext,
+      onboardingExtras,
     });
   } catch (err) {
     log.error("generateIdeasFromOutlierAction generation failed", {
@@ -465,4 +489,66 @@ export async function removeCompetitorAction(formData: FormData): Promise<void> 
   }
 
   revalidatePath("/research");
+}
+
+/**
+ * Pick the deeper onboarding fields the outlier-idea prompt actually
+ * uses (ICP extras, positioning, story-bank seeds, signature phrases).
+ * Returns null when no answers are stored so the prompt block is skipped.
+ */
+function buildOnboardingExtras(
+  answers: OnboardingAnswers | null,
+): OnboardingExtras | null {
+  if (!answers) return null;
+  return {
+    icp: {
+      thoughts_at_2am: answers.icp?.thoughts_at_2am,
+      internal_battles: answers.icp?.internal_battles,
+      dreams: answers.icp?.dreams,
+      desires: answers.icp?.desires,
+    },
+    positioning: {
+      core_philosophy: answers.positioning?.core_philosophy,
+      contrarian_belief: answers.positioning?.contrarian_belief,
+      differentiator: answers.positioning?.differentiator,
+    },
+    story_bank: answers.story_bank,
+    voice_signals: answers.voice_signals
+      ? {
+          signature_phrases: answers.voice_signals.signature_phrases,
+          humor_style: answers.voice_signals.humor_style,
+        }
+      : undefined,
+  };
+}
+
+/**
+ * Best-effort corpus retrieval for outlier ideas. Returns null when
+ * VOYAGE_API_KEY is unset (dev / unconfigured environments) or when the
+ * retrieval call fails; the idea generator works fine without it.
+ */
+async function loadOutlierIdeaCorpus(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string,
+  voiceDna: Parameters<typeof OutlierIdeaGenerator.prototype.generate>[0]["voiceDna"],
+) {
+  const apiKey = process.env.VOYAGE_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const [{ VoyageEmbeddingsClient }, { loadScriptsCorpusContext }] = await Promise.all([
+      import("@/lib/shared/embeddings"),
+      import("@/engines/content/corpus-context"),
+    ]);
+    const embeddings = new VoyageEmbeddingsClient({ apiKey });
+    return await loadScriptsCorpusContext(
+      { supabase, embeddings },
+      { userId, voiceDna },
+    );
+  } catch (err) {
+    log.warn("outlier-idea corpus retrieval failed, continuing without it", {
+      user_id: userId,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
 }

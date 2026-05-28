@@ -60,6 +60,9 @@ export class OutlierIdeaGenerator implements IOutlierIdeaGenerator {
         ? { house: ctx.house, scripts: ctx.scripts }
         : undefined,
       ctx?.operatorRules ?? [],
+      input.clientAssets ?? null,
+      input.corpusContext ?? null,
+      input.onboardingExtras ?? null,
     );
 
     const o = input.outlier;

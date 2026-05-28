@@ -223,6 +223,38 @@ export interface GeneratedIdeaSet {
   };
 }
 
+/**
+ * Curated subset of OnboardingAnswers the outlier-idea prompt renders.
+ * The active VoiceDNA only carries tone / pillars / audience_persona /
+ * prohibited_phrases; this exposes the deeper content-strategy fields
+ * (ICP axes beyond pain/aspiration, the contrarian belief, the story
+ * bank seeds, the creator's signature phrases) so generated ideas can
+ * ladder up to the creator's actual stories and worldview, not just
+ * their tone.
+ */
+export interface OnboardingExtras {
+  icp?: {
+    thoughts_at_2am?: string[];
+    internal_battles?: string[];
+    dreams?: string[];
+    desires?: string[];
+  };
+  positioning?: {
+    core_philosophy?: string;
+    contrarian_belief?: string;
+    differentiator?: string;
+  };
+  story_bank?: {
+    rock_bottom?: string;
+    breakthrough?: string;
+    current_journey?: string;
+  };
+  voice_signals?: {
+    signature_phrases?: string[];
+    humor_style?: string;
+  };
+}
+
 export interface GenerateOutlierIdeasInput {
   voiceDna: VoiceDNA;
   /** The outlier reel pattern to learn from. */
@@ -233,6 +265,24 @@ export interface GenerateOutlierIdeasInput {
   userMethodology?: string | null;
   /** House methodology overrides (BO-048). */
   methodologyContext?: ContentMethodologyContext;
+  /**
+   * Optional operator-curated reference material (BO-042): the creator's
+   * stories, viral references, templates, past scripts. Saved competitor
+   * outliers are excluded by the loader (they're inspiration, not voice).
+   */
+  clientAssets?: import("./client-assets-persistence").ScriptAssetsContext | null;
+  /**
+   * Optional top-k corpus retrieval (BO-051): recent Fathom transcripts,
+   * weekly check-ins, long-form notes. Skipped when VOYAGE_API_KEY is
+   * unset; the generator works fine without it.
+   */
+  corpusContext?: import("./corpus-context").ScriptsCorpusContext | null;
+  /**
+   * Optional richer onboarding fields not exposed on VoiceDNA: ICP
+   * extras, contrarian belief, story-bank seeds, signature phrases.
+   * Drawn from `voice_dna.source_answers`.
+   */
+  onboardingExtras?: OnboardingExtras | null;
 }
 
 export interface IOutlierIdeaGenerator {
