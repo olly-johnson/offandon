@@ -83,7 +83,7 @@ function truncateForPrompt(s: string): string {
   return `${s.slice(0, ASSET_BODY_RENDER_CAP).trimEnd()}...`;
 }
 
-function renderClientAssetsBlock(ctx: ScriptAssetsContext | null | undefined): string {
+export function renderClientAssetsBlock(ctx: ScriptAssetsContext | null | undefined): string {
   if (!hasAnyAssets(ctx)) return "";
 
   const c = ctx!;
@@ -160,7 +160,7 @@ function renderClientAssetsBlock(ctx: ScriptAssetsContext | null | undefined): s
  * the model can phrase references naturally ("on a recent call you
  * said..." vs "in last week's check-in...").
  */
-function renderCorpusContextBlock(ctx: ScriptsCorpusContext | null | undefined): string {
+export function renderCorpusContextBlock(ctx: ScriptsCorpusContext | null | undefined): string {
   if (!hasCorpusHits(ctx)) return "";
   const hits = ctx!.hits;
   const lines: string[] = [];

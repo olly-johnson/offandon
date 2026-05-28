@@ -7,6 +7,7 @@ import type { VoiceDNA } from "@/engines/voice/types";
 import { OutlierIdeaGenerator } from "./outlier-idea-generator";
 import { buildOutlierIdeaSystemPrompt } from "./outlier-idea-system-prompt";
 import { HUMANIZATION_MANIFESTO } from "./system-prompt";
+import type { ScriptsCorpusContext } from "./corpus-context";
 import type { GenerateOutlierIdeasInput, OutlierPattern } from "./types";
 
 const FIXTURE_DNA: VoiceDNA = {
@@ -97,6 +98,108 @@ describe("buildOutlierIdeaSystemPrompt", () => {
   it("includes the user methodology block when provided", () => {
     const prompt = buildOutlierIdeaSystemPrompt(FIXTURE_DNA, "Never say unlock.");
     expect(prompt).toContain("Never say unlock.");
+  });
+
+  it("renders the client assets block when stories are provided", () => {
+    const clientAssets = {
+      stories: [
+        {
+          asset_type: "story" as const,
+          title: "The fired-best-client moment",
+          body: "Sat in the airport for two hours after I told them.",
+          metadata: { category: "rock_bottom" },
+        },
+      ],
+      viral_references: [],
+      templates: [],
+      past_scripts: [],
+    };
+    const prompt = buildOutlierIdeaSystemPrompt(
+      FIXTURE_DNA,
+      null,
+      undefined,
+      [],
+      clientAssets,
+    );
+    expect(prompt).toContain("BEGIN CREATOR'S OWN MATERIAL");
+    expect(prompt).toContain("The fired-best-client moment");
+  });
+
+  it("renders the corpus block when corpus hits are provided", () => {
+    const corpusContext: ScriptsCorpusContext = {
+      hits: [
+        {
+          chunk_id: "ch1",
+          document_id: "doc1",
+          chunk_index: 0,
+          similarity: 0.81,
+          source_type: "fathom_transcript",
+          document_title: "Coaching call with Alex",
+          captured_at: "2026-04-12T00:00:00.000Z",
+          chunk_text: "The single biggest hire that broke our operator playbook.",
+        },
+      ],
+    };
+    const prompt = buildOutlierIdeaSystemPrompt(
+      FIXTURE_DNA,
+      null,
+      undefined,
+      [],
+      null,
+      corpusContext,
+    );
+    expect(prompt).toContain("BEGIN CREATOR'S CORPUS");
+    expect(prompt).toContain("Coaching call with Alex");
+  });
+
+  it("renders the onboarding extras block: contrarian belief, ICP axes, story-bank seeds, signature phrases", () => {
+    const extras = {
+      icp: {
+        thoughts_at_2am: ["What if the next hire is the wrong one"],
+        internal_battles: ["Charge more vs feel guilty"],
+        dreams: ["Run the business on four days a week"],
+      },
+      positioning: {
+        core_philosophy: "Operators win on systems, not vibes.",
+        contrarian_belief: "Most coaching frameworks are theatre.",
+        differentiator: "Receipts over rhetoric.",
+      },
+      story_bank: {
+        rock_bottom: "Down to 11 days of runway in 2024.",
+        breakthrough: "Sold three retainers in one week after one offer rewrite.",
+      },
+      voice_signals: {
+        signature_phrases: ["receipts over rhetoric", "do the work"],
+        humor_style: "dry",
+      },
+    };
+    const prompt = buildOutlierIdeaSystemPrompt(
+      FIXTURE_DNA,
+      null,
+      undefined,
+      [],
+      null,
+      null,
+      extras,
+    );
+    expect(prompt).toContain("BEGIN CREATOR'S CONTENT STRATEGY");
+    expect(prompt).toContain("contrarian_belief: Most coaching frameworks are theatre.");
+    expect(prompt).toContain("Charge more vs feel guilty");
+    expect(prompt).toContain("Down to 11 days of runway in 2024.");
+    expect(prompt).toContain("receipts over rhetoric, do the work");
+  });
+
+  it("omits the onboarding extras block entirely when every field is empty", () => {
+    const prompt = buildOutlierIdeaSystemPrompt(
+      FIXTURE_DNA,
+      null,
+      undefined,
+      [],
+      null,
+      null,
+      { icp: { thoughts_at_2am: [] }, positioning: {} },
+    );
+    expect(prompt).not.toContain("BEGIN CREATOR'S CONTENT STRATEGY");
   });
 });
 
