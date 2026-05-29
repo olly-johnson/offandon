@@ -19,6 +19,17 @@ import {
 
 const log = createLogger("research.analyzer");
 
+/**
+ * Stand-in transcript for a reel that carries no speech (music-only or
+ * purely visual). Deepgram returns a blank transcript for these; we
+ * substitute this note so the model knows to read structure from the
+ * caption and metrics, and store it as the transcript (both analysis
+ * tables CHECK that transcript is not blank). No em-dashes: this
+ * renders in the Transcript tab as site copy.
+ */
+export const NO_SPEECH_TRANSCRIPT =
+  "(No speech detected. This reel is music or visual only; analysis is based on the caption and metrics.)";
+
 export interface MediaAnalyzerOptions {
   llm: ILLMClient;
 }
@@ -38,10 +49,15 @@ export class MediaAnalyzer {
   }
 
   async analyze(input: MediaAnalyzeInput): Promise<MediaAnalysis> {
-    const transcript = input.transcript.trim();
-    if (transcript.length === 0) {
-      throw new Error("MediaAnalyzer: transcript is empty; refusing to analyze");
+    const trimmed = input.transcript.trim();
+    // A blank transcript means a no-speech reel (music/visual only). We
+    // still analyze it from caption + metrics rather than failing the
+    // run; substitute a note the model can read and that we can store.
+    const hasSpeech = trimmed.length > 0;
+    if (!hasSpeech) {
+      log.info("research.analyze: no-speech reel, analyzing from caption + metrics");
     }
+    const transcript = hasSpeech ? trimmed : NO_SPEECH_TRANSCRIPT;
 
     const user = buildAnalysisUserPrompt({
       voiceDna: input.voiceDna,
