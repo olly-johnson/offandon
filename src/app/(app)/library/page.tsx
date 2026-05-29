@@ -135,41 +135,35 @@ function ConnectEmptyState({ allowPasteToken }: { allowPasteToken: boolean }) {
         </p>
       </header>
 
-      <ConnectForm allowPasteToken={allowPasteToken} />
-
       <TesterInviteHelp />
+
+      <ConnectForm allowPasteToken={allowPasteToken} />
     </div>
   );
 }
 
 /**
- * Collapsible help for clients who get "Insufficient Developer role" on
- * Instagram's consent screen. That error means they were invited as a
- * Tester but have not accepted the invite yet (acceptance happens on
- * Instagram, not here). Rendered as a native <details> so it needs no
- * client JS. See tester-invite-steps.ts; remove once the app goes Live.
+ * Always-visible reminder for clients to accept their Instagram Tester
+ * invite before connecting. While the Meta app is in Development mode,
+ * OAuth fails for any account that has not accepted its invite (the
+ * acceptance happens on Instagram, not here), so we surface the steps
+ * up front. See tester-invite-steps.ts; remove once the app goes Live.
  */
 function TesterInviteHelp() {
   return (
-    <details
-      className="mt-6 rounded-xl p-4"
+    <div
+      className="mb-6 rounded-xl p-4"
       style={{
         background: "var(--oo-bg-elevated)",
         border: "1px solid var(--oo-border-subtle)",
       }}
     >
-      <summary
-        className="cursor-pointer text-sm font-medium"
+      <p
+        className="text-sm font-medium"
         style={{ color: "var(--oo-text-primary)" }}
       >
-        Seeing &quot;Insufficient Developer role&quot;? Accept your invite first
-      </summary>
-      <p
-        className="mt-2 text-xs leading-relaxed"
-        style={{ color: "var(--oo-text-secondary)" }}
-      >
-        Bot OS is in early access, so each account has to accept a one-time
-        invite on Instagram before it can connect. It takes about a minute:
+        Make sure you accept the invite on Instagram first, before connecting
+        below.
       </p>
       <ol className="mt-3 flex flex-col gap-2">
         {TESTER_INVITE_STEPS.map((step) => (
@@ -201,7 +195,7 @@ function TesterInviteHelp() {
       >
         Open the Instagram invites page
       </a>
-    </details>
+    </div>
   );
 }
 

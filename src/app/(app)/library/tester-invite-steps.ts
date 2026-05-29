@@ -39,6 +39,6 @@ export const TESTER_INVITE_STEPS: readonly TesterInviteStep[] = [
   },
   {
     n: 4,
-    text: "Come back here and click Connect with Instagram again.",
+    text: "Then click Connect with Instagram below.",
   },
 ];
