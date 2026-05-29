@@ -9,6 +9,7 @@ import {
   generateSingleScriptAction,
   saveScriptToLibraryAction,
 } from "./actions";
+import { RefineStudio } from "./refine-studio";
 import type {
   GeneratedHook,
   GeneratedHookBatch,
@@ -64,7 +65,6 @@ export function ScriptWizard({
   const [script, setScript] = useState<GeneratedSingleScript | null>(null);
   const [scriptLoading, setScriptLoading] = useState(false);
   const [scriptError, setScriptError] = useState("");
-  const [refinement, setRefinement] = useState("");
 
   const [savedId, setSavedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -123,13 +123,13 @@ export function ScriptWizard({
     setScript(res.script);
   }
 
-  async function save() {
+  async function save(hook: string, body: string) {
     if (!script) return;
     setSaving(true);
     setSaveError("");
     const res = await saveScriptToLibraryAction({
-      hook: script.hook,
-      body: script.body,
+      hook,
+      body,
       angle: script.angle,
       pillar: script.pillar,
     });
@@ -199,23 +199,15 @@ export function ScriptWizard({
         />
       ) : null}
 
-      {step === 5 ? (
-        <Step5Refine
-          refinement={refinement}
-          setRefinement={setRefinement}
+      {step === 5 && script ? (
+        <RefineStudio
           script={script}
-          loading={scriptLoading}
+          concept={concept}
+          imf={imf}
           saving={saving}
           savedId={savedId}
           saveError={saveError}
           onBack={() => setStep(4)}
-          onRegenerate={() => {
-            if (refinement.trim().length > 0) {
-              const r = refinement;
-              setRefinement("");
-              generateScript(r);
-            }
-          }}
           onSave={save}
         />
       ) : null}
@@ -716,81 +708,3 @@ function Step4Script({
   );
 }
 
-function Step5Refine({
-  refinement,
-  setRefinement,
-  script,
-  loading,
-  saving,
-  savedId,
-  saveError,
-  onBack,
-  onRegenerate,
-  onSave,
-}: {
-  refinement: string;
-  setRefinement: (v: string) => void;
-  script: GeneratedSingleScript | null;
-  loading: boolean;
-  saving: boolean;
-  savedId: string | null;
-  saveError: string;
-  onBack: () => void;
-  onRegenerate: () => void;
-  onSave: () => void;
-}) {
-  return (
-    <div className="oo-card-static max-w-2xl space-y-5 p-6">
-      <div>
-        <h2 className="text-base font-bold" style={{ color: "var(--oo-text-primary)" }}>
-          Refine your script
-        </h2>
-        <p className="mt-1 text-sm" style={{ color: "var(--oo-text-secondary)" }}>
-          What doesn&apos;t sound right? What would you change? Leave blank to save as is.
-        </p>
-      </div>
-
-      <textarea
-        className="oo-input resize-none"
-        rows={4}
-        placeholder="e.g. The second paragraph feels too formal."
-        value={refinement}
-        onChange={(e) => setRefinement(e.target.value)}
-      />
-
-      {saveError ? (
-        <div
-          className="rounded-lg p-3 text-sm"
-          style={{
-            background: "rgba(192,57,43,0.07)",
-            border: "1px solid rgba(192,57,43,0.3)",
-            color: "var(--oo-bof)",
-          }}
-        >
-          {saveError}
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap gap-3">
-        <button className="oo-btn-ghost px-5 py-2.5 text-sm" onClick={onBack}>
-          &larr; Back
-        </button>
-        <button
-          className="oo-btn-ghost flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-50"
-          onClick={onRegenerate}
-          disabled={loading || refinement.trim().length === 0}
-        >
-          <RefreshCw className="size-3.5" /> {loading ? "Regenerating..." : "Regenerate"}
-        </button>
-        <button
-          className="gold-btn flex items-center gap-2 px-6 py-2.5 text-sm disabled:opacity-50"
-          onClick={onSave}
-          disabled={saving || !script || savedId !== null}
-        >
-          <CheckCircle className="size-3.5" />
-          {savedId ? "Saved" : saving ? "Saving..." : "Save to library"}
-        </button>
-      </div>
-    </div>
-  );
-}

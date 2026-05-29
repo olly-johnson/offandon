@@ -406,6 +406,7 @@ export type Database = {
             | "imf"
             | "hooks"
             | "single_script"
+            | "script_refine"
             | "media_analysis"
             | "competitor_analysis"
             | "other";
@@ -428,6 +429,7 @@ export type Database = {
             | "imf"
             | "hooks"
             | "single_script"
+            | "script_refine"
             | "media_analysis"
             | "competitor_analysis"
             | "other";
@@ -450,6 +452,7 @@ export type Database = {
             | "imf"
             | "hooks"
             | "single_script"
+            | "script_refine"
             | "media_analysis"
             | "competitor_analysis"
             | "other";

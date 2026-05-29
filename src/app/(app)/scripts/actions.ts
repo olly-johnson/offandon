@@ -6,11 +6,14 @@ import { redirect } from "next/navigation";
 import {
   HookGenerator,
   IMFExtractor,
+  ScriptRefineChat,
   SingleScriptGenerator,
   type GeneratedHookBatch,
   type GeneratedSingleScript,
   type IMF,
   type ScriptAngle,
+  type ScriptRefineChatTurn,
+  type ScriptRefineProposal,
 } from "@/engines/content";
 import { deleteScriptForUser, saveSingleScript } from "@/engines/content/persistence";
 import { getUserMethodology } from "@/engines/methodology/persistence";
@@ -251,6 +254,100 @@ export async function generateSingleScriptAction(input: {
         err instanceof SlopError
           ? "Script failed the slop validator. Try refining or regenerating."
           : "Could not generate the script. Try again.",
+    };
+  }
+}
+
+/**
+ * Step 5 (Refine Studio): one conversational turn with the refine
+ * assistant. The creator edits the script directly and chats alongside it;
+ * when they ask for a change the assistant returns a proposed amendment the
+ * UI shows as a diff to accept or reject. The current (possibly hand-edited)
+ * script is sent every turn so the model edits exactly what's on screen.
+ */
+export async function refineScriptChatAction(input: {
+  concept: string;
+  imf?: IMF;
+  currentScript: { hook: string; body: string };
+  history: ScriptRefineChatTurn[];
+}): Promise<{ reply: string; proposal?: ScriptRefineProposal } | WizardError> {
+  if (!input.currentScript?.hook || !input.currentScript?.body) {
+    return { error: "There's no script to refine yet." };
+  }
+  if (!Array.isArray(input.history) || input.history.length === 0) {
+    return { error: "Say something to the assistant first." };
+  }
+  const last = input.history[input.history.length - 1];
+  if (last.role !== "user" || last.content.trim().length === 0) {
+    return { error: "Type a message before sending." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    log.warn("refineScriptChatAction without user");
+    redirect("/signin");
+  }
+  const dna = await getCurrentVoiceDNA(supabase, user.id);
+  if (!dna) return { error: "You need to complete onboarding first." };
+
+  const admin = createSupabaseAdminClient();
+  const [userMethodology, methodologyHouse, scriptsSlice, operatorRules] =
+    await Promise.all([
+      getUserMethodology(supabase, user.id),
+      loadMethodologySlice(admin, "house"),
+      loadMethodologySlice(admin, "scripts"),
+      listRulesForSlicePrompt(admin, "scripts"),
+    ]);
+  const methodologyContext = {
+    house: methodologyHouse,
+    scripts: scriptsSlice,
+    operatorRules,
+  };
+
+  try {
+    const result = await timed(
+      log,
+      "script-refine.chat",
+      async () => {
+        const engine = new ScriptRefineChat({
+          llm: new AnthropicLLMClient({
+            onUsage: buildUsageRecorder({ userId: user.id, surface: "script_refine" }),
+          }),
+        });
+        return engine.reply({
+          voiceDna: dna,
+          concept: input.concept,
+          imf: input.imf,
+          currentScript: input.currentScript,
+          history: input.history,
+          userMethodology,
+          methodologyContext,
+        });
+      },
+      {
+        user_id: user.id,
+        turns: input.history.length,
+        body_chars: input.currentScript.body.length,
+      },
+    );
+    return {
+      reply: result.message.content,
+      ...(result.proposal ? { proposal: result.proposal } : {}),
+    };
+  } catch (err) {
+    log.error("refineScriptChatAction failed", {
+      user_id: user.id,
+      slop: err instanceof SlopError,
+      error: (err as Error).message,
+    });
+    return {
+      error:
+        err instanceof SlopError
+          ? "The assistant's reply tripped the slop validator. Try rephrasing what you'd like changed."
+          : "The refine assistant hit an error. Try again.",
     };
   }
 }
