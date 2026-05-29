@@ -80,9 +80,17 @@ export class DeepgramTranscriptionClient implements ITranscriptionClient {
         }
         const json = (await res.json()) as DeepgramResponse;
         const transcript = pickTranscript(json);
-        if (!transcript) {
-          throw new Error("Deepgram returned no transcript");
+        if (transcript === null) {
+          // No transcript field at all: we couldn't parse Deepgram's
+          // output. That's a real failure, distinct from a reel that
+          // simply has no speech (handled below as an empty string).
+          throw new Error(
+            "Deepgram returned a malformed response (no transcript field)",
+          );
         }
+        // transcript may be "" here: a music-only or visual reel that
+        // carries no speech. That's a valid result, not an error. The
+        // caller analyses such reels from caption + metrics.
         return {
           text: transcript,
           duration_seconds: json.metadata?.duration ?? null,
@@ -102,9 +110,14 @@ interface DeepgramResponse {
   };
 }
 
+/**
+ * Returns the transcript string, or null when the response is
+ * malformed (the transcript field is missing entirely). An empty/
+ * whitespace-only transcript is returned as "" — that's a no-speech
+ * reel, a valid outcome the caller handles, not a parse failure.
+ */
 function pickTranscript(r: DeepgramResponse): string | null {
   const t = r.results?.channels?.[0]?.alternatives?.[0]?.transcript;
   if (typeof t !== "string") return null;
-  const trimmed = t.trim();
-  return trimmed === "" ? null : trimmed;
+  return t.trim();
 }

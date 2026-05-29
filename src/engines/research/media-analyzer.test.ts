@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ILLMClient } from "@/engines/voice/voice";
 import type { VoiceDNA } from "@/engines/voice/types";
 
-import { MediaAnalyzer, parseAnalysisJson } from "./media-analyzer";
+import { MediaAnalyzer, NO_SPEECH_TRANSCRIPT, parseAnalysisJson } from "./media-analyzer";
 import type { LibraryStats, MediaAnalysisInput } from "./types";
 
 const VOICE_DNA: VoiceDNA = {
@@ -97,19 +97,27 @@ describe("MediaAnalyzer.analyze", () => {
     expect(call.user).toContain("Some transcript.");
   });
 
-  it("throws when transcript is empty (refuses to call LLM)", async () => {
+  it("analyzes a no-speech reel from caption + metrics (music only)", async () => {
+    // A music-only reel yields a blank Deepgram transcript. We still
+    // analyze it: the analyzer substitutes a no-speech note so the model
+    // knows to read from caption + metrics, and stores that note as the
+    // transcript (the DB forbids a blank transcript).
     const llm = makeLLM(VALID_ANALYSIS);
     const analyzer = new MediaAnalyzer({ llm });
 
-    await expect(
-      analyzer.analyze({
-        voiceDna: VOICE_DNA,
-        libraryStats: LIBRARY_STATS,
-        media: MEDIA,
-        transcript: "   ",
-      }),
-    ).rejects.toThrow(/transcript/i);
-    expect(llm.complete).not.toHaveBeenCalled();
+    const out = await analyzer.analyze({
+      voiceDna: VOICE_DNA,
+      libraryStats: LIBRARY_STATS,
+      media: MEDIA,
+      transcript: "   ",
+    });
+
+    expect(llm.complete).toHaveBeenCalledTimes(1);
+    const call = (llm.complete as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.user).toContain(NO_SPEECH_TRANSCRIPT);
+    expect(out.transcript).toBe(NO_SPEECH_TRANSCRIPT);
+    expect(out.transcript.trim().length).toBeGreaterThan(0);
+    expect(out.performance_score).toBe(92);
   });
 
   it("rethrows LLM errors", async () => {

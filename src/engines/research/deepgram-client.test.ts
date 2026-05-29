@@ -51,8 +51,12 @@ describe("DeepgramTranscriptionClient", () => {
     );
   });
 
-  it("throws when the response carries an empty transcript", async () => {
+  it("returns an empty transcript for a no-speech reel (music only)", async () => {
+    // Deepgram answers 200 with a blank transcript when the audio has
+    // no speech (a music-only or visual reel). That is a valid result,
+    // not an error: the caller analyses from caption + metrics.
     const fetchImpl = makeFetch({
+      metadata: { duration: 12 },
       results: { channels: [{ alternatives: [{ transcript: "   " }] }] },
     });
     const client = new DeepgramTranscriptionClient({
@@ -60,8 +64,23 @@ describe("DeepgramTranscriptionClient", () => {
       fetchImpl,
     });
 
+    const out = await client.transcribe(new Uint8Array([1]));
+    expect(out.text).toBe("");
+    expect(out.duration_seconds).toBe(12);
+  });
+
+  it("throws when the response is malformed (no transcript field at all)", async () => {
+    // A response missing results/channels/alternatives means we could
+    // not parse Deepgram's output, which is a genuine failure, distinct
+    // from a no-speech reel.
+    const fetchImpl = makeFetch({ metadata: { duration: 9 } });
+    const client = new DeepgramTranscriptionClient({
+      apiKey: "k",
+      fetchImpl,
+    });
+
     await expect(client.transcribe(new Uint8Array([1]))).rejects.toThrow(
-      /no transcript/,
+      /malformed/,
     );
   });
 
