@@ -130,6 +130,32 @@ describe("RefineStudio", () => {
     expect(screen.queryByDisplayValue("A totally different body.")).not.toBeInTheDocument();
   });
 
+  it("does not show a diff when the proposal matches the current script", async () => {
+    // The model can re-emit the current script (e.g. right after an accept).
+    // An all-equal diff is noise, so no Accept/Reject should appear.
+    refineScriptChatAction.mockResolvedValue({
+      reply: "It already reads well, so I left it as is.",
+      proposal: {
+        hook: SCRIPT.hook,
+        body: SCRIPT.body,
+        word_count: SCRIPT.word_count,
+        summary: "No change.",
+      },
+    });
+    renderStudio();
+    fireEvent.change(screen.getByPlaceholderText(/ask for a change/i), {
+      target: { value: "Improve it." },
+    });
+    fireEvent.click(screen.getByLabelText("Send"));
+
+    expect(
+      await screen.findByText("It already reads well, so I left it as is."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /accept changes/i })).not.toBeInTheDocument();
+    // The editor (with the body field) is still shown, not the diff.
+    expect(screen.getByDisplayValue(SCRIPT.body)).toBeInTheDocument();
+  });
+
   it("surfaces an action error in the chat", async () => {
     refineScriptChatAction.mockResolvedValue({ error: "The refine assistant hit an error." });
     renderStudio();

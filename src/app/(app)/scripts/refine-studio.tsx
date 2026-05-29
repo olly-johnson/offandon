@@ -9,7 +9,7 @@ import type {
   ScriptRefineChatTurn,
   ScriptRefineProposal,
 } from "@/engines/content";
-import { diffLines, type DiffOp } from "@/lib/shared/text-diff";
+import { diffWords, hasChanges, type DiffOp } from "@/lib/shared/text-diff";
 
 import { MessageBubble, TypingIndicator, type ChatMessage } from "../chat/chat-messages";
 import { refineScriptChatAction } from "./actions";
@@ -86,7 +86,15 @@ export function RefineStudio({
       ...prev,
       { id: nextId(), role: "assistant", content: res.reply },
     ]);
-    if (res.proposal) setProposal(res.proposal);
+    // Only surface a diff when the proposal actually differs from what's on
+    // screen. The model can re-emit the current (e.g. just-accepted) script,
+    // and an all-equal diff is noise, not a change to accept.
+    if (
+      res.proposal &&
+      hasChanges(`${hook}\n\n${body}`, `${res.proposal.hook}\n\n${res.proposal.body}`)
+    ) {
+      setProposal(res.proposal);
+    }
   }
 
   function acceptProposal() {
@@ -280,7 +288,7 @@ function ProposalDiff({
   onAccept: () => void;
   onReject: () => void;
 }) {
-  const ops = useMemo<DiffOp[]>(() => diffLines(current, proposed), [current, proposed]);
+  const ops = useMemo<DiffOp[]>(() => diffWords(current, proposed), [current, proposed]);
 
   return (
     <>
@@ -288,13 +296,17 @@ function ProposalDiff({
         {summary}
       </p>
       <div
-        className="max-h-[22rem] overflow-y-auto rounded-xl p-4 font-sans text-sm leading-relaxed"
+        className="max-h-[22rem] overflow-y-auto whitespace-pre-wrap rounded-xl p-4 font-sans text-sm leading-relaxed"
         style={{ background: "var(--oo-bg-elevated)", border: "1px solid var(--oo-border)" }}
       >
         {ops.map((op, i) => (
-          <DiffLine key={i} op={op} />
+          <DiffToken key={i} op={op} />
         ))}
       </div>
+      <p className="text-xs" style={{ color: "var(--oo-text-dim)" }}>
+        <span style={{ color: "#16A34A" }}>Green</span> is added,{" "}
+        <span style={{ color: "#C0392B" }}>red</span> is removed.
+      </p>
       <div className="flex flex-wrap gap-3">
         <button
           className="gold-btn flex items-center gap-2 px-6 py-2.5 text-sm"
@@ -313,26 +325,26 @@ function ProposalDiff({
   );
 }
 
-function DiffLine({ op }: { op: DiffOp }) {
+/**
+ * One inline diff token. Whitespace tokens are styled too so an added or
+ * removed space reads correctly, but only words carry the strike-through.
+ * Equal tokens flow as ordinary text so unchanged prose is never flagged.
+ */
+function DiffToken({ op }: { op: DiffOp }) {
   if (op.type === "equal") {
-    return (
-      <div className="whitespace-pre-wrap" style={{ color: "var(--oo-text-secondary)" }}>
-        <span style={{ opacity: 0.4 }}>{"  "}</span>
-        {op.text || " "}
-      </div>
-    );
+    return <span style={{ color: "var(--oo-text-secondary)" }}>{op.text}</span>;
   }
   const add = op.type === "add";
   return (
-    <div
-      className="whitespace-pre-wrap rounded px-1"
+    <span
       style={{
-        background: add ? "rgba(22,163,74,0.12)" : "rgba(192,57,43,0.12)",
+        background: add ? "rgba(22,163,74,0.16)" : "rgba(192,57,43,0.16)",
         color: add ? "#16A34A" : "#C0392B",
+        textDecoration: add ? "none" : "line-through",
+        borderRadius: "2px",
       }}
     >
-      <span style={{ opacity: 0.7 }}>{add ? "+ " : "- "}</span>
-      {op.text || " "}
-    </div>
+      {op.text}
+    </span>
   );
 }
