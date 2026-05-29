@@ -12,6 +12,10 @@ import { createSupabaseServerClient } from "@/lib/shared/supabase/server";
 
 import { ConnectForm } from "./connect-form";
 import { LibraryGrid } from "./library-grid";
+import {
+  INSTAGRAM_MANAGE_ACCESS_URL,
+  TESTER_INVITE_STEPS,
+} from "./tester-invite-steps";
 
 const log = createLogger("page.library");
 
@@ -132,7 +136,72 @@ function ConnectEmptyState({ allowPasteToken }: { allowPasteToken: boolean }) {
       </header>
 
       <ConnectForm allowPasteToken={allowPasteToken} />
+
+      <TesterInviteHelp />
     </div>
+  );
+}
+
+/**
+ * Collapsible help for clients who get "Insufficient Developer role" on
+ * Instagram's consent screen. That error means they were invited as a
+ * Tester but have not accepted the invite yet (acceptance happens on
+ * Instagram, not here). Rendered as a native <details> so it needs no
+ * client JS. See tester-invite-steps.ts; remove once the app goes Live.
+ */
+function TesterInviteHelp() {
+  return (
+    <details
+      className="mt-6 rounded-xl p-4"
+      style={{
+        background: "var(--oo-bg-elevated)",
+        border: "1px solid var(--oo-border-subtle)",
+      }}
+    >
+      <summary
+        className="cursor-pointer text-sm font-medium"
+        style={{ color: "var(--oo-text-primary)" }}
+      >
+        Seeing &quot;Insufficient Developer role&quot;? Accept your invite first
+      </summary>
+      <p
+        className="mt-2 text-xs leading-relaxed"
+        style={{ color: "var(--oo-text-secondary)" }}
+      >
+        Bot OS is in early access, so each account has to accept a one-time
+        invite on Instagram before it can connect. It takes about a minute:
+      </p>
+      <ol className="mt-3 flex flex-col gap-2">
+        {TESTER_INVITE_STEPS.map((step) => (
+          <li
+            key={step.n}
+            className="flex gap-3 text-xs leading-relaxed"
+            style={{ color: "var(--oo-text-secondary)" }}
+          >
+            <span
+              className="flex size-5 flex-none items-center justify-center rounded-full text-[11px] font-semibold"
+              style={{
+                background: "var(--oo-bg-base)",
+                color: "var(--oo-text-primary)",
+                border: "1px solid var(--oo-border-subtle)",
+              }}
+            >
+              {step.n}
+            </span>
+            <span>{step.text}</span>
+          </li>
+        ))}
+      </ol>
+      <a
+        href={INSTAGRAM_MANAGE_ACCESS_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-block text-xs underline"
+        style={{ color: "var(--oo-gold, var(--oo-text-primary))" }}
+      >
+        Open the Instagram invites page
+      </a>
+    </details>
   );
 }
 

@@ -131,6 +131,12 @@ Per-user "track up to 5 IG accounts" research surface. The user pins competitors
 | BO-072 | Fix: the "Generate 3 ideas" (vault) and "Save to vault" (drill-in) buttons had no hover feedback and no pointer cursor (Tailwind v4 drops the default button cursor). New reusable `.oo-soft-btn` class adds the shared tactile hover (gentle lift + brighten) + pointer cursor for custom-styled buttons whose colours are set inline; applied to both. | claude | Done | PR #64 |
 | BO-073 | Outlier-idea generator now pulls the full content-strategy stack, matching the weekly /scripts generator. New voice loader `getCurrentOnboardingAnswers` exposes `voice_dna.source_answers`; `OutlierIdeaGenerator` input gains `clientAssets`, `corpusContext`, and a new `OnboardingExtras` shape (ICP extras `thoughts_at_2am` / `internal_battles` / `dreams`, positioning `core_philosophy` / `contrarian_belief` / `differentiator`, story-bank seeds, signature phrases). `buildOutlierIdeaSystemPrompt` reuses the existing `renderClientAssetsBlock` + `renderCorpusContextBlock` (now exported) and adds `renderOnboardingExtrasBlock` (skipped when every field is empty). `generateIdeasFromOutlierAction` loads them all in parallel + best-effort corpus retrieval gated on `VOYAGE_API_KEY`. Hard rule #5 instructs the model to ground each idea in the creator's stories / corpus / contrarian belief / 2am thoughts before reaching for anything generic. TDD: 4 new system-prompt assertions. | claude | In Progress | feature/outlier-idea-deeper-context |
 
+## Phase 1b. Instagram connect polish
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-074 | Surface "how to accept your Instagram Tester invite" steps on the `/library` Connect screen. While the Meta app is in Development mode, OAuth throws "Insufficient Developer role" for any IG account that has not accepted its tester invite, and clients miss the accept step. New pure `tester-invite-steps.ts` (`INSTAGRAM_MANAGE_ACCESS_URL` + numbered `TESTER_INVITE_STEPS`, Vitest-covered, anti-em-dash) consumed by a collapsible `<details>` help block in the Connect empty state linking to instagram.com/accounts/manage_access. No backend change; remove once App Review lands and the tester gate drops. | claude | In Progress | feature/ig-tester-invite-help |
+
 ## Conventions
 
 - `Owner` is the agent name (e.g. `claude`) or a human name. Empty = unclaimed.
