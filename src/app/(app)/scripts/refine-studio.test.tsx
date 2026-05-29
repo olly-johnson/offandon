@@ -73,13 +73,16 @@ describe("RefineStudio", () => {
     expect(arg.history.at(-1)).toEqual({ role: "user", content: "Is the close strong?" });
   });
 
-  it("renders a diff and accepting it applies the proposed script", async () => {
+  it("shows only the changed sentence before/after, and accepting applies it", async () => {
+    // Only the final sentence changes. The first two should appear as
+    // unchanged context, not as red/green edits.
+    const proposedBody = "It is the discovery call. They lead with credentials. Flip the order entirely.";
     refineScriptChatAction.mockResolvedValue({
       reply: "I sharpened the close.",
       proposal: {
         hook: SCRIPT.hook,
-        body: "It is the discovery call. Lead with their problem first. Then earn the offer.",
-        word_count: 13,
+        body: proposedBody,
+        word_count: 11,
         summary: "Problem-first, sharper close.",
       },
     });
@@ -89,8 +92,12 @@ describe("RefineStudio", () => {
     });
     fireEvent.click(screen.getByLabelText("Send"));
 
-    // Diff appears with the summary and accept/reject controls.
     expect(await screen.findByText("Problem-first, sharper close.")).toBeInTheDocument();
+    // The changed sentence shows as before (old) and after (new). The
+    // unchanged sentences are not rendered as the removed/added sentence.
+    expect(screen.getByText("Reverse the order.")).toBeInTheDocument();
+    expect(screen.getByText("Flip the order entirely.")).toBeInTheDocument();
+    expect(screen.queryByText("They lead with credentials.")).not.toBeInTheDocument();
     const accept = screen.getByRole("button", { name: /accept changes/i });
     expect(screen.getByRole("button", { name: /reject/i })).toBeInTheDocument();
 
@@ -98,11 +105,7 @@ describe("RefineStudio", () => {
 
     // Editor is back, now showing the accepted body.
     await waitFor(() =>
-      expect(
-        screen.getByDisplayValue(
-          "It is the discovery call. Lead with their problem first. Then earn the offer.",
-        ),
-      ).toBeInTheDocument(),
+      expect(screen.getByDisplayValue(proposedBody)).toBeInTheDocument(),
     );
   });
 

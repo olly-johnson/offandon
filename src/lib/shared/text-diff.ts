@@ -7,11 +7,12 @@
  * readable diff without pulling in a diff library.
  *
  * Two granularities:
- *   - `diffLines`  — line-level, good for whole-block structure.
- *   - `diffWords`  — word-level (whitespace-preserving), so changing one
- *                    word in a paragraph highlights only that word instead
- *                    of flagging the whole paragraph. This is what the
- *                    Refine Studio uses for prose.
+ *   - `diffLines`     — line-level, good for whole-block structure.
+ *   - `diffSentences` — sentence-level (whitespace-preserving). Changing a
+ *                       word flags only the sentence it lives in, shown as a
+ *                       whole-sentence before/after, while untouched
+ *                       sentences stay as plain context. This is what the
+ *                       Refine Studio uses for prose.
  */
 
 export type DiffOpType = "equal" | "add" | "remove";
@@ -100,23 +101,40 @@ export function diffLines(oldText: string, newText: string): DiffOp[] {
 }
 
 /**
- * Split text into word + whitespace tokens, keeping whitespace runs as
- * their own tokens so the original text can be reconstructed faithfully
- * (newlines and spaces survive the round trip).
+ * Split text into sentence tokens. Each token keeps its terminal
+ * punctuation and the whitespace that follows it, and runs of newlines are
+ * kept as their own tokens, so concatenating the tokens reproduces the
+ * original text exactly. A sentence with no terminal punctuation (e.g. a
+ * hook) is still emitted as one token.
  */
-function toWords(text: string): string[] {
-  return normalise(text).match(/\s+|\S+/g) ?? [];
+function toSentences(text: string): string[] {
+  const norm = normalise(text);
+  const tokens: string[] = [];
+  // Keep the newline separators as their own tokens so paragraph breaks
+  // survive the round trip.
+  for (const part of norm.split(/(\n+)/)) {
+    if (part === "") continue;
+    if (/^\n+$/.test(part)) {
+      tokens.push(part);
+      continue;
+    }
+    // A sentence is any run up to and including its terminal .!? (plus any
+    // trailing spaces), or a trailing run with no terminator.
+    const sentences = part.match(/[^.!?]*[.!?]+(?:\s+|$)|[^.!?]+$/g);
+    if (sentences) tokens.push(...sentences);
+    else tokens.push(part);
+  }
+  return tokens.filter((t) => t.length > 0);
 }
 
 /**
- * Diff two blocks of text word by word. Whitespace is preserved as tokens,
- * so concatenating every op's `text` reproduces the new text exactly (for
- * adds + equals) or the old text (for removes + equals). Changing a single
- * word in a long paragraph yields a tiny add/remove pair instead of
- * flagging the entire paragraph.
+ * Diff two blocks of text sentence by sentence. Concatenating every op's
+ * `text` reproduces the new text (for adds + equals) or the old text (for
+ * removes + equals), so the caller can render whole-sentence before/after
+ * blocks while leaving unchanged sentences as context.
  */
-export function diffWords(oldText: string, newText: string): DiffOp[] {
-  return diffTokens(toWords(oldText), toWords(newText));
+export function diffSentences(oldText: string, newText: string): DiffOp[] {
+  return diffTokens(toSentences(oldText), toSentences(newText));
 }
 
 /** True when the two texts differ (after CRLF normalisation). */

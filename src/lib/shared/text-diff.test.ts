@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { diffLines, diffWords, hasChanges } from "./text-diff";
+import { diffLines, diffSentences, hasChanges } from "./text-diff";
 
 describe("diffLines", () => {
   it("marks every line equal when the texts match", () => {
@@ -82,26 +82,36 @@ describe("diffLines", () => {
   });
 });
 
-describe("diffWords", () => {
-  it("highlights only the changed word, not the whole line", () => {
-    const ops = diffWords(
-      "The fix is not another headline.",
-      "The fix is not another bloody headline.",
-    );
-    // Everything before and after the insertion stays equal; only the new
-    // word (and its leading space) are added.
-    expect(ops.filter((o) => o.type === "remove")).toEqual([]);
-    expect(ops.filter((o) => o.type === "add").map((o) => o.text)).toEqual([
-      "bloody",
-      " ",
+describe("diffSentences", () => {
+  it("flags only the changed sentence, leaving the others equal", () => {
+    const oldText =
+      "It is the discovery call. They lead with credentials. Reverse the order.";
+    const newText =
+      "It is the discovery call. They lead with credentials. Flip the order entirely.";
+    const ops = diffSentences(oldText, newText);
+
+    // The two untouched sentences stay equal; only the last one is a
+    // remove + add pair (a whole-sentence before/after).
+    expect(ops.filter((o) => o.type === "equal").map((o) => o.text.trim())).toEqual([
+      "It is the discovery call.",
+      "They lead with credentials.",
     ]);
+    expect(ops.find((o) => o.type === "remove")?.text.trim()).toBe("Reverse the order.");
+    expect(ops.find((o) => o.type === "add")?.text.trim()).toBe(
+      "Flip the order entirely.",
+    );
+  });
+
+  it("does not flag a sentence whose words are unchanged", () => {
+    const text = "First sentence. Second sentence. Third sentence.";
+    const ops = diffSentences(text, text);
+    expect(ops.every((o) => o.type === "equal")).toBe(true);
   });
 
   it("reconstructs the new text from equal + add tokens", () => {
-    const oldText = "lead with credentials when the prospect needs it";
-    const newText = "lead with their problem when the prospect needs it";
-    const ops = diffWords(oldText, newText);
-    const rebuilt = ops
+    const oldText = "One. Two. Three.";
+    const newText = "One. Two changed. Three.";
+    const rebuilt = diffSentences(oldText, newText)
       .filter((o) => o.type !== "remove")
       .map((o) => o.text)
       .join("");
@@ -109,27 +119,35 @@ describe("diffWords", () => {
   });
 
   it("reconstructs the old text from equal + remove tokens", () => {
-    const oldText = "lead with credentials when the prospect needs it";
-    const newText = "lead with their problem when the prospect needs it";
-    const ops = diffWords(oldText, newText);
-    const rebuilt = ops
+    const oldText = "One. Two. Three.";
+    const newText = "One. Two changed. Three.";
+    const rebuilt = diffSentences(oldText, newText)
       .filter((o) => o.type !== "add")
       .map((o) => o.text)
       .join("");
     expect(rebuilt).toBe(oldText);
   });
 
-  it("preserves newlines as tokens so multi-paragraph diffs stay readable", () => {
-    const ops = diffWords("p1\n\np2", "p1\n\np2 extra");
-    expect(ops.some((o) => o.type === "equal" && o.text === "\n\n")).toBe(true);
-    expect(ops.filter((o) => o.type === "add").map((o) => o.text)).toEqual([
-      " ",
-      "extra",
-    ]);
+  it("keeps paragraph breaks so a multi-paragraph script round-trips", () => {
+    const oldText = "Hook line.\n\nFirst paragraph. Second paragraph.";
+    const newText = "Hook line.\n\nFirst paragraph. A new second paragraph.";
+    const ops = diffSentences(oldText, newText);
+    expect(ops.some((o) => o.text.includes("\n\n"))).toBe(true);
+    const rebuilt = ops
+      .filter((o) => o.type !== "remove")
+      .map((o) => o.text)
+      .join("");
+    expect(rebuilt).toBe(newText);
+  });
+
+  it("handles a sentence with no terminal punctuation (e.g. a hook)", () => {
+    const ops = diffSentences("Most coaches lose leads", "Most founders lose leads");
+    expect(ops.find((o) => o.type === "remove")?.text).toBe("Most coaches lose leads");
+    expect(ops.find((o) => o.type === "add")?.text).toBe("Most founders lose leads");
   });
 
   it("treats two empty strings as no change", () => {
-    expect(diffWords("", "")).toEqual([]);
+    expect(diffSentences("", "")).toEqual([]);
   });
 });
 

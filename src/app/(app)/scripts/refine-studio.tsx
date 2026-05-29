@@ -9,7 +9,7 @@ import type {
   ScriptRefineChatTurn,
   ScriptRefineProposal,
 } from "@/engines/content";
-import { diffWords, hasChanges, type DiffOp } from "@/lib/shared/text-diff";
+import { diffSentences, hasChanges, type DiffOp, type DiffOpType } from "@/lib/shared/text-diff";
 
 import { MessageBubble, TypingIndicator, type ChatMessage } from "../chat/chat-messages";
 import { refineScriptChatAction } from "./actions";
@@ -275,6 +275,28 @@ export function RefineStudio({
   );
 }
 
+interface DiffBlock {
+  type: DiffOpType;
+  text: string;
+}
+
+/**
+ * Collapse the sentence-level ops into runs of the same type so the diff
+ * reads as whole-sentence (or paragraph) before/after blocks: a run of
+ * unchanged sentences renders as one context block, a run of removals as
+ * one red block, a run of additions as one green block. Whitespace-only
+ * runs (stray newline tokens) are dropped so we never paint empty blocks.
+ */
+function groupOps(ops: DiffOp[]): DiffBlock[] {
+  const blocks: DiffBlock[] = [];
+  for (const op of ops) {
+    const last = blocks[blocks.length - 1];
+    if (last && last.type === op.type) last.text += op.text;
+    else blocks.push({ type: op.type, text: op.text });
+  }
+  return blocks.filter((b) => b.text.trim().length > 0);
+}
+
 function ProposalDiff({
   current,
   proposed,
@@ -288,7 +310,10 @@ function ProposalDiff({
   onAccept: () => void;
   onReject: () => void;
 }) {
-  const ops = useMemo<DiffOp[]>(() => diffWords(current, proposed), [current, proposed]);
+  const blocks = useMemo<DiffBlock[]>(
+    () => groupOps(diffSentences(current, proposed)),
+    [current, proposed],
+  );
 
   return (
     <>
@@ -296,16 +321,17 @@ function ProposalDiff({
         {summary}
       </p>
       <div
-        className="max-h-[22rem] overflow-y-auto whitespace-pre-wrap rounded-xl p-4 font-sans text-sm leading-relaxed"
+        className="flex max-h-[22rem] flex-col gap-2 overflow-y-auto rounded-xl p-4 font-sans text-sm leading-relaxed"
         style={{ background: "var(--oo-bg-elevated)", border: "1px solid var(--oo-border)" }}
       >
-        {ops.map((op, i) => (
-          <DiffToken key={i} op={op} />
+        {blocks.map((b, i) => (
+          <DiffBlockRow key={i} block={b} />
         ))}
       </div>
       <p className="text-xs" style={{ color: "var(--oo-text-dim)" }}>
-        <span style={{ color: "#16A34A" }}>Green</span> is added,{" "}
-        <span style={{ color: "#C0392B" }}>red</span> is removed.
+        Only the sentences that changed are shown as{" "}
+        <span style={{ color: "#C0392B" }}>before</span> /{" "}
+        <span style={{ color: "#16A34A" }}>after</span>. Everything else is unchanged.
       </p>
       <div className="flex flex-wrap gap-3">
         <button
@@ -326,25 +352,34 @@ function ProposalDiff({
 }
 
 /**
- * One inline diff token. Whitespace tokens are styled too so an added or
- * removed space reads correctly, but only words carry the strike-through.
- * Equal tokens flow as ordinary text so unchanged prose is never flagged.
+ * One run of the grouped diff. Unchanged runs flow as muted context;
+ * removed runs are a red before-block, added runs a green after-block.
  */
-function DiffToken({ op }: { op: DiffOp }) {
-  if (op.type === "equal") {
-    return <span style={{ color: "var(--oo-text-secondary)" }}>{op.text}</span>;
+function DiffBlockRow({ block }: { block: DiffBlock }) {
+  const text = block.text.replace(/^\n+|\n+$/g, "");
+
+  if (block.type === "equal") {
+    return (
+      <p className="whitespace-pre-wrap" style={{ color: "var(--oo-text-dim)" }}>
+        {text}
+      </p>
+    );
   }
-  const add = op.type === "add";
+
+  const add = block.type === "add";
   return (
-    <span
+    <div
+      className="flex gap-2 whitespace-pre-wrap rounded-lg px-3 py-2"
       style={{
-        background: add ? "rgba(22,163,74,0.16)" : "rgba(192,57,43,0.16)",
+        background: add ? "rgba(22,163,74,0.10)" : "rgba(192,57,43,0.10)",
+        borderLeft: `3px solid ${add ? "#16A34A" : "#C0392B"}`,
         color: add ? "#16A34A" : "#C0392B",
-        textDecoration: add ? "none" : "line-through",
-        borderRadius: "2px",
       }}
     >
-      {op.text}
-    </span>
+      <span className="select-none font-bold" aria-hidden>
+        {add ? "+" : "−"}
+      </span>
+      <span>{text}</span>
+    </div>
   );
 }
