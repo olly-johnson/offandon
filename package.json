@@ -15,7 +15,9 @@
     "ingest:sanitize": "tsx scripts/ingest-sanitize.ts",
     "ingest:commit": "tsx scripts/ingest-commit.ts",
     "ingest:corpus": "tsx scripts/ingest-corpus.ts",
-    "avatars:refresh": "tsx scripts/refresh-suggested-avatars.ts"
+    "avatars:refresh": "tsx scripts/refresh-suggested-avatars.ts",
+    "checkin:backfill": "tsx scripts/backfill-checkin-metrics.ts",
+    "checkin:import-csv": "tsx scripts/import-checkins-csv.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
