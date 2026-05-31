@@ -13,10 +13,12 @@ import {
   syncAllCompetitorsNightly,
 } from "@/lib/shared/inngest/functions/scrape-competitor";
 import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
-// Weekly check-in send/reminder crons retired (BO-075): GoHighLevel now
-// owns sending the "Off&On Weekly Check-In" survey. The bot only receives
-// submissions via /api/ghl/webhook. The send/reminder engine helpers are
-// left dormant until the GHL path is proven in prod.
+// Weekly check-in send/reminder re-enabled (BO-078). GHL receives + processes
+// submissions (/api/ghl/webhook), but its workflows don't do a recurring
+// weekly send to all members, so the bot owns sending: these crons email
+// every active member the GHL survey link (WEEKLY_CHECKIN_FORM_URL) each week.
+import { weeklyCheckinReminder } from "@/lib/shared/inngest/functions/weekly-checkin-reminder";
+import { weeklyCheckinSend } from "@/lib/shared/inngest/functions/weekly-checkin-send";
 
 /**
  * Inngest serve endpoint. Inngest cloud (and the local dev CLI) hit this
@@ -32,6 +34,8 @@ export const { GET, POST, PUT } = serve({
     generateScripts,
     syncInstagram,
     analyzeMedia,
+    weeklyCheckinSend,
+    weeklyCheckinReminder,
     refreshVoiceDna,
     competitorScrapeRequested,
     competitorScrapeCompleted,
