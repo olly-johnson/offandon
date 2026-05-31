@@ -39,10 +39,11 @@ describe("dispatchWeekly", () => {
     expect(result.ok).toBe(2);
     expect(result.failed).toBe(0);
     expect(email.sent).toHaveLength(2);
-    expect(email.sent[0].subject).toMatch(/check-in is open/i);
+    expect(email.sent[0].subject).toMatch(/weekly check in/i);
     expect(email.sent[0].to).toBe("a@x.com");
-    expect(email.sent[0].text).toContain("Hey Alice");
-    expect(email.sent[1].text).toContain("Hey,");
+    expect(email.sent[0].text).toContain("Your weekly check in is live");
+    expect(email.sent[0].text).toContain("https://forms.example/x");
+    expect(email.sent[1].text).toContain("Your weekly check in is live");
     expect(email.sent[0].idempotencyKey).toBe(
       "weekly-send-2026-05-11-a@x.com",
     );

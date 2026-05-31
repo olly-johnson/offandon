@@ -27,26 +27,21 @@ function greeting(displayName: string | null): string {
 }
 
 export function buildWeeklySendEmail(ctx: WeeklyEmailContext): EmailMessage {
-  const hi = greeting(ctx.displayName);
-  const subject = "Your Off&On weekly check-in is open";
+  // Copy mirrors the GHL "Off&On - Your Weekly Check In" email, minus the
+  // book-your-call line (the bot doesn't handle call booking).
+  const subject = "Off&On - Your Weekly Check In";
   const text = [
-    `${hi},`,
-    "",
-    "Quick 10-15 minute check-in. Your wins, what you posted, what landed, what you're focused on next week.",
-    "",
-    "This feeds your bot. The more specific you are, the smarter your scripts get next week.",
+    "Your weekly check in is live. Go fill it in now.",
     "",
     ctx.formUrl,
     "",
-    "Off&On",
+    "Alex",
   ].join("\n");
 
   const html = [
-    `<p>${hi},</p>`,
-    "<p>Quick 10-15 minute check-in. Your wins, what you posted, what landed, what you're focused on next week.</p>",
-    "<p>This feeds your bot. The more specific you are, the smarter your scripts get next week.</p>",
-    `<p><a href="${ctx.formUrl}">Open this week's check-in</a></p>`,
-    "<p>Off&amp;On</p>",
+    "<p>Your weekly check in is live. Go fill it in now.</p>",
+    `<p><a href="${ctx.formUrl}">Check-In</a></p>`,
+    "<p>Alex</p>",
   ].join("");
 
   return {
