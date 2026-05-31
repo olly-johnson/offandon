@@ -136,7 +136,15 @@ Per-user "track up to 5 IG accounts" research surface. The user pins competitors
 
 | Task ID | Description | Owner | Status | Branch / PR |
 | :--- | :--- | :--- | :--- | :--- |
-| BO-074 | Surface "how to accept your Instagram Tester invite" steps on the `/library` Connect screen. While the Meta app is in Development mode, OAuth throws "Insufficient Developer role" for any IG account that has not accepted its tester invite, and clients miss the accept step. New pure `tester-invite-steps.ts` (`INSTAGRAM_MANAGE_ACCESS_URL` + numbered `TESTER_INVITE_STEPS`, Vitest-covered, anti-em-dash) consumed by a collapsible `<details>` help block in the Connect empty state linking to instagram.com/accounts/manage_access. No backend change; remove once App Review lands and the tester gate drops. | claude | In Progress | feature/ig-tester-invite-help |
+| BO-074 | Surface "how to accept your Instagram Tester invite" steps on the `/library` Connect screen. While the Meta app is in Development mode, OAuth throws "Insufficient Developer role" for any IG account that has not accepted its tester invite, and clients miss the accept step. New pure `tester-invite-steps.ts` (`INSTAGRAM_MANAGE_ACCESS_URL` + numbered `TESTER_INVITE_STEPS`, Vitest-covered, anti-em-dash) consumed by a collapsible `<details>` help block in the Connect empty state linking to instagram.com/accounts/manage_access. No backend change; remove once App Review lands and the tester gate drops. | claude | Done | PR #66 |
+
+## Phase 8. CRM (GoHighLevel / "Hookd")
+
+The Hookd GHL sub-account is the front door (payment, onboarding forms, weekly check-ins, comms) and fires outbound webhooks at each workflow stage to the bot (Option A). The bot processes them and can write pipeline stages back.
+
+| Task ID | Description | Owner | Status | Branch / PR |
+| :--- | :--- | :--- | :--- | :--- |
+| BO-075 | Switch weekly check-ins from the bot's own Google-Form/Resend loop to GHL. GHL already owns the live "Off&On Weekly Check-In" survey; its *Survey Submitted* workflow gets a Webhook action POSTing answers + email to the new `/api/ghl/webhook`. Endpoint verifies a `GHL_WEBHOOK_SECRET` header (constant-time), parses a tolerant GHL payload (`parseGhlCheckinBody` - flat or `answers`-object shape, email required), resolves the user by email, reuses `saveCheckin` (idempotent on user+week) and emits `voice/dna.refresh.requested`. Retire the bot's outbound check-in: unregister `weeklyCheckinSend` + `weeklyCheckinReminder` from the Inngest serve route so the crons stop firing. The two cron files and their engine helpers (`dispatchWeekly`, `listRecipients`, `getWeekSubmitters`) are left in place but dormant during the migration (re-enable = re-add to the serve array); prune once GHL check-ins are proven in prod. The old `/api/weekly-checkin/webhook` (Google Form) stays dormant. TDD on the GHL parser + secret verify. | claude | In Progress | feature/ghl-checkin-webhook |
 
 ## Conventions
 
