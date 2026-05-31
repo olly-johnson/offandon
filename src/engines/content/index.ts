@@ -28,6 +28,16 @@ export { HookGenerator, hookTotalScore } from "./hook-generator";
 export type { HookGeneratorOptions } from "./hook-generator";
 export { SingleScriptGenerator } from "./single-script-generator";
 export type { SingleScriptGeneratorOptions } from "./single-script-generator";
+export { ScriptRefineChat, PROPOSE_TOOL_NAME } from "./script-refine-chat";
+export type {
+  CurrentScript,
+  ScriptRefineChatOptions,
+  ScriptRefineChatTurn,
+  ScriptRefineProposal,
+  ScriptRefineReply,
+  ScriptRefineReplyInput,
+} from "./script-refine-chat";
+export { buildScriptRefineSystemPrompt } from "./script-refine-system-prompt";
 export { OutlierIdeaGenerator } from "./outlier-idea-generator";
 export type { OutlierIdeaGeneratorOptions } from "./outlier-idea-generator";
 export { buildOutlierIdeaSystemPrompt } from "./outlier-idea-system-prompt";
