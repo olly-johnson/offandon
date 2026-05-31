@@ -32,6 +32,11 @@ export {
   listRecentCheckinMetrics,
   type CheckinMetricsRow,
 } from "./metrics-persistence";
+export {
+  csvRowToCheckin,
+  mapCsvRowsToCheckins,
+  type CsvCheckin,
+} from "./csv-import";
 export { foldWeekliesIntoAnswers, type FoldWeekliesInput } from "./refresh";
 export {
   adminReplaceVoiceDNA,
