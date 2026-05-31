@@ -22,6 +22,23 @@ const log = createLogger("weekly-checkin.recipients");
 
 export type WeeklyCheckinSupabase = SupabaseClient<Database>;
 
+/**
+ * Safety valve for verifying a REAL send without blasting the whole
+ * cohort. When `WEEKLY_CHECKIN_TEST_RECIPIENT` is set, the send is
+ * restricted to that single email (case-insensitive). The address must
+ * already be a valid recipient — this filters the resolved list, it does
+ * not inject anyone who wouldn't otherwise qualify. Leave unset in normal
+ * operation.
+ */
+export function filterToTestRecipient(
+  recipients: Recipient[],
+  testRecipient: string | undefined | null,
+): Recipient[] {
+  const target = testRecipient?.toLowerCase().trim();
+  if (!target) return recipients;
+  return recipients.filter((r) => r.email.toLowerCase() === target);
+}
+
 export async function listRecipients(
   supabase: WeeklyCheckinSupabase,
 ): Promise<Recipient[]> {
@@ -60,10 +77,14 @@ export async function listRecipients(
     });
   }
 
+  const testRecipient = process.env.WEEKLY_CHECKIN_TEST_RECIPIENT;
+  const finalRecipients = filterToTestRecipient(recipients, testRecipient);
+
   log.info("recipients resolved", {
     profiles: profilesRes.data?.length ?? 0,
     auth_users: usersRes.data?.users?.length ?? 0,
-    recipients: recipients.length,
+    recipients: finalRecipients.length,
+    ...(testRecipient ? { test_recipient_override: testRecipient } : {}),
   });
-  return recipients;
+  return finalRecipients;
 }
