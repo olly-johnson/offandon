@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import {
+  extractCheckinMetrics,
   parseWebhookBody,
   saveCheckin,
   verifyHmac,
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     weekStart,
     rawResponses: payload.answers,
     submittedAt: submittedAt.toISOString(),
+    metrics: extractCheckinMetrics(payload.answers),
   });
 
   if (duplicated) {

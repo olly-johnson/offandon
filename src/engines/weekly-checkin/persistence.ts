@@ -13,6 +13,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "@/lib/shared/supabase";
 
+import type { CheckinMetrics } from "./metrics";
 import type { WeeklyCheckinRow } from "./types";
 
 export type CheckinSupabase = SupabaseClient<Database>;
@@ -22,6 +23,12 @@ export interface SaveCheckinInput {
   weekStart: string;
   rawResponses: Record<string, unknown>;
   submittedAt: string;
+  /**
+   * Structured numbers extracted from the answers (BO-076). Optional so
+   * callers that don't compute them still work; each field is null when
+   * the answer was missing or unparseable.
+   */
+  metrics?: CheckinMetrics;
 }
 
 export interface SaveCheckinResult {
@@ -35,6 +42,7 @@ export async function saveCheckin(
   supabase: CheckinSupabase,
   input: SaveCheckinInput,
 ): Promise<SaveCheckinResult> {
+  const metrics = input.metrics;
   const { data, error } = await supabase
     .from("weekly_checkins")
     .insert({
@@ -42,6 +50,14 @@ export async function saveCheckin(
       week_start: input.weekStart,
       raw_responses: input.rawResponses as unknown as Json,
       submitted_at: input.submittedAt,
+      new_followers: metrics?.newFollowers ?? null,
+      dms_received: metrics?.dmsReceived ?? null,
+      calls_booked: metrics?.callsBooked ?? null,
+      sales_closed: metrics?.salesClosed ?? null,
+      leads_generated: metrics?.leadsGenerated ?? null,
+      revenue: metrics?.revenue ?? null,
+      posts_published: metrics?.postsPublished ?? null,
+      satisfaction: metrics?.satisfaction ?? null,
     })
     .select("id, user_id, week_start, raw_responses, submitted_at")
     .single();

@@ -1020,6 +1020,14 @@ export type Database = {
           raw_responses: Json;
           submitted_at: string;
           created_at: string;
+          new_followers: number | null;
+          dms_received: number | null;
+          calls_booked: number | null;
+          sales_closed: number | null;
+          leads_generated: number | null;
+          revenue: number | null;
+          posts_published: number | null;
+          satisfaction: number | null;
         };
         Insert: {
           id?: string;
@@ -1028,6 +1036,14 @@ export type Database = {
           raw_responses?: Json;
           submitted_at?: string;
           created_at?: string;
+          new_followers?: number | null;
+          dms_received?: number | null;
+          calls_booked?: number | null;
+          sales_closed?: number | null;
+          leads_generated?: number | null;
+          revenue?: number | null;
+          posts_published?: number | null;
+          satisfaction?: number | null;
         };
         Update: {
           id?: string;
@@ -1036,6 +1052,14 @@ export type Database = {
           raw_responses?: Json;
           submitted_at?: string;
           created_at?: string;
+          new_followers?: number | null;
+          dms_received?: number | null;
+          calls_booked?: number | null;
+          sales_closed?: number | null;
+          leads_generated?: number | null;
+          revenue?: number | null;
+          posts_published?: number | null;
+          satisfaction?: number | null;
         };
         Relationships: [];
       };

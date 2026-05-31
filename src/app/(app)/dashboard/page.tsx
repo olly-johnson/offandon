@@ -17,6 +17,8 @@ import {
 } from "@/lib/shared/dashboard-metrics";
 
 import { listCompetitors } from "@/engines/competitor";
+import { listRecentCheckinMetrics } from "@/engines/weekly-checkin";
+import { buildWeeklyProgress } from "@/lib/shared/weekly-progress";
 
 import { buildSuggestions, loadDashboard } from "./data";
 import { loadFormulaMatrix } from "./formula-matrix-data";
@@ -34,6 +36,7 @@ import {
   StoryBankCard,
 } from "./components/side-cards";
 import { RecommendationsCard } from "./components/recommendations-card";
+import { WeeklyProgressCard } from "./components/weekly-progress-card";
 
 const log = createLogger("page.dashboard");
 
@@ -74,6 +77,7 @@ export default async function DashboardPage() {
     followerHistory,
     formulaMatrix,
     competitorRows,
+    checkinMetrics,
     profileRow,
   ] = await Promise.all([
     loadDashboard(user.id),
@@ -82,6 +86,7 @@ export default async function DashboardPage() {
     listFollowerHistory(supabase, user.id, { sinceDays: 30, now }),
     loadFormulaMatrix(user.id),
     listCompetitors(supabase, user.id),
+    listRecentCheckinMetrics(supabase, user.id),
     supabase
       .from("profiles")
       .select("display_name")
@@ -89,6 +94,8 @@ export default async function DashboardPage() {
       .maybeSingle()
       .then((r) => r.data),
   ]);
+
+  const weeklyProgress = buildWeeklyProgress(checkinMetrics);
 
   const dashboardRows: DashboardMediaRow[] = igMedia.map(stripMedia);
   const metrics = computeAccountMetrics(dashboardRows, {
@@ -148,6 +155,10 @@ export default async function DashboardPage() {
             <div className="bd-card-title">Engagement Over Time</div>
             <EngagementChart points={engagementSeries} />
           </div>
+
+          {weeklyProgress.hasData ? (
+            <WeeklyProgressCard progress={weeklyProgress} />
+          ) : null}
 
           <div className="oo-card-static bd-section p-6">
             <div className="bd-card-title">Performance Breakdown</div>

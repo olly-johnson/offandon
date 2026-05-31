@@ -22,6 +22,16 @@ export {
   verifyGhlWebhookSecret,
   type GhlCheckinPayload,
 } from "./ghl";
+export {
+  extractCheckinMetrics,
+  parseStatNumber,
+  sumStatNumbers,
+  type CheckinMetrics,
+} from "./metrics";
+export {
+  listRecentCheckinMetrics,
+  type CheckinMetricsRow,
+} from "./metrics-persistence";
 export { foldWeekliesIntoAnswers, type FoldWeekliesInput } from "./refresh";
 export {
   adminReplaceVoiceDNA,
