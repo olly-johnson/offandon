@@ -34,42 +34,32 @@ describe("verifyFanbasisSignature", () => {
 
 describe("parseFanbasisPayment", () => {
   // Real payment.succeeded is FLAT with no top-level "type".
+  // Real Fanbasis shape: event_type (not type), status "succeeded" (not
+  // "paid"), total_price (not amount).
   const ok = JSON.stringify({
     payment_id: "pay_123",
-    amount: 290000,
+    total_price: 290000,
     currency: "GBP",
-    status: "paid",
+    status: "succeeded",
+    event_type: "payment.succeeded",
     buyer: { email: "Client@Example.com", name: "Olly Johnson" },
   });
 
-  it("maps a flat successful payment to a PaymentEvent", () => {
+  it("maps a real Fanbasis payment.succeeded to a PaymentEvent", () => {
     const e = parseFanbasisPayment(ok)!;
     expect(e.provider).toBe("fanbasis");
     expect(e.email).toBe("client@example.com");
     expect(e.name).toBe("Olly Johnson");
-    expect(e.amountCents).toBe(290000);
+    expect(e.amountCents).toBe(290000); // from total_price
     expect(e.currency).toBe("GBP");
     expect(e.externalId).toBe("pay_123");
   });
 
-  it("accepts a flat payment with no status field", () => {
+  it("accepts the docs' legacy shape (amount + status paid)", () => {
     const e = parseFanbasisPayment(
-      JSON.stringify({ payment_id: "p1", buyer: { email: "a@b.com" } }),
+      JSON.stringify({ payment_id: "p1", amount: 5000, status: "paid", buyer: { email: "a@b.com" } }),
     )!;
-    expect(e.email).toBe("a@b.com");
-  });
-
-  it("accepts a flat payment that also carries a payment.* type", () => {
-    const e = parseFanbasisPayment(
-      JSON.stringify({
-        type: "payment.succeeded",
-        payment_id: "p2",
-        status: "paid",
-        buyer: { email: "c@d.com" },
-      }),
-    )!;
-    expect(e.externalId).toBe("p2");
-    expect(e.email).toBe("c@d.com");
+    expect(e.amountCents).toBe(5000);
   });
 
   it("accepts an enveloped payment, reading fields from data", () => {
@@ -77,7 +67,7 @@ describe("parseFanbasisPayment", () => {
       JSON.stringify({
         id: "evt_1",
         type: "payment.succeeded",
-        data: { payment_id: "p3", status: "paid", buyer: { email: "e@f.com" }, amount: 5000 },
+        data: { payment_id: "p3", status: "succeeded", buyer: { email: "e@f.com" }, total_price: 5000 },
       }),
     )!;
     expect(e.externalId).toBe("p3");
@@ -85,23 +75,32 @@ describe("parseFanbasisPayment", () => {
     expect(e.amountCents).toBe(5000);
   });
 
-  it("falls back to `id` when payment_id is absent", () => {
-    const e = parseFanbasisPayment(
-      JSON.stringify({ id: "txn_9", status: "paid", buyer: { email: "g@h.com" } }),
-    )!;
-    expect(e.externalId).toBe("txn_9");
+  it("coerces a numeric payment_id / falls back to id", () => {
+    expect(
+      parseFanbasisPayment(
+        JSON.stringify({ payment_id: 9876, status: "succeeded", buyer: { email: "g@h.com" } }),
+      )!.externalId,
+    ).toBe("9876");
+    expect(
+      parseFanbasisPayment(
+        JSON.stringify({ id: "txn_9", status: "succeeded", buyer: { email: "g@h.com" } }),
+      )!.externalId,
+    ).toBe("txn_9");
   });
 
-  it("ignores enveloped events (they carry a top-level type)", () => {
+  it("ignores non-payment events (event_type or type)", () => {
     expect(
-      parseFanbasisPayment(JSON.stringify({ id: "evt", type: "dispute.created", data: {} })),
+      parseFanbasisPayment(JSON.stringify({ event_type: "subscription.cancelled", buyer: { email: "a@b.com" } })),
+    ).toBeNull();
+    expect(
+      parseFanbasisPayment(JSON.stringify({ id: "e", type: "dispute.created", data: {} })),
     ).toBeNull();
   });
 
-  it("ignores a failed payment (status != paid)", () => {
+  it("ignores a failed payment (status != succeeded/paid)", () => {
     expect(
       parseFanbasisPayment(
-        JSON.stringify({ payment_id: "p", status: "failed", buyer: { email: "a@b.com" } }),
+        JSON.stringify({ event_type: "payment.succeeded", payment_id: "p", status: "failed", buyer: { email: "a@b.com" } }),
       ),
     ).toBeNull();
   });
