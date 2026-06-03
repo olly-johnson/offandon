@@ -39,13 +39,11 @@ export function verifyFanbasisSignature(
  * Parse a Fanbasis webhook body. Returns a PaymentEvent for a successful
  * payment, or null for anything we don't act on (route ignores those).
  *
- * Tolerant of shape, because the docs and the test endpoint don't fully
- * agree: a real `payment.succeeded` is FLAT with no top-level `type`
- * (payment_id, buyer, amount, status...), but some deliveries wrap it
- * ({type, data}) or include a `type`. We therefore:
- *   - ignore an explicitly non-payment `type` (dispute.*, refund.*, etc.),
- *   - read the payment fields from `data` when present, else top-level,
- *   - require buyer.email + payment_id, and skip a non-"paid" status.
+ * Verified against a real delivery (the docs were wrong on three points):
+ *   - the event type is in `event_type` (not `type`), e.g. "payment.succeeded";
+ *   - a successful payment has status "succeeded" (not "paid");
+ *   - the amount is `total_price` (not `amount`), in minor units.
+ * Still tolerant of an enveloped `{type, data}` shape just in case.
  */
 export function parseFanbasisPayment(rawBody: string): PaymentEvent | null {
   let parsed: unknown;
@@ -59,21 +57,24 @@ export function parseFanbasisPayment(rawBody: string): PaymentEvent | null {
   }
   const root = parsed as Record<string, unknown>;
 
-  // A top-level type that isn't a payment event (dispute.created, refund.*,
-  // subscription.cancelled, ...) -> ignore. Absent type is fine (flat).
-  const type = typeof root.type === "string" ? root.type : null;
-  if (type && !type.startsWith("payment")) return null;
+  // Event type lives in `event_type` (real payloads) or `type` (enveloped).
+  const eventType =
+    (typeof root.event_type === "string" && root.event_type) ||
+    (typeof root.type === "string" && root.type) ||
+    null;
+  if (eventType && eventType !== "payment.succeeded") return null;
 
-  // Payment fields live under `data` when enveloped, else at the top level.
+  // Enveloped events nest the fields under `data`; flat events are top-level.
   const data = (
     root.data && typeof root.data === "object" && !Array.isArray(root.data)
       ? root.data
       : root
   ) as Record<string, unknown>;
 
-  // A failed payment carries a non-"paid" status; ignore it.
+  // Defence in depth: skip a non-success status. Real payloads use
+  // "succeeded"; the docs example used "paid". Accept either.
   const status = typeof data.status === "string" ? data.status.toLowerCase() : "";
-  if (status && status !== "paid") return null;
+  if (status && status !== "succeeded" && status !== "paid") return null;
 
   const buyer = (data.buyer ?? {}) as Record<string, unknown>;
   const rawEmail = buyer.email;
@@ -81,19 +82,24 @@ export function parseFanbasisPayment(rawBody: string): PaymentEvent | null {
     throw new FanbasisParseError("buyer.email missing or invalid");
   }
 
-  const paymentId =
-    (typeof data.payment_id === "string" && data.payment_id) ||
-    (typeof data.id === "string" && data.id) ||
-    "";
+  const idValue = data.payment_id ?? data.id;
+  const paymentId = idValue != null ? String(idValue) : "";
   if (!paymentId) {
     throw new FanbasisParseError("payment_id missing");
   }
+
+  const amountCents =
+    typeof data.total_price === "number"
+      ? data.total_price
+      : typeof data.amount === "number"
+        ? data.amount
+        : null;
 
   return {
     provider: "fanbasis",
     email: rawEmail.toLowerCase().trim(),
     name: typeof buyer.name === "string" ? buyer.name : null,
-    amountCents: typeof data.amount === "number" ? data.amount : null,
+    amountCents,
     currency: typeof data.currency === "string" ? data.currency : null,
     externalId: paymentId,
   };
