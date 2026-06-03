@@ -37,7 +37,14 @@ export function verifyFanbasisSignature(
 
 /**
  * Parse a Fanbasis webhook body. Returns a PaymentEvent for a successful
- * payment, or null for any other event type (route ignores those).
+ * payment, or null for anything we don't act on (route ignores those).
+ *
+ * Important: a `payment.succeeded` event is delivered as a FLAT payload
+ * with NO top-level `type` field (payment_id, buyer, amount, status...).
+ * Only enveloped events (dispute.created, refund.*, etc.) carry a
+ * top-level `type` + `data`. So we ignore anything enveloped, and among
+ * flat events we accept a successful payment (status "paid", or status
+ * absent) and skip a failed one.
  */
 export function parseFanbasisPayment(rawBody: string): PaymentEvent | null {
   let parsed: unknown;
@@ -51,8 +58,12 @@ export function parseFanbasisPayment(rawBody: string): PaymentEvent | null {
   }
   const obj = parsed as Record<string, unknown>;
 
-  const type = typeof obj.type === "string" ? obj.type : "";
-  if (type !== "payment.succeeded") return null;
+  // Enveloped event (has a top-level type) -> not a flat payment success.
+  if (typeof obj.type === "string" && obj.type.length > 0) return null;
+
+  // Flat event. A failed payment is also flat; tell them apart by status.
+  const status = typeof obj.status === "string" ? obj.status.toLowerCase() : "";
+  if (status && status !== "paid") return null;
 
   const buyer = (obj.buyer ?? {}) as Record<string, unknown>;
   const rawEmail = buyer.email;
