@@ -59,6 +59,39 @@ describe("parseFanbasisPayment", () => {
     expect(e.email).toBe("a@b.com");
   });
 
+  it("accepts a flat payment that also carries a payment.* type", () => {
+    const e = parseFanbasisPayment(
+      JSON.stringify({
+        type: "payment.succeeded",
+        payment_id: "p2",
+        status: "paid",
+        buyer: { email: "c@d.com" },
+      }),
+    )!;
+    expect(e.externalId).toBe("p2");
+    expect(e.email).toBe("c@d.com");
+  });
+
+  it("accepts an enveloped payment, reading fields from data", () => {
+    const e = parseFanbasisPayment(
+      JSON.stringify({
+        id: "evt_1",
+        type: "payment.succeeded",
+        data: { payment_id: "p3", status: "paid", buyer: { email: "e@f.com" }, amount: 5000 },
+      }),
+    )!;
+    expect(e.externalId).toBe("p3");
+    expect(e.email).toBe("e@f.com");
+    expect(e.amountCents).toBe(5000);
+  });
+
+  it("falls back to `id` when payment_id is absent", () => {
+    const e = parseFanbasisPayment(
+      JSON.stringify({ id: "txn_9", status: "paid", buyer: { email: "g@h.com" } }),
+    )!;
+    expect(e.externalId).toBe("txn_9");
+  });
+
   it("ignores enveloped events (they carry a top-level type)", () => {
     expect(
       parseFanbasisPayment(JSON.stringify({ id: "evt", type: "dispute.created", data: {} })),
