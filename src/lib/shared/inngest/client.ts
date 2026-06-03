@@ -31,7 +31,24 @@ export const INNGEST_EVENTS = {
     "competitor/youtube-media.download.requested",
   SuggestedAvatarsRefreshRequested:
     "research/suggested-avatars.refresh.requested",
+  OnboardingIdentitySubmitted: "onboarding/identity.submitted",
 } as const;
+
+/**
+ * Payload shape for onboarding/identity.submitted (BO-081). Emitted by the
+ * Google-Form onboarding webhook once the user is resolved/created. The
+ * function turns the answers into a source document, LLM-extracts the full
+ * Voice DNA (reusing the ingestion extractor), commits it, and tags the GHL
+ * contact onboarding_complete.
+ */
+export interface OnboardingIdentitySubmittedData {
+  user_id: string;
+  email: string;
+  /** Raw form answers keyed by question title. */
+  answers: Record<string, string>;
+  /** ISO submission timestamp. */
+  submitted_at: string;
+}
 
 /**
  * Payload shape for scripts/batch.requested. The function loads the rest
