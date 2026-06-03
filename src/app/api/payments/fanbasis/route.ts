@@ -48,7 +48,20 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   if (!event) {
-    log.info("fanbasis event ignored (not a flat successful payment)");
+    // Diagnostic (no PII): surface the shape so an unexpected payload is
+    // easy to spot in the logs.
+    let topLevelKeys: string[] = [];
+    let type: unknown = null;
+    let status: unknown = null;
+    try {
+      const o = JSON.parse(rawBody) as Record<string, unknown>;
+      topLevelKeys = Object.keys(o);
+      type = o.type ?? null;
+      status = o.status ?? null;
+    } catch {
+      /* already verified + parsed above; ignore */
+    }
+    log.info("fanbasis event ignored", { top_level_keys: topLevelKeys, type, status });
     return Response.json({ ok: true, ignored: true });
   }
 
