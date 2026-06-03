@@ -12,6 +12,7 @@ import {
   competitorScrapeRequested,
   syncAllCompetitorsNightly,
 } from "@/lib/shared/inngest/functions/scrape-competitor";
+import { onboardingGenerate } from "@/lib/shared/inngest/functions/onboarding-generate";
 import { syncInstagram } from "@/lib/shared/inngest/functions/sync-instagram";
 // Weekly check-in send/reminder re-enabled (BO-078). GHL receives + processes
 // submissions (/api/ghl/webhook), but its workflows don't do a recurring
@@ -37,6 +38,7 @@ export const { GET, POST, PUT } = serve({
     weeklyCheckinSend,
     weeklyCheckinReminder,
     refreshVoiceDna,
+    onboardingGenerate,
     competitorScrapeRequested,
     competitorScrapeCompleted,
     syncAllCompetitorsNightly,
