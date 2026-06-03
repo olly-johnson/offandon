@@ -48,6 +48,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   if (!event) {
+    log.info("fanbasis event ignored (not a flat successful payment)");
     return Response.json({ ok: true, ignored: true });
   }
 

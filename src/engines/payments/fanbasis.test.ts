@@ -33,15 +33,16 @@ describe("verifyFanbasisSignature", () => {
 });
 
 describe("parseFanbasisPayment", () => {
+  // Real payment.succeeded is FLAT with no top-level "type".
   const ok = JSON.stringify({
-    type: "payment.succeeded",
     payment_id: "pay_123",
     amount: 290000,
     currency: "GBP",
+    status: "paid",
     buyer: { email: "Client@Example.com", name: "Olly Johnson" },
   });
 
-  it("maps a payment.succeeded to a PaymentEvent", () => {
+  it("maps a flat successful payment to a PaymentEvent", () => {
     const e = parseFanbasisPayment(ok)!;
     expect(e.provider).toBe("fanbasis");
     expect(e.email).toBe("client@example.com");
@@ -51,18 +52,31 @@ describe("parseFanbasisPayment", () => {
     expect(e.externalId).toBe("pay_123");
   });
 
-  it("returns null for non-payment events (route ignores them)", () => {
+  it("accepts a flat payment with no status field", () => {
+    const e = parseFanbasisPayment(
+      JSON.stringify({ payment_id: "p1", buyer: { email: "a@b.com" } }),
+    )!;
+    expect(e.email).toBe("a@b.com");
+  });
+
+  it("ignores enveloped events (they carry a top-level type)", () => {
     expect(
-      parseFanbasisPayment(JSON.stringify({ type: "subscription.cancelled" })),
+      parseFanbasisPayment(JSON.stringify({ id: "evt", type: "dispute.created", data: {} })),
+    ).toBeNull();
+  });
+
+  it("ignores a failed payment (status != paid)", () => {
+    expect(
+      parseFanbasisPayment(
+        JSON.stringify({ payment_id: "p", status: "failed", buyer: { email: "a@b.com" } }),
+      ),
     ).toBeNull();
   });
 
   it("throws on invalid JSON or a missing buyer email", () => {
     expect(() => parseFanbasisPayment("{bad")).toThrow(FanbasisParseError);
     expect(() =>
-      parseFanbasisPayment(
-        JSON.stringify({ type: "payment.succeeded", payment_id: "p", buyer: {} }),
-      ),
+      parseFanbasisPayment(JSON.stringify({ payment_id: "p", status: "paid", buyer: {} })),
     ).toThrow(FanbasisParseError);
   });
 });
